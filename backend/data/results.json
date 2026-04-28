@@ -1,0 +1,10 @@
+[
+  {
+    "type": "simulation",
+    "runtime": 1.1,
+    "cpu_utilization": 50.0,
+    "energy_kwh": 0.055,
+    "emissions_kg_co2e": 0.0385,
+    "timestamp": "2026-04-28T15:47:03.935519"
+  }
+]

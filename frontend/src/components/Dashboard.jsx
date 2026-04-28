@@ -6,6 +6,7 @@ import DataTable from './DataTable';
 import AIInsightsPanel from './AIInsightsPanel';
 import WhatIfSimulator from './WhatIfSimulator';
 import UploadSection from './UploadSection';
+import CloudSimulationPanel from './CloudSimulationPanel';
 
 function Dashboard({ awsData, insights, loading, onUpload, onLoadMock }) {
   const [activeTab, setActiveTab] = useState('overview');
@@ -30,6 +31,16 @@ function Dashboard({ awsData, insights, loading, onUpload, onLoadMock }) {
             </div>
             <div className="flex gap-3">
               <button
+                onClick={() => setActiveTab('simulation')}
+                className={`px-4 py-2 rounded-lg transition ${
+                  activeTab === 'simulation'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                }`}
+              >
+                Simulation & Custom Data
+              </button>
+              <button
                 onClick={() => setActiveTab('overview')}
                 className={`px-4 py-2 rounded-lg transition ${
                   activeTab === 'overview'
@@ -37,7 +48,7 @@ function Dashboard({ awsData, insights, loading, onUpload, onLoadMock }) {
                     : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
                 }`}
               >
-                Overview
+                AWS Overview
               </button>
               <button
                 onClick={() => setActiveTab('insights')}
@@ -65,10 +76,16 @@ function Dashboard({ awsData, insights, loading, onUpload, onLoadMock }) {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8">
-        {/* Upload Section */}
-        <UploadSection onUpload={onUpload} onLoadMock={onLoadMock} />
+        
+        {activeTab === 'simulation' && (
+          <CloudSimulationPanel />
+        )}
 
-        {awsData && (
+        {activeTab !== 'simulation' && (
+          <UploadSection onUpload={onUpload} onLoadMock={onLoadMock} />
+        )}
+
+        {awsData && activeTab !== 'simulation' && (
           <>
             {activeTab === 'overview' && (
               <div className="space-y-6">

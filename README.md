@@ -5,16 +5,17 @@ A full-stack web dashboard that converts AWS billing CSV data into carbon emissi
 ## 🌟 Features
 
 ### Core Functionality
-- 📊 **CSV Upload**: Accept AWS billing CSV with automatic parsing
-- 🌍 **Carbon Conversion**: Convert AWS usage into CO₂ emissions using region-specific factors
-- 📈 **Visual Analytics**: Interactive charts and graphs
-- 🤖 **AI Insights**: Google Gemini-powered optimization recommendations
-- 🔮 **What-If Simulator**: Test different optimization scenarios
-- ⚠️ **Idle Resource Detection**: Identify wasteful spending
-- 💰 **Cost vs Emissions**: Understand the relationship between spend and carbon
+- 💻 **Cloud Workload Simulation**: Estimate emissions based on server runtime and CPU utilization.
+- 📊 **Custom CSV Upload**: Upload batch server usage data (runtime, cpu_usage, region) for mass carbon calculation.
+- 📈 **AWS CSV Upload**: Accept native AWS Cost and Usage Reports with automatic parsing.
+- 🌍 **Climatiq Integration**: Convert cloud usage into CO₂ emissions utilizing the official Climatiq API (defaulting to the India grid mix `IN`) with built-in fallbacks.
+- 🤖 **AI Insights**: Google Gemini-powered optimization recommendations.
+- 🔮 **What-If Simulator**: Test different optimization scenarios.
+- ⚠️ **Idle Resource Detection**: Identify wasteful spending.
 
 ### Dashboard Components
 - **Top Metrics Cards**: Total CO₂, Cost, Top Region, Top Service
+- **Cloud Simulation & Custom Data Panel**: Interactive workload form, CSV uploader, and historical emissions charting.
 - **Pie Chart**: Emissions by Service (EC2, RDS, Lambda, S3, etc.)
 - **Bar Charts**: Emissions by Region and Instance Type
 - **Scatter Plot**: Cost vs CO₂ correlation
@@ -57,8 +58,16 @@ npm run dev
 
 Open http://localhost:5173
 
-## 📊 AWS CSV Format
+## 📊 Supported CSV Formats
+### 1. Custom Cloud Usage
+A simplified batch upload structure meant for simulation.
+```
+runtime,cpu_usage,region
+5,60,IN
+3,40,IN
+```
 
+### 2. AWS Cost & Usage Report
 The app expects AWS Cost and Usage Report CSV with these headers:
 
 ```
@@ -76,6 +85,11 @@ lineItem/UnblendedCost
 ```
 
 ## 🧮 Carbon Calculation
+
+### Workload Simulation
+- **Base server power**: 100 watts (0.1 kW)
+- **Power Adjustment**: Calculated based on CPU Utilization `%`.
+- **API Engine**: Passes `kWh` calculations to the Climatiq API targeting `electricity-energy_source_grid_mix` with India `IN` defaulting constraints.
 
 ### Region Emission Factors (kg CO₂/kWh)
 - us-west-1 (California): 0.285 - Low carbon
@@ -136,22 +150,30 @@ carboniq/
 ├── backend/
 │   ├── main.py                 # FastAPI app
 │   ├── routes/
+│   │   ├── simulate_routes.py  # Simulation endpoints
+│   │   ├── upload_routes.py    # Custom CSV upload endpoints
 │   │   ├── emissions.py        # CSV upload & analysis
 │   │   ├── insights.py         # AI recommendations
 │   │   ├── whatif.py           # Scenario simulator
 │   │   └── chat.py             # Chatbot endpoint
 │   ├── services/
+│   │   ├── energy_calculator.py# Dynamic power estimators
+│   │   ├── climatiq_service.py # Climatiq integration module
 │   │   ├── aws_analyzer.py     # CSV parser & calculator
 │   │   ├── gemini.py           # AI integration
 │   │   └── climatiq.py         # Emission factors
+│   ├── utils/
+│   │   └── csv_parser.py       # Custom CSV helper
 │   ├── models/
 │   │   └── schemas.py          # Pydantic models
 │   └── data/
+│       ├── results.json        # Simulation History
 │       └── mock_csv.csv        # Demo data
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
 │   │   │   ├── Dashboard.jsx
+│   │   │   ├── CloudSimulationPanel.jsx # Simulation & Upload Panel
 │   │   │   ├── UploadSection.jsx
 │   │   │   ├── MetricsBar.jsx
 │   │   │   ├── EmissionsPieChart.jsx
@@ -184,6 +206,9 @@ carboniq/
 ## 🌐 API Endpoints
 
 - `GET /api/health` - Health check
+- `POST /api/simulate` - Simulate workload emissions
+- `POST /api/upload-custom-csv` - Batch upload workload parameters via CSV
+- `GET /api/results` - Fetch history of simulations and uploads
 - `POST /api/upload-csv` - Upload AWS billing CSV
 - `GET /api/mock-data` - Load demo data
 - `POST /api/insights` - Get AI recommendations
