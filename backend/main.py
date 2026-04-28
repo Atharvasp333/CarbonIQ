@@ -2,7 +2,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from routes import emissions, insights, whatif, chat
+from routes import emissions, insights, whatif, chat, regional_test
 
 load_dotenv()
 
@@ -20,6 +20,7 @@ app.include_router(emissions.router, prefix="/api")
 app.include_router(insights.router, prefix="/api")
 app.include_router(whatif.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
+app.include_router(regional_test.router, prefix="/api")
 
 
 @app.get("/api/health")

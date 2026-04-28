@@ -2,6 +2,44 @@ from pydantic import BaseModel
 from typing import Optional
 
 
+# Appliance/Server Emissions Schemas
+class ApplianceUsage(BaseModel):
+    AC: float = 0
+    Lighting: float = 0
+    Servers: float = 0
+    Others: float = 0
+
+
+class ApplianceEmission(BaseModel):
+    appliance: str
+    kwh: float
+    co2_kg: float
+    percentage: float = 0
+
+
+class EmissionResponse(BaseModel):
+    total_kwh: float
+    total_co2_kg: float
+    breakdown: list[ApplianceEmission]
+    top_contributor: str
+    source: Optional[str] = "fallback"  # "climatiq" or "fallback"
+
+
+class RegionalTestRequest(BaseModel):
+    region_code: str
+    kwh: float
+
+
+class RegionalTestResponse(BaseModel):
+    region_code: str
+    region_name: str
+    kwh: float
+    co2_kg: float
+    emission_factor: float
+    source: str  # "climatiq" or "fallback"
+    message: str
+
+
 # AWS Billing Schemas
 class AWSLineItem(BaseModel):
     service: str
