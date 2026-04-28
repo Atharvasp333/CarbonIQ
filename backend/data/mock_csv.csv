@@ -1,0 +1,16 @@
+identity/LineItemId,bill/BillingPeriodStartDate,lineItem/UsageStartDate,lineItem/UsageEndDate,product/ProductName,product/region,lineItem/UsageType,lineItem/UsageAmount,product/instanceType,lineItem/ResourceId,lineItem/UnblendedCost
+1,2024-01-01,2024-01-01,2024-01-02,Amazon Elastic Compute Cloud,us-east-1,BoxUsage:m5.large,24,m5.large,i-1234567890abcdef0,12.50
+2,2024-01-01,2024-01-01,2024-01-02,Amazon Elastic Compute Cloud,us-west-2,BoxUsage:t3.medium,48,t3.medium,i-abcdef1234567890,8.75
+3,2024-01-01,2024-01-01,2024-01-02,Amazon Relational Database Service,us-east-1,InstanceUsage:db.t3.small,24,db.t3.small,db-instance-1,15.20
+4,2024-01-01,2024-01-01,2024-01-02,Amazon Simple Storage Service,us-east-1,TimedStorage-ByteHrs,1500000,,,2.30
+5,2024-01-01,2024-01-01,2024-01-02,AWS Lambda,us-west-2,Lambda-GB-Second,50000,,,0.85
+6,2024-01-01,2024-01-01,2024-01-02,Amazon Elastic Compute Cloud,eu-west-1,BoxUsage:m5.xlarge,24,m5.xlarge,i-fedcba0987654321,25.00
+7,2024-01-01,2024-01-01,2024-01-02,Amazon Elastic Block Store,us-east-1,VolumeUsage,500,,,5.00
+8,2024-01-01,2024-01-01,2024-01-02,Amazon Elastic Compute Cloud,ap-south-1,BoxUsage:t3.large,24,t3.large,i-mumbai123456,11.50
+9,2024-01-01,2024-01-01,2024-01-02,Amazon Relational Database Service,us-west-2,InstanceUsage:db.m5.large,24,db.m5.large,db-instance-2,28.40
+10,2024-01-01,2024-01-01,2024-01-02,Amazon Elastic Compute Cloud,us-east-2,BoxUsage:m5.large,2,m5.large,i-idle-resource,18.00
+11,2024-01-01,2024-01-01,2024-01-02,Amazon Simple Storage Service,eu-west-1,TimedStorage-ByteHrs,2500000,,,3.75
+12,2024-01-01,2024-01-01,2024-01-02,AWS Lambda,us-east-1,Lambda-GB-Second,75000,,,1.25
+13,2024-01-01,2024-01-01,2024-01-02,Amazon Elastic Compute Cloud,ap-northeast-1,BoxUsage:t3.medium,48,t3.medium,i-tokyo123456,9.20
+14,2024-01-01,2024-01-01,2024-01-02,Amazon Elastic Compute Cloud,us-east-1,BoxUsage:c5.large,24,c5.large,i-compute123,13.80
+15,2024-01-01,2024-01-01,2024-01-02,Amazon Elastic Block Store,us-west-2,VolumeUsage,800,,,8.00
