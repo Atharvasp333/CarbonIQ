@@ -1,16 +1,121 @@
-identity/LineItemId,bill/BillingPeriodStartDate,lineItem/UsageStartDate,lineItem/UsageEndDate,product/ProductName,product/region,lineItem/UsageType,lineItem/UsageAmount,product/instanceType,lineItem/ResourceId,lineItem/UnblendedCost
-1,2024-01-01,2024-01-01,2024-01-02,Amazon Elastic Compute Cloud,us-east-1,BoxUsage:m5.large,24,m5.large,i-1234567890abcdef0,12.50
-2,2024-01-01,2024-01-01,2024-01-02,Amazon Elastic Compute Cloud,us-west-2,BoxUsage:t3.medium,48,t3.medium,i-abcdef1234567890,8.75
-3,2024-01-01,2024-01-01,2024-01-02,Amazon Relational Database Service,us-east-1,InstanceUsage:db.t3.small,24,db.t3.small,db-instance-1,15.20
-4,2024-01-01,2024-01-01,2024-01-02,Amazon Simple Storage Service,us-east-1,TimedStorage-ByteHrs,1500000,,,2.30
-5,2024-01-01,2024-01-01,2024-01-02,AWS Lambda,us-west-2,Lambda-GB-Second,50000,,,0.85
-6,2024-01-01,2024-01-01,2024-01-02,Amazon Elastic Compute Cloud,eu-west-1,BoxUsage:m5.xlarge,24,m5.xlarge,i-fedcba0987654321,25.00
-7,2024-01-01,2024-01-01,2024-01-02,Amazon Elastic Block Store,us-east-1,VolumeUsage,500,,,5.00
-8,2024-01-01,2024-01-01,2024-01-02,Amazon Elastic Compute Cloud,ap-south-1,BoxUsage:t3.large,24,t3.large,i-mumbai123456,11.50
-9,2024-01-01,2024-01-01,2024-01-02,Amazon Relational Database Service,us-west-2,InstanceUsage:db.m5.large,24,db.m5.large,db-instance-2,28.40
-10,2024-01-01,2024-01-01,2024-01-02,Amazon Elastic Compute Cloud,us-east-2,BoxUsage:m5.large,2,m5.large,i-idle-resource,18.00
-11,2024-01-01,2024-01-01,2024-01-02,Amazon Simple Storage Service,eu-west-1,TimedStorage-ByteHrs,2500000,,,3.75
-12,2024-01-01,2024-01-01,2024-01-02,AWS Lambda,us-east-1,Lambda-GB-Second,75000,,,1.25
-13,2024-01-01,2024-01-01,2024-01-02,Amazon Elastic Compute Cloud,ap-northeast-1,BoxUsage:t3.medium,48,t3.medium,i-tokyo123456,9.20
-14,2024-01-01,2024-01-01,2024-01-02,Amazon Elastic Compute Cloud,us-east-1,BoxUsage:c5.large,24,c5.large,i-compute123,13.80
-15,2024-01-01,2024-01-01,2024-01-02,Amazon Elastic Block Store,us-west-2,VolumeUsage,800,,,8.00
+Service,Region,UsageType,UsageAmount,Cost,Timestamp
+AWSLambda,eu-west-1,Storage,157.919,6.14,2026-01-11 04:00:00
+AWSLambda,eu-west-1,Requests,457.265,89.76,2026-04-21 17:00:00
+AmazonSageMaker,ap-south-1,Requests,375.837,47.27,2026-03-10 20:00:00
+AmazonS3,us-east-1,Requests,321.219,53.66,2026-01-11 23:00:00
+AWSLambda,ap-south-1,GB-Seconds,238.867,17.32,2026-03-12 10:00:00
+AWSLambda,ap-south-1,DataTransfer,60.327,6.96,2026-04-16 17:00:00
+AmazonEC2,us-west-1,Storage,52.19,3.36,2026-01-15 18:00:00
+AWSLambda,us-west-1,DataTransfer,23.737,0.46,2026-04-21 04:00:00
+AmazonEC2,ap-south-1,GB-Seconds,423.16,12.22,2026-01-17 20:00:00
+AmazonSageMaker,us-east-1,DataTransfer,157.902,29.82,2026-04-19 00:00:00
+AmazonS3,ap-south-1,Storage,46.721,2.85,2026-03-09 13:00:00
+AmazonEC2,ap-south-1,Compute,386.724,49.74,2026-03-06 03:00:00
+AmazonSageMaker,eu-west-1,GB-Seconds,282.389,35.07,2026-04-17 04:00:00
+AmazonS3,ap-south-1,GB-Seconds,292.308,39.61,2026-01-13 01:00:00
+AmazonEC2,us-east-1,Storage,362.782,4.1,2026-01-16 22:00:00
+AmazonEC2,us-east-1,Compute,481.886,55.82,2026-04-17 03:00:00
+AmazonEC2,us-east-1,Requests,303.566,26.81,2026-01-15 11:00:00
+AmazonSageMaker,us-east-1,Requests,326.799,31.6,2026-03-11 14:00:00
+AmazonS3,us-east-1,Storage,163.224,31.55,2026-01-17 15:00:00
+AWSLambda,eu-west-1,GB-Seconds,385.487,67.77,2026-03-08 13:00:00
+AmazonSageMaker,eu-west-1,Requests,184.471,25.55,2026-01-16 07:00:00
+AmazonS3,us-west-1,GB-Seconds,60.576,2.68,2026-04-21 13:00:00
+AWSLambda,eu-west-1,DataTransfer,149.093,21.25,2026-03-09 15:00:00
+AmazonSageMaker,ap-south-1,DataTransfer,311.845,36.11,2026-03-06 21:00:00
+AmazonS3,us-west-1,Compute,5.815,0.26,2026-04-19 12:00:00
+AmazonSageMaker,us-east-1,DataTransfer,11.4,1.68,2026-01-15 02:00:00
+AWSLambda,us-east-1,GB-Seconds,393.111,17.74,2026-03-12 17:00:00
+AmazonSageMaker,us-west-1,Storage,93.88,16.34,2026-03-10 03:00:00
+AmazonS3,us-west-1,GB-Seconds,258.891,27.92,2026-01-12 17:00:00
+AWSLambda,us-east-1,Storage,86.118,8.43,2026-04-21 17:00:00
+AWSLambda,eu-west-1,Compute,217.994,28.2,2026-01-11 10:00:00
+AmazonEC2,us-west-1,GB-Seconds,230.458,30.97,2026-01-16 22:00:00
+AmazonSageMaker,ap-south-1,Requests,66.586,11.52,2026-01-14 03:00:00
+AmazonEC2,ap-south-1,Compute,120.883,21.05,2026-04-21 21:00:00
+AmazonEC2,us-east-1,Requests,376.05,45.16,2026-04-15 06:00:00
+AmazonEC2,ap-south-1,GB-Seconds,172.83,33.81,2026-01-16 15:00:00
+AmazonSageMaker,us-east-1,Storage,334.146,8.19,2026-04-17 00:00:00
+AmazonSageMaker,us-west-1,GB-Seconds,346.924,42.81,2026-01-13 22:00:00
+AmazonEC2,us-east-1,Compute,9.368,1.25,2026-03-08 00:00:00
+AmazonSageMaker,eu-west-1,Storage,276.503,50.8,2026-04-15 16:00:00
+AmazonSageMaker,ap-south-1,Requests,257.111,14.61,2026-01-10 12:00:00
+AmazonSageMaker,eu-west-1,Requests,98.021,8.09,2026-01-13 17:00:00
+AmazonEC2,ap-south-1,DataTransfer,354.772,66.66,2026-04-21 23:00:00
+AmazonSageMaker,us-west-1,Requests,330.208,6.4,2026-03-07 06:00:00
+AWSLambda,us-west-1,Requests,434.962,54.13,2026-03-10 19:00:00
+AmazonSageMaker,us-west-1,Requests,62.892,12.29,2026-04-21 06:00:00
+AmazonS3,us-east-1,GB-Seconds,116.835,19.73,2026-03-08 04:00:00
+AWSLambda,us-west-1,Requests,382.113,46.63,2026-01-12 22:00:00
+AmazonSageMaker,ap-south-1,GB-Seconds,295.569,36.55,2026-03-08 14:00:00
+AmazonSageMaker,ap-south-1,Requests,71.449,7.09,2026-01-13 05:00:00
+AmazonS3,eu-west-1,Storage,202.424,35.66,2026-04-18 21:00:00
+AmazonS3,eu-west-1,GB-Seconds,416.651,74.03,2026-01-14 03:00:00
+AmazonEC2,us-east-1,Requests,54.3,7.04,2026-04-18 14:00:00
+AmazonEC2,ap-south-1,Requests,156.675,17.78,2026-01-13 17:00:00
+AmazonS3,us-east-1,DataTransfer,383.807,27.7,2026-04-17 16:00:00
+AWSLambda,ap-south-1,Requests,340.5,30.29,2026-03-13 04:00:00
+AmazonS3,us-east-1,GB-Seconds,425.899,79.0,2026-03-07 04:00:00
+AmazonEC2,us-east-1,GB-Seconds,236.898,47.01,2026-01-18 05:00:00
+AmazonSageMaker,eu-west-1,Storage,263.087,44.59,2026-03-12 16:00:00
+AWSLambda,ap-south-1,DataTransfer,358.587,41.95,2026-04-22 21:00:00
+AmazonSageMaker,us-east-1,Storage,143.475,9.44,2026-03-07 19:00:00
+AWSLambda,us-east-1,Compute,175.314,18.74,2026-01-13 03:00:00
+AmazonEC2,ap-south-1,GB-Seconds,195.02,19.62,2026-01-15 21:00:00
+AmazonS3,us-east-1,Requests,479.132,37.42,2026-01-16 07:00:00
+AmazonSageMaker,us-west-1,DataTransfer,253.17,29.59,2026-04-16 17:00:00
+AWSLambda,us-east-1,Storage,330.161,18.93,2026-04-16 03:00:00
+AmazonSageMaker,us-east-1,GB-Seconds,59.72,0.98,2026-03-13 06:00:00
+AmazonEC2,eu-west-1,DataTransfer,487.383,63.83,2026-01-11 05:00:00
+AmazonSageMaker,us-west-1,DataTransfer,58.586,4.76,2026-01-15 03:00:00
+AmazonSageMaker,ap-south-1,Compute,185.781,14.88,2026-04-17 13:00:00
+AmazonS3,eu-west-1,Storage,119.734,5.24,2026-03-12 10:00:00
+AmazonSageMaker,us-west-1,Storage,41.143,1.28,2026-04-17 13:00:00
+AmazonS3,us-west-1,GB-Seconds,307.699,7.15,2026-03-11 20:00:00
+AmazonS3,us-west-1,Requests,336.596,57.68,2026-01-13 20:00:00
+AmazonSageMaker,us-west-1,Storage,373.257,43.27,2026-03-12 18:00:00
+AWSLambda,us-east-1,GB-Seconds,123.766,16.34,2026-04-18 04:00:00
+AWSLambda,us-west-1,GB-Seconds,38.802,1.28,2026-03-10 04:00:00
+AWSLambda,us-west-1,Requests,88.701,12.63,2026-01-12 05:00:00
+AmazonSageMaker,us-west-1,Compute,25.818,4.95,2026-03-13 08:00:00
+AWSLambda,us-west-1,GB-Seconds,478.182,32.48,2026-03-06 12:00:00
+AmazonEC2,us-west-1,Storage,75.132,14.02,2026-04-17 02:00:00
+AmazonSageMaker,eu-west-1,GB-Seconds,33.878,4.89,2026-03-12 17:00:00
+AmazonSageMaker,us-east-1,DataTransfer,174.592,30.7,2026-04-15 22:00:00
+AmazonEC2,us-east-1,DataTransfer,76.846,11.17,2026-04-17 04:00:00
+AWSLambda,us-west-1,Compute,489.205,49.01,2026-03-08 10:00:00
+AmazonS3,eu-west-1,DataTransfer,130.922,6.69,2026-04-20 02:00:00
+AmazonEC2,us-east-1,Compute,224.302,4.7,2026-04-19 21:00:00
+AmazonSageMaker,us-west-1,GB-Seconds,361.375,29.36,2026-04-19 10:00:00
+AmazonSageMaker,eu-west-1,GB-Seconds,281.719,28.31,2026-01-13 23:00:00
+AmazonEC2,us-east-1,GB-Seconds,455.7,23.87,2026-04-17 16:00:00
+AmazonS3,eu-west-1,Storage,275.022,9.56,2026-04-21 19:00:00
+AWSLambda,eu-west-1,Requests,254.216,10.28,2026-04-19 11:00:00
+AmazonSageMaker,us-east-1,GB-Seconds,275.299,52.47,2026-04-22 01:00:00
+AWSLambda,eu-west-1,Compute,143.484,3.56,2026-01-18 03:00:00
+AmazonEC2,us-east-1,Storage,359.103,59.02,2026-01-10 14:00:00
+AmazonSageMaker,us-west-1,Storage,419.466,39.88,2026-03-06 23:00:00
+AmazonS3,ap-south-1,Storage,369.485,55.42,2026-04-20 09:00:00
+AmazonEC2,us-west-1,GB-Seconds,338.387,29.04,2026-04-15 06:00:00
+AmazonEC2,us-east-1,Requests,448.841,8.28,2026-03-10 03:00:00
+AmazonS3,eu-west-1,Requests,88.505,14.13,2026-01-17 02:00:00
+AmazonSageMaker,us-west-1,Requests,327.971,65.1,2026-04-18 02:00:00
+AmazonEC2,us-west-1,DataTransfer,493.837,82.66,2026-03-09 17:00:00
+AmazonEC2,ap-south-1,DataTransfer,258.515,7.58,2026-03-07 03:00:00
+AmazonS3,us-east-1,DataTransfer,210.18,24.57,2026-04-17 16:00:00
+AmazonSageMaker,us-east-1,GB-Seconds,184.168,6.64,2026-04-22 10:00:00
+AmazonSageMaker,us-east-1,DataTransfer,31.362,0.49,2026-01-10 07:00:00
+AmazonSageMaker,us-east-1,Requests,408.757,6.1,2026-01-15 23:00:00
+AWSLambda,eu-west-1,Requests,155.023,28.33,2026-01-13 09:00:00
+AWSLambda,eu-west-1,GB-Seconds,165.835,11.62,2026-03-05 21:00:00
+AmazonEC2,us-west-1,Requests,198.475,32.71,2026-04-22 17:00:00
+AmazonSageMaker,us-west-1,DataTransfer,88.847,1.64,2026-03-06 21:00:00
+AmazonS3,us-east-1,Compute,495.266,58.46,2026-01-13 10:00:00
+AmazonSageMaker,eu-west-1,Compute,121.952,21.71,2026-04-21 22:00:00
+AmazonS3,us-west-1,Compute,254.145,40.38,2026-01-11 04:00:00
+AmazonS3,us-east-1,DataTransfer,79.533,7.28,2026-01-14 01:00:00
+AWSLambda,eu-west-1,GB-Seconds,447.395,33.47,2026-01-10 22:00:00
+AWSLambda,eu-west-1,Storage,312.76,27.51,2026-03-13 07:00:00
+AmazonSageMaker,us-east-1,DataTransfer,401.885,53.41,2026-01-13 18:00:00
+AmazonEC2,us-west-1,Requests,267.159,51.9,2026-04-20 01:00:00
+AmazonEC2,us-east-1,Compute,369.688,63.2,2026-04-22 10:00:00

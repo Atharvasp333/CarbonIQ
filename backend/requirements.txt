@@ -6,3 +6,4 @@ python-dotenv
 pydantic
 google-generativeai
 python-multipart
+boto3

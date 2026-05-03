@@ -93,3 +93,35 @@ class WhatIfAWSResponse(BaseModel):
     savings_kg: float
     savings_cost: float
     description: str
+
+
+# Time-Based Analysis Schemas (with Electricity Maps)
+class TimeBasedLineItem(BaseModel):
+    service: str
+    region: str
+    zone: str  # Electricity Maps zone
+    usage_amount: float
+    timestamp: str  # ISO format
+    carbon_intensity: float  # gCO2/kWh
+    energy_kwh: float
+    co2_kg: float
+    cost: float
+    source: str  # "electricity_maps", "electricity_maps_cached", or "fallback"
+
+
+class TimeBasedAnalysisResponse(BaseModel):
+    total_co2_kg: float
+    total_cost: float
+    total_energy_kwh: float
+    top_region: str
+    top_service: str
+    by_service: list[dict]
+    by_region: list[dict]
+    by_time: list[dict]  # Time-series data
+    line_items: list[TimeBasedLineItem]
+    processed_rows: int
+    skipped_rows: int
+    api_calls: int  # Number of API calls made
+    cached_calls: int  # Number of cached results used
+    fallback_calls: int  # Number of fallback values used
+    cache_size: int  # Current cache size

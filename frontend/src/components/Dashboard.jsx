@@ -7,7 +7,7 @@ import AIInsightsPanel from './AIInsightsPanel';
 import WhatIfSimulator from './WhatIfSimulator';
 import UploadSection from './UploadSection';
 
-function Dashboard({ awsData, insights, loading, onUpload, onLoadMock }) {
+function Dashboard({ awsData, insights, loading, onUpload, onLoadMock, onBackToIntegration }) {
   const [activeTab, setActiveTab] = useState('overview');
 
   if (loading) {
@@ -29,6 +29,12 @@ function Dashboard({ awsData, insights, loading, onUpload, onLoadMock }) {
               <p className="text-slate-400 text-sm">AWS Billing → Carbon Intelligence</p>
             </div>
             <div className="flex gap-3">
+              <button
+                onClick={onBackToIntegration}
+                className="px-4 py-2 rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 transition"
+              >
+                ← Back to Integration
+              </button>
               <button
                 onClick={() => setActiveTab('overview')}
                 className={`px-4 py-2 rounded-lg transition ${
