@@ -37,3 +37,27 @@ export const sendChatMessage = async (message) => {
   const response = await api.post('/api/chat', { message });
   return response.data;
 };
+
+export const fetchAWSData = async (credentials) => {
+  const response = await api.post('/api/aws/fetch', credentials);
+  return response.data;
+};
+
+export const loadDemoData = async () => {
+  const response = await api.post('/api/aws/demo');
+  return response.data;
+};
+
+export const uploadTimeBasedCSV = async (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await api.post('/api/time-based/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+  return response.data;
+};
+
+export const loadTimeBasedDemo = async () => {
+  const response = await api.post('/api/time-based/demo');
+  return response.data;
+};

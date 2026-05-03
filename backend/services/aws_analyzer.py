@@ -28,6 +28,7 @@ SERVICE_POWER_FACTORS = {
     "EBS": 0.002,
     "ECS": 0.10,
     "EKS": 0.10,
+    "SageMaker": 0.18,  # kWh per usage unit
 }
 
 
@@ -39,11 +40,46 @@ async def parse_aws_csv(csv_content: str) -> AWSAnalysisResponse:
     
     for row in reader:
         try:
-            service = _extract_service(row.get("product/ProductName", "Unknown"))
-            region = row.get("product/region", "unknown")
-            usage_amount = float(row.get("lineItem/UsageAmount", 0))
-            instance_type = row.get("product/instanceType", None)
-            cost = float(row.get("lineItem/UnblendedCost", 0))
+            # Support both old and new CSV formats
+            # NEW FORMAT: Service, Region, UsageAmount, Cost
+            # OLD FORMAT: product/ProductName, product/region, lineItem/UsageAmount, lineItem/UnblendedCost
+            
+            service_name = (
+                row.get("Service") or 
+                row.get("service") or 
+                row.get("product/ProductName") or 
+                "Unknown"
+            )
+            service = _extract_service(service_name)
+            
+            region = (
+                row.get("Region") or 
+                row.get("region") or 
+                row.get("product/region") or 
+                "unknown"
+            )
+            
+            usage_str = (
+                row.get("UsageAmount") or 
+                row.get("usage") or 
+                row.get("lineItem/UsageAmount") or 
+                "0"
+            )
+            usage_amount = float(usage_str) if usage_str else 0
+            
+            instance_type = (
+                row.get("InstanceType") or 
+                row.get("product/instanceType") or 
+                None
+            )
+            
+            cost_str = (
+                row.get("Cost") or 
+                row.get("cost") or 
+                row.get("lineItem/UnblendedCost") or 
+                "0"
+            )
+            cost = float(cost_str) if cost_str else 0
             
             # Calculate CO2
             co2_kg = _calculate_co2(service, region, usage_amount)
@@ -66,19 +102,27 @@ async def parse_aws_csv(csv_content: str) -> AWSAnalysisResponse:
 
 def _extract_service(product_name: str) -> str:
     """Extract service name from AWS product name"""
-    if "EC2" in product_name or "Elastic Compute" in product_name:
-        return "EC2"
-    elif "RDS" in product_name or "Relational Database" in product_name:
-        return "RDS"
-    elif "Lambda" in product_name:
+    if not product_name:
+        return "Unknown"
+    
+    product_upper = product_name.upper()
+    
+    # Handle new format: AWSLambda, AmazonEC2, AmazonS3, AmazonSageMaker
+    if "LAMBDA" in product_upper or "AWSLAMBDA" in product_upper:
         return "Lambda"
-    elif "S3" in product_name or "Simple Storage" in product_name:
+    elif "EC2" in product_upper or "AMAZONEC2" in product_upper or "ELASTIC COMPUTE" in product_upper:
+        return "EC2"
+    elif "S3" in product_upper or "AMAZONS3" in product_upper or "SIMPLE STORAGE" in product_upper:
         return "S3"
-    elif "EBS" in product_name or "Elastic Block" in product_name:
+    elif "SAGEMAKER" in product_upper or "AMAZONSAGEMAKER" in product_upper:
+        return "SageMaker"
+    elif "RDS" in product_upper or "RELATIONAL DATABASE" in product_upper:
+        return "RDS"
+    elif "EBS" in product_upper or "ELASTIC BLOCK" in product_upper:
         return "EBS"
-    elif "ECS" in product_name:
+    elif "ECS" in product_upper:
         return "ECS"
-    elif "EKS" in product_name:
+    elif "EKS" in product_upper:
         return "EKS"
     else:
         return product_name[:20]  # Truncate long names
