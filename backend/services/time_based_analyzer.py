@@ -90,25 +90,25 @@ async def analyze_csv_with_timestamps(csv_content: str) -> TimeBasedAnalysisResp
     """
     Analyze AWS CSV data with time-based carbon intensity from Electricity Maps.
     
-    This is the CORE function that implements time-based emission calculation.
+    OPTIMIZED: Batch API calls with deduplication to avoid API rate limits
     """
-    logger.info("Starting time-based CSV analysis")
+    logger.info("="*60)
+    logger.info("TIME-BASED CSV ANALYSIS (OPTIMIZED)")
+    logger.info("="*60)
     
     # Get Electricity Maps client
     em_client = get_electricity_maps_client()
     
-    # Parse CSV
+    # STAGE 1: Parse CSV and extract data (no API calls yet)
+    logger.info("STAGE 1: Parsing CSV rows")
     reader = csv.DictReader(io.StringIO(csv_content))
-    line_items: List[TimeBasedLineItem] = []
     
+    parsed_rows = []
     skipped_rows = 0
-    processed_rows = 0
     
     for row_num, row in enumerate(reader, start=1):
         try:
             # Extract fields (handle different column names)
-            # NEW FORMAT: Service, Region, UsageType, UsageAmount, Cost, Timestamp
-            # OLD FORMAT: product/ProductName, product/region, lineItem/UsageAmount, etc.
             service = extract_service_name(
                 row.get("Service") or 
                 row.get("service") or 
@@ -123,7 +123,6 @@ async def analyze_csv_with_timestamps(csv_content: str) -> TimeBasedAnalysisResp
                 "UNKNOWN"
             )
             
-            # Get usage type (new field)
             usage_type = (
                 row.get("UsageType") or
                 row.get("lineItem/UsageType") or
@@ -180,51 +179,153 @@ async def analyze_csv_with_timestamps(csv_content: str) -> TimeBasedAnalysisResp
             # Map region to Electricity Maps zone
             zone = em_client.map_region_to_zone(region)
             
-            # Get historical carbon intensity for this specific timestamp
-            carbon_intensity, source = await em_client.get_historical_carbon_intensity(
-                zone, 
-                timestamp
-            )
-            
-            # Convert usage to energy (kWh)
-            power_factor = SERVICE_POWER_FACTORS.get(service, SERVICE_POWER_FACTORS["Default"])
-            energy_kwh = usage_amount * power_factor
-            
-            # Calculate CO2 emissions
-            # carbon_intensity is in gCO2/kWh, convert to kg
-            co2_kg = (energy_kwh * carbon_intensity) / 1000
-            
-            # Create line item
-            line_items.append(TimeBasedLineItem(
-                service=service,
-                region=region,
-                zone=zone,
-                usage_amount=usage_amount,
-                timestamp=timestamp.isoformat(),
-                carbon_intensity=round(carbon_intensity, 2),
-                energy_kwh=round(energy_kwh, 6),
-                co2_kg=round(co2_kg, 6),
-                cost=round(cost, 2),
-                source=source
-            ))
-            
-            processed_rows += 1
+            # Store parsed data (no API call yet!)
+            parsed_rows.append({
+                'service': service,
+                'region': region,
+                'zone': zone,
+                'usage_amount': usage_amount,
+                'timestamp': timestamp,
+                'cost': cost,
+                'usage_type': usage_type
+            })
             
         except Exception as e:
             logger.error(f"Row {row_num}: Error processing - {e}")
             skipped_rows += 1
             continue
     
-    logger.info(f"Processed {processed_rows} rows, skipped {skipped_rows} rows")
+    processed_rows = len(parsed_rows)
+    logger.info(f"✓ Parsed {processed_rows} valid rows, skipped {skipped_rows} rows")
+    
+    if not parsed_rows:
+        logger.warning("No valid rows to process")
+        return _empty_time_based_response(0, skipped_rows)
+    
+    # STAGE 2: Build unique (zone, hour) keys for deduplication
+    logger.info("="*60)
+    logger.info("STAGE 2: Building unique region-hour combinations")
+    logger.info("="*60)
+    
+    unique_requests = {}
+    row_to_cache_key = []  # Maps row index to cache key
+    
+    for parsed_row in parsed_rows:
+        dt = parsed_row['timestamp']
+        # Normalize to hour for caching
+        cache_key = f"{parsed_row['zone']}_{dt.strftime('%Y_%m_%d_%H')}"
+        row_to_cache_key.append(cache_key)
+        
+        if cache_key not in unique_requests:
+            unique_requests[cache_key] = {
+                'zone': parsed_row['zone'],
+                'timestamp': dt
+            }
+    
+    logger.info(f"✓ Deduplication: {len(parsed_rows)} rows → {len(unique_requests)} unique (zone, hour) combinations")
+    logger.info(f"  Reduction: {(1 - len(unique_requests)/len(parsed_rows))*100:.1f}%")
+    
+    # STAGE 3: Batch fetch carbon intensity (deduplicated)
+    logger.info("="*60)
+    logger.info(f"STAGE 3: Fetching carbon intensity for {len(unique_requests)} unique combinations")
+    logger.info("="*60)
+    
+    intensity_cache = {}
+    api_calls_made = 0
+    cache_hits = 0
+    fallback_used = 0
+    
+    for cache_key, req_data in unique_requests.items():
+        carbon_intensity, source = await em_client.get_historical_carbon_intensity(
+            req_data['zone'],
+            req_data['timestamp']
+        )
+        
+        intensity_cache[cache_key] = {
+            'carbon_intensity': carbon_intensity,
+            'source': source
+        }
+        
+        if source == "electricity_maps":
+            api_calls_made += 1
+        elif source == "electricity_maps_cached":
+            cache_hits += 1
+        elif source == "fallback":
+            fallback_used += 1
+    
+    logger.info(f"✓ Carbon intensity fetched")
+    logger.info(f"  API calls: {api_calls_made}")
+    logger.info(f"  Cache hits: {cache_hits}")
+    logger.info(f"  Fallback: {fallback_used}")
+    
+    # STAGE 4: Map carbon intensity back to rows and calculate emissions
+    logger.info("="*60)
+    logger.info("STAGE 4: Calculating emissions for all rows")
+    logger.info("="*60)
+    
+    line_items: List[TimeBasedLineItem] = []
+    
+    for i, parsed_row in enumerate(parsed_rows):
+        cache_key = row_to_cache_key[i]
+        intensity_data = intensity_cache[cache_key]
+        
+        carbon_intensity = intensity_data['carbon_intensity']
+        source = intensity_data['source']
+        
+        # Convert usage to energy (kWh)
+        power_factor = SERVICE_POWER_FACTORS.get(
+            parsed_row['service'], 
+            SERVICE_POWER_FACTORS["Default"]
+        )
+        energy_kwh = parsed_row['usage_amount'] * power_factor
+        
+        # Calculate CO2 emissions (carbon_intensity is in gCO2/kWh, convert to kg)
+        co2_kg = (energy_kwh * carbon_intensity) / 1000
+        
+        # Create line item
+        line_items.append(TimeBasedLineItem(
+            service=parsed_row['service'],
+            region=parsed_row['region'],
+            zone=parsed_row['zone'],
+            usage_amount=parsed_row['usage_amount'],
+            timestamp=parsed_row['timestamp'].isoformat(),
+            carbon_intensity=round(carbon_intensity, 2),
+            energy_kwh=round(energy_kwh, 6),
+            co2_kg=round(co2_kg, 6),
+            cost=round(parsed_row['cost'], 2),
+            source=source
+        ))
+    
+    logger.info(f"✓ Emissions calculated for {len(line_items)} rows")
+    logger.info("="*60)
+    logger.info("AGENT PERFORMANCE REPORT")
+    logger.info("="*60)
+    logger.info(f"Rows Loaded: {len(parsed_rows)}")
+    logger.info(f"Rows After Reduction: {len(parsed_rows)}")
+    logger.info(f"Unique Region-Hour Keys: {len(unique_requests)}")
+    logger.info(f"Electricity Maps Requests: {api_calls_made}")
+    logger.info(f"Cache Hits: {cache_hits}")
+    logger.info(f"Fallback Used: {fallback_used}")
+    logger.info("="*60)
     
     # Aggregate results
-    return _aggregate_time_based_results(line_items, processed_rows, skipped_rows)
+    return _aggregate_time_based_results(
+        line_items, 
+        processed_rows, 
+        skipped_rows,
+        api_calls_made,
+        cache_hits,
+        fallback_used
+    )
 
 
 def _aggregate_time_based_results(
     line_items: List[TimeBasedLineItem],
     processed_rows: int,
-    skipped_rows: int
+    skipped_rows: int,
+    api_calls_made: int,
+    cache_hits: int,
+    fallback_used: int
 ) -> TimeBasedAnalysisResponse:
     """Aggregate time-based analysis results"""
     
@@ -320,14 +421,9 @@ def _aggregate_time_based_results(
     top_service = by_service_list[0]["service"] if by_service_list else "Unknown"
     top_region = by_region_list[0]["region"] if by_region_list else "Unknown"
     
-    # Calculate API usage stats
+    # Get global cache stats
     em_client = get_electricity_maps_client()
     cache_stats = em_client.get_cache_stats()
-    
-    # Count sources
-    api_calls = sum(1 for item in line_items if item.source == "electricity_maps")
-    cached_calls = sum(1 for item in line_items if item.source == "electricity_maps_cached")
-    fallback_calls = sum(1 for item in line_items if item.source == "fallback")
     
     return TimeBasedAnalysisResponse(
         total_co2_kg=round(total_co2, 4),
@@ -341,9 +437,9 @@ def _aggregate_time_based_results(
         line_items=line_items[:100],  # Limit to first 100 for display
         processed_rows=processed_rows,
         skipped_rows=skipped_rows,
-        api_calls=api_calls,
-        cached_calls=cached_calls,
-        fallback_calls=fallback_calls,
+        api_calls=api_calls_made,
+        cached_calls=cache_hits,
+        fallback_calls=fallback_used,
         cache_size=cache_stats["cache_size"]
     )
 
