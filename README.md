@@ -2,6 +2,28 @@
 
 A full-stack web dashboard that converts AWS billing CSV data into carbon emissions insights and visual analytics. Upload your AWS Cost and Usage Report and get instant carbon intelligence with AI-powered optimization recommendations.
 
+## 🎯 NEW: Multi-Agent Architecture
+
+CarbonIQ now features a **6-agent AI system** for advanced AWS CUR analysis:
+
+- 🤖 **Agent 1:** CUR Ingestion & Normalization
+- 🗺️ **Agent 2:** Region Mapping (AWS → Electricity Maps)
+- ⚡ **Agent 3:** Historical Carbon Intensity (Real-time API)
+- 🧮 **Agent 4:** Emission Calculation (Service-aware)
+- 📊 **Agent 5:** Analytics Generation
+- 💡 **Agent 6:** Optimization Engine
+
+**[📖 Multi-Agent Quick Start →](MULTI_AGENT_QUICKSTART.md)** | **[🏗️ Architecture Details →](MULTI_AGENT_ARCHITECTURE.md)**
+
+### Key Features:
+- ✅ **Historical Carbon Intensity** - Uses actual timestamps from CUR data
+- ✅ **Smart Caching** - Reduces API calls by 80%
+- ✅ **20+ AWS Regions** - Mapped to Electricity Maps zones
+- ✅ **Service-Specific Calculations** - EC2, Lambda, S3, RDS, SageMaker, etc.
+- ✅ **Optimization Insights** - Region migration, time-shifting, rightsizing
+
+---
+
 ## 🌟 Features
 
 ### Core Functionality
