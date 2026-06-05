@@ -131,8 +131,11 @@ function AWSIntegration({ onDataLoaded }) {
               value={formData.file_key}
               onChange={handleChange}
               className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="cur-reports/2024/01/report.csv"
+              placeholder="reports/CUR_report/ or full path like reports/CUR_report/20260501-20260601/CUR_report-00001.csv.gz"
             />
+            <p className="text-xs text-slate-400 mt-1">
+              Supports .csv and .csv.gz files. Leave empty to auto-fetch the latest file.
+            </p>
           </div>
         </div>
 

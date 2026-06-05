@@ -35,11 +35,33 @@ SERVICE_POWER_FACTORS = {
 async def parse_aws_csv(csv_content: str) -> AWSAnalysisResponse:
     """Parse AWS billing CSV and calculate carbon emissions"""
     
+    logger.info("📋 Starting CSV parsing...")
+    
     reader = csv.DictReader(io.StringIO(csv_content))
     line_items: List[AWSLineItem] = []
     
+    # Get headers
+    headers = reader.fieldnames
+    logger.info(f"   CSV has {len(headers)} columns")
+    logger.info(f"   Key columns detected:")
+    logger.info(f"      - Service: {any('product' in h.lower() or 'service' in h.lower() for h in headers)}")
+    logger.info(f"      - Region: {any('region' in h.lower() for h in headers)}")
+    logger.info(f"      - Usage: {any('usage' in h.lower() for h in headers)}")
+    logger.info(f"      - Cost: {any('cost' in h.lower() for h in headers)}")
+    
+    row_count = 0
+    skipped_rows = 0
+    tax_lines = 0
+    
     for row in reader:
+        row_count += 1
         try:
+            # Check if this is a tax line
+            line_item_type = row.get("lineItem/LineItemType", "")
+            if line_item_type == "Tax":
+                tax_lines += 1
+                continue
+            
             # Support both old and new CSV formats
             # NEW FORMAT: Service, Region, UsageAmount, Cost
             # OLD FORMAT: product/ProductName, product/region, lineItem/UsageAmount, lineItem/UnblendedCost
@@ -94,8 +116,16 @@ async def parse_aws_csv(csv_content: str) -> AWSAnalysisResponse:
                     co2_kg=round(co2_kg, 4)
                 ))
         except Exception as e:
-            logger.warning(f"Skipping row due to error: {e}")
+            skipped_rows += 1
+            if skipped_rows <= 5:  # Only log first 5 errors
+                logger.warning(f"Skipping row {row_count} due to error: {e}")
             continue
+    
+    logger.info(f"📊 Parsing statistics:")
+    logger.info(f"   Total rows: {row_count}")
+    logger.info(f"   Tax lines (skipped): {tax_lines}")
+    logger.info(f"   Skipped rows (errors): {skipped_rows}")
+    logger.info(f"   Valid line items: {len(line_items)}")
     
     return _aggregate_results(line_items)
 

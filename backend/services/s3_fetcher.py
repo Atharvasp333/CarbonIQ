@@ -1,5 +1,7 @@
 import boto3
 import logging
+import gzip
+import io
 from botocore.exceptions import ClientError, NoCredentialsError, PartialCredentialsError
 from typing import Optional, Tuple
 
@@ -36,13 +38,43 @@ async def fetch_csv_from_s3(
             file_key = await _find_latest_csv(s3_client, bucket_name)
             if not file_key:
                 return None, "No CSV files found in the bucket"
+        # If file_key ends with /, treat it as a prefix and find latest in that folder
+        elif file_key.endswith('/'):
+            logger.info(f"Prefix provided: {file_key}. Searching for latest CSV in this folder")
+            file_key = await _find_latest_csv(s3_client, bucket_name, prefix=file_key)
+            if not file_key:
+                return None, f"No CSV files found in folder: {file_key}"
         
         # Fetch the file
-        logger.info(f"Fetching file: {file_key} from bucket: {bucket_name}")
-        response = s3_client.get_object(Bucket=bucket_name, Key=file_key)
-        csv_content = response['Body'].read().decode('utf-8')
+        logger.info("="*80)
+        logger.info(f"📦 FETCHING S3 FILE")
+        logger.info(f"   Bucket: {bucket_name}")
+        logger.info(f"   Region: {region}")
+        logger.info(f"   File Key: {file_key}")
+        logger.info("="*80)
         
-        logger.info(f"Successfully fetched {len(csv_content)} bytes from S3")
+        response = s3_client.get_object(Bucket=bucket_name, Key=file_key)
+        file_content = response['Body'].read()
+        file_size_mb = len(file_content) / (1024 * 1024)
+        
+        logger.info(f"✅ File downloaded: {len(file_content):,} bytes ({file_size_mb:.2f} MB)")
+        
+        # Decompress if it's a .gz file
+        if file_key.lower().endswith('.gz'):
+            logger.info(f"🗜️  Decompressing gzip file...")
+            with gzip.GzipFile(fileobj=io.BytesIO(file_content)) as gz:
+                csv_content = gz.read().decode('utf-8')
+            decompressed_size_mb = len(csv_content) / (1024 * 1024)
+            logger.info(f"✅ Decompressed: {len(csv_content):,} bytes ({decompressed_size_mb:.2f} MB)")
+        else:
+            csv_content = file_content.decode('utf-8')
+            logger.info(f"📄 Plain CSV file (no compression)")
+        
+        # Count lines
+        line_count = csv_content.count('\n')
+        logger.info(f"📊 Total lines in CSV: {line_count:,}")
+        logger.info("="*80)
+        
         return csv_content, None
         
     except NoCredentialsError:
@@ -80,26 +112,45 @@ async def fetch_csv_from_s3(
         return None, error_msg
 
 
-async def _find_latest_csv(s3_client, bucket_name: str) -> Optional[str]:
-    """Find the latest CSV file in the bucket"""
+async def _find_latest_csv(s3_client, bucket_name: str, prefix: str = '') -> Optional[str]:
+    """Find the latest CSV file in the bucket (supports .csv and .csv.gz)"""
     try:
-        response = s3_client.list_objects_v2(Bucket=bucket_name)
+        # List all objects in the bucket with optional prefix
+        all_objects = []
+        paginator = s3_client.get_paginator('list_objects_v2')
         
-        if 'Contents' not in response:
+        pagination_config = {'Bucket': bucket_name}
+        if prefix:
+            pagination_config['Prefix'] = prefix
+            logger.info(f"Searching in prefix: {prefix}")
+        
+        for page in paginator.paginate(**pagination_config):
+            if 'Contents' in page:
+                all_objects.extend(page['Contents'])
+        
+        if not all_objects:
             return None
         
-        # Filter CSV files
+        # Filter CSV files (including .csv.gz)
         csv_files = [
-            obj for obj in response['Contents']
-            if obj['Key'].lower().endswith('.csv')
+            obj for obj in all_objects
+            if obj['Key'].lower().endswith('.csv') or obj['Key'].lower().endswith('.csv.gz')
         ]
         
         if not csv_files:
+            logger.warning(f"No CSV or CSV.GZ files found in bucket (prefix: {prefix})")
             return None
         
         # Sort by last modified date and get the latest
         latest_file = sorted(csv_files, key=lambda x: x['LastModified'], reverse=True)[0]
-        logger.info(f"Found latest CSV: {latest_file['Key']}")
+        file_size_mb = latest_file.get('Size', 0) / (1024 * 1024)
+        
+        logger.info("🔍 CSV FILES FOUND:")
+        logger.info(f"   Total CSV/CSV.GZ files: {len(csv_files)}")
+        logger.info(f"   Latest file: {latest_file['Key']}")
+        logger.info(f"   Last modified: {latest_file['LastModified']}")
+        logger.info(f"   File size: {file_size_mb:.2f} MB")
+        
         return latest_file['Key']
         
     except Exception as e:
