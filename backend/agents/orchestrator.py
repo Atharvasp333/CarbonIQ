@@ -106,9 +106,18 @@ class CarbonIQOrchestrator:
                 )
             
             validation_summary = self.ingestion_agent.get_validation_summary()
-            logger.info(f"[4] COLUMNS REDUCED - Kept only required columns")
             logger.info(f"✓ Ingestion complete: {validation_summary['compressed_rows']} records ready")
+            logger.info(f"  Original rows: {validation_summary['original_rows']}")
+            logger.info(f"  Processed rows: {validation_summary['processed_rows']}")
+            logger.info(f"  Skipped rows: {validation_summary['skipped_rows']}")
             logger.info(f"  Compression: {validation_summary.get('compression_ratio', '0%')}")
+            
+            if validation_summary['compressed_rows'] == 0:
+                logger.error("❌ ZERO records after ingestion! Check CSV data.")
+                return self._error_response(
+                    "No records processed from CSV - likely all Tax/Credit entries or zero usage",
+                    validation_summary
+                )
             
             # STAGE 2: Region Mapping
             stage_start = time.time()
@@ -173,48 +182,20 @@ class CarbonIQOrchestrator:
             
             # Check for API errors - USE FALLBACK instead of aborting
             api_errors = sum(1 for r in intensity_results if r.get('source') == 'error')
-            fallback_used = sum(1 for r in intensity_results if r.get('source') == 'fallback')
+            fallback_used = sum(1 for r in intensity_results if r.get('source') in ('fallback', 'api'))
+            logger.info(f"Carbon intensity: {fallback_used} resolved, {api_errors} errors")
             
-            if api_errors > 0:
-                logger.warning(f"⚠️  {api_errors} API requests failed - using fallback carbon intensity")
-                
-                # Replace errors with fallback values
-                FALLBACK_CARBON_INTENSITY = {
-                    "US-MIDA-PJM": 420, "US-MIDW-MISO": 500, "US-CAL-CISO": 285,
-                    "US-NW-PACW": 200, "IE": 295, "GB": 230, "FR": 60, "DE": 350,
-                    "SE": 40, "IT-NO": 300, "IN-WE": 708, "IN": 708,
-                    "JP-TK": 463, "KR": 450, "JP-KN": 463, "SG": 493,
-                    "AU-NSW": 700, "HK": 650, "BR-CS": 100, "CA-ON": 120,
-                    "AE": 500, "ZA": 850, "UNKNOWN": 450
-                }
-                
-                for i, result in enumerate(intensity_results):
-                    if result.get('source') == 'error':
-                        zone = result.get('zone', 'UNKNOWN')
-                        fallback_intensity = FALLBACK_CARBON_INTENSITY.get(zone, 450)
-                        intensity_results[i] = {
-                            'carbon_intensity': fallback_intensity,
-                            'source': 'fallback',
-                            'zone': zone,
-                            'timestamp': result.get('timestamp', '')
-                        }
-            
-            logger.info(f"✓ Carbon intensity data: {len(intensity_results) - api_errors} from API, {api_errors} fallback")
-            
-            # Attach carbon intensity to records (skip error records)
+            # Attach carbon intensity to all records (new format never returns errors)
             valid_records = []
             for record, intensity_result in zip(normalized_records, intensity_results):
-                if intensity_result.get('source') != 'error':
-                    record['carbon_intensity'] = intensity_result['carbon_intensity']
-                    record['intensity_source'] = intensity_result['source']
-                    valid_records.append(record)
-                else:
-                    logger.warning(f"Skipping record due to intensity lookup error: {intensity_result.get('error')}")
+                record['carbon_intensity'] = intensity_result['carbon_intensity']
+                record['intensity_source'] = intensity_result.get('source', 'fallback')
+                valid_records.append(record)
             
             if not valid_records:
                 return self._error_response(
                     "No valid records after carbon intensity lookup",
-                    {'api_errors': api_errors}
+                    {'total_records': len(normalized_records)}
                 )
             
             cache_stats = self.carbon_intensity_agent.get_cache_stats()
@@ -307,8 +288,11 @@ class CarbonIQOrchestrator:
                 # Optimization insights
                 'optimization': optimization,
                 
-                # Detailed records (limited to 100 for UI)
+                # Detailed records (limited to 100 for UI display)
                 'detailed_records': emission_records[:100],
+                
+                # Full records for service drill-down (all records)
+                'all_records': emission_records,
                 
                 # Pipeline metadata
                 'pipeline_stats': {

@@ -97,6 +97,15 @@ class EmissionCalculationAgent:
             'unit': 'gb',
             'base_factor': 0.0001,
         },
+        # Additional services
+        'CloudWatch': {'unit': 'requests', 'base_factor': 0.000001},
+        'Glue': {'unit': 'hours', 'base_factor': 0.10},
+        'Amplify': {'unit': 'hours', 'base_factor': 0.05},
+        'EFS': {'unit': 'gb-hours', 'base_factor': 0.000002},
+        'API Gateway': {'unit': 'requests', 'base_factor': 0.000001},
+        'DataZone': {'unit': 'hours', 'base_factor': 0.08},
+        'Cognito': {'unit': 'requests', 'base_factor': 0.0000001},
+        'SNS': {'unit': 'requests', 'base_factor': 0.0000001},
     }
     
     def __init__(self):
@@ -162,7 +171,7 @@ class EmissionCalculationAgent:
         
         if not service_profile:
             # Unknown service - use generic compute factor
-            logger.warning(f"Unknown service {service}, using generic factor")
+            logger.debug(f"Unknown service {service}, using generic factor")
             return usage_amount * 0.1
         
         base_factor = service_profile['base_factor']
