@@ -19,8 +19,10 @@ async def store_analysis_results(data: dict):
     Called after multi-agent analysis completes
     """
     try:
-        # Store the detailed emission records
-        _analysis_cache['emission_records'] = data.get('detailed_records', [])
+        # Store full records for service drill-down (prefer all_records over detailed_records)
+        _analysis_cache['emission_records'] = (
+            data.get('all_records') or data.get('detailed_records', [])
+        )
         _analysis_cache['timestamp'] = data.get('generated_at', '')
         
         return {'status': 'success', 'records_stored': len(_analysis_cache['emission_records'])}

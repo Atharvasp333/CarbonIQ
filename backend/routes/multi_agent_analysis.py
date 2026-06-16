@@ -105,8 +105,8 @@ async def analyze_cur_multiagent(file: UploadFile = File(...)):
         logger.info("Starting pipeline with max_rows=1000, fast API timeout mode")
         result = await orchestrator.process_cur_data(
             csv_content, 
-            max_rows=1000,  # HARD LIMIT for debugging
-            debug_skip_api=False  # TRY REAL API with fast timeout
+            max_rows=10000,  # Scan up to 10k rows
+            debug_skip_api=False
         )
         
         request_duration = time.time() - request_start

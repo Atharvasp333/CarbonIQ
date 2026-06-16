@@ -2,6 +2,10 @@
 .env
 backend/.env
 
+# AWS CUR reports - contain account IDs and sensitive billing data
+CUR_report*.csv
+*.cur.csv
+
 # Python
 __pycache__/
 *.py[cod]

@@ -19,6 +19,9 @@ class RegionMappingAgent:
         'us-west-1': 'US-CAL-CISO',      # California
         'us-west-2': 'US-NW-PACW',       # Oregon
         
+        # Global/Unknown
+        'global': 'US-MIDA-PJM',         # Default to US East for global services
+        
         # EU Regions
         'eu-west-1': 'IE',               # Ireland
         'eu-west-2': 'GB',               # London
@@ -28,7 +31,7 @@ class RegionMappingAgent:
         'eu-south-1': 'IT-NO',           # Milan
         
         # Asia Pacific
-        'ap-south-1': 'IN',              # Mumbai
+        'ap-south-1': 'IN-WE',           # Mumbai (West India zone)
         'ap-southeast-1': 'SG',          # Singapore
         'ap-southeast-2': 'AU-NSW',      # Sydney
         'ap-northeast-1': 'JP-TK',       # Tokyo

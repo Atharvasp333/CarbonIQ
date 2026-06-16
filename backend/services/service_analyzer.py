@@ -76,17 +76,20 @@ class ServiceAnalyzer:
         
         Returns: Complete service analytics with all sections
         """
-        # Filter records for this service
+        # Filter records for this service (case-insensitive)
         service_records = [
             r for r in emission_records 
-            if r.get('service', '').upper() == service_name.upper()
+            if r.get('service', '').lower() == service_name.lower()
         ]
+        
+        # Use the canonical service name from records if found
+        canonical_name = service_records[0]['service'] if service_records else service_name
         
         if not service_records:
             return self._empty_analytics(service_name)
         
         # Section 1: Service Summary
-        summary = self._generate_summary(service_name, service_records)
+        summary = self._generate_summary(canonical_name, service_records)
         
         # Section 2: Execution Timeline
         timeline = self._generate_timeline(service_records)
@@ -110,7 +113,7 @@ class ServiceAnalyzer:
         whatif = self._generate_whatif_scenarios(service_name, service_records)
         
         return {
-            'service_name': service_name,
+            'service_name': canonical_name,
             'summary': summary,
             'execution_timeline': timeline,
             'run_history': run_history,
