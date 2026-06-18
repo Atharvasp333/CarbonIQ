@@ -112,3 +112,36 @@ async def list_available_services():
     except Exception as e:
         logger.error(f"Failed to list services: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/history")
+async def get_analysis_history():
+    """Return list of past analyses from NeonDB."""
+    try:
+        from database import get_analysis_history
+        rows = await get_analysis_history(limit=50)
+        # Convert datetime objects for JSON serialisation
+        for r in rows:
+            for k, v in r.items():
+                if hasattr(v, 'isoformat'):
+                    r[k] = v.isoformat()
+        return {"analyses": rows}
+    except Exception as e:
+        logger.error(f"Failed to fetch history: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/history/{analysis_id}/records")
+async def get_historical_records(analysis_id: int):
+    """Return emission records for a specific past analysis."""
+    try:
+        from database import get_analysis_records
+        rows = await get_analysis_records(analysis_id)
+        for r in rows:
+            for k, v in r.items():
+                if hasattr(v, 'isoformat'):
+                    r[k] = v.isoformat()
+        return {"analysis_id": analysis_id, "records": rows}
+    except Exception as e:
+        logger.error(f"Failed to fetch records: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
