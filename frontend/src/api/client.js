@@ -1,24 +1,30 @@
 import axios from 'axios';
+import { getJwtToken } from '../lib/auth';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
 });
 
-// Inject JWT token on every request (kept for compatibility if backend needs it)
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('carboniq_token');
+// Inject Neon Auth JWT on every request
+api.interceptors.request.use(async (config) => {
+  const token = await getJwtToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
 
-// Redirect to login on 401
+// On 401 retry once with a fresh token, then just reject (no redirect loops)
 api.interceptors.response.use(
   (res) => res,
-  (error) => {
-    if (error.response?.status === 401) {
-      window.location.href = '/login';
+  async (error) => {
+    if (error.response?.status === 401 && !error.config?._retried) {
+      error.config._retried = true;
+      const token = await getJwtToken();
+      if (token) {
+        error.config.headers.Authorization = `Bearer ${token}`;
+        return api(error.config);
+      }
     }
     return Promise.reject(error);
   }
