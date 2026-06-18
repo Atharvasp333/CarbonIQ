@@ -45,6 +45,22 @@ async def init_db():
         """)
 
         await conn.execute("""
+            CREATE TABLE IF NOT EXISTS aws_credentials (
+                id          SERIAL PRIMARY KEY,
+                user_id     INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                access_key  TEXT NOT NULL,
+                secret_key  TEXT NOT NULL,
+                region      TEXT NOT NULL DEFAULT 'us-east-1',
+                bucket_name TEXT NOT NULL,
+                verified    BOOLEAN DEFAULT FALSE,
+                verified_at TIMESTAMPTZ,
+                created_at  TIMESTAMPTZ DEFAULT NOW(),
+                updated_at  TIMESTAMPTZ DEFAULT NOW(),
+                UNIQUE(user_id)
+            );
+        """)
+
+        await conn.execute("""
             CREATE TABLE IF NOT EXISTS analyses (
                 id              SERIAL PRIMARY KEY,
                 filename        TEXT,

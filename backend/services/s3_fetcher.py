@@ -11,11 +11,14 @@ async def fetch_csv_from_s3(
     secret_key: str,
     region: str,
     bucket_name: str,
-    file_key: Optional[str] = None
+    file_key: Optional[str] = None,
+    verify_only: bool = False,
 ) -> Tuple[str, str]:
     """
     Fetch CSV from S3 bucket using provided credentials.
-    
+
+    If verify_only=True, only list the bucket (no download) — used to validate credentials.
+
     Returns:
         Tuple[str, str]: (csv_content, error_message)
         If successful: (csv_content, None)
@@ -29,19 +32,30 @@ async def fetch_csv_from_s3(
             aws_secret_access_key=secret_key,
             region_name=region
         )
-        
+
+        # verify_only: just confirm we can list the bucket
+        if verify_only:
+            s3_client.list_objects_v2(Bucket=bucket_name, MaxKeys=1)
+            return None, None
+
         # If no file_key provided, find the latest CSV file
         if not file_key:
             logger.info(f"No file key provided. Searching for latest CSV in bucket: {bucket_name}")
             file_key = await _find_latest_csv(s3_client, bucket_name)
             if not file_key:
                 return None, "No CSV files found in the bucket"
-        
+
         # Fetch the file
         logger.info(f"Fetching file: {file_key} from bucket: {bucket_name}")
         response = s3_client.get_object(Bucket=bucket_name, Key=file_key)
-        csv_content = response['Body'].read().decode('utf-8')
-        
+        content_bytes = response['Body'].read()
+
+        # Handle gzip compressed files
+        if file_key.lower().endswith('.gz'):
+            import gzip
+            content_bytes = gzip.decompress(content_bytes)
+
+        csv_content = content_bytes.decode('utf-8')
         logger.info(f"Successfully fetched {len(csv_content)} bytes from S3")
         return csv_content, None
         
@@ -88,10 +102,10 @@ async def _find_latest_csv(s3_client, bucket_name: str) -> Optional[str]:
         if 'Contents' not in response:
             return None
         
-        # Filter CSV files
+        # Filter CSV files (including gzip)
         csv_files = [
             obj for obj in response['Contents']
-            if obj['Key'].lower().endswith('.csv')
+            if obj['Key'].lower().endswith('.csv') or obj['Key'].lower().endswith('.csv.gz')
         ]
         
         if not csv_files:
