@@ -1,31 +1,22 @@
 import { createInternalNeonAuth } from '@neondatabase/neon-js/auth';
+import { BetterAuthReactAdapter } from '@neondatabase/neon-js/auth/react/adapters';
 
-const _internal = createInternalNeonAuth(import.meta.env.VITE_NEON_AUTH_URL, {
+export const _neonAuth = createInternalNeonAuth(import.meta.env.VITE_NEON_AUTH_URL, {
+  adapter: BetterAuthReactAdapter(),
   fetchOptions: { credentials: 'include' },
 });
 
-// The Better Auth client instance (signIn, signUp, getSession, signOut, etc.)
-export const authClient = _internal.adapter.getBetterAuthInstance
-  ? _internal.adapter.getBetterAuthInstance()
-  : _internal.adapter;
+// React-aware client — has useSession, signIn, signUp, getSession, signOut
+export const authClient = _neonAuth.adapter;
 
-/**
- * Get JWT for the current session.
- * Strategy:
- *  1. Try getJWTToken() from the internal client (works if cookie is accessible)
- *  2. Fall back to localStorage cache (set at login/signup time via set-auth-jwt header)
- */
+// Get JWT for the current session (for backend API calls)
 export async function getJwtToken() {
-  // Try live token first
   try {
-    const token = await _internal.getJWTToken();
+    const token = await _neonAuth.getJWTToken();
     if (token) {
-      localStorage.setItem('neon_jwt', token); // keep cache fresh
+      localStorage.setItem('neon_jwt', token);
       return token;
     }
   } catch { /* ignore */ }
-
-  // Fall back to cached token
-  const cached = localStorage.getItem('neon_jwt');
-  return cached ?? null;
+  return localStorage.getItem('neon_jwt') ?? null;
 }
