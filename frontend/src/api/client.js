@@ -41,6 +41,28 @@ export const authMe = async () => {
   return res.data;
 };
 
+// --- AWS Credentials --------------------------------------------------------
+
+export const saveAWSCredentials = async (creds) => {
+  const res = await api.post('/api/aws/credentials', creds);
+  return res.data;
+};
+
+export const getAWSCredentials = async () => {
+  const res = await api.get('/api/aws/credentials');
+  return res.data;
+};
+
+export const deleteAWSCredentials = async () => {
+  const res = await api.delete('/api/aws/credentials');
+  return res.data;
+};
+
+export const autoSyncAWS = async () => {
+  const res = await api.post('/api/aws/auto-sync', {}, { timeout: 180000 });
+  return res.data;
+};
+
 // --- Existing endpoints ------------------------------------------------------
 
 export const uploadCSV = async (file) => {

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { loadDemoData, uploadCSV } from '../../api/client';
 import ChatBot from '../../components/ChatBot/ChatBot';
+import AWSConnectBanner from '../../components/AWSConnectBanner';
 import toast from 'react-hot-toast';
 import { Upload, FileSpreadsheet, CheckCircle, BarChart3, Server, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -73,6 +74,15 @@ export default function Home() {
     if (fileInput) fileInput.value = '';
   };
 
+  const handleAutoSyncData = (data) => {
+    if (data?.summary) {
+      localStorage.setItem('awsAnalysisData', JSON.stringify(data));
+      localStorage.setItem('hasLoadedData', 'true');
+      setDataUploaded(true);
+      setLastUploadSummary(data.summary);
+    }
+  };
+
   return (
     <>
       <div className="max-w-6xl mx-auto space-y-6">
@@ -80,6 +90,9 @@ export default function Home() {
           <h1 className="text-3xl font-bold text-gray-900">Welcome to CarbonIQ</h1>
           <p className="text-gray-600 mt-2">Upload your AWS Cost and Usage Report to analyze carbon emissions</p>
         </div>
+
+        {/* AWS Connect Banner */}
+        <AWSConnectBanner onDataLoaded={handleAutoSyncData} />
 
         {/* Success Message - Show after data is uploaded */}
         {dataUploaded && lastUploadSummary && (

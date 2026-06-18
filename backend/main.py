@@ -9,7 +9,7 @@ load_dotenv()
 from database import init_db, close_pool
 from routes import (
     emissions, insights, whatif, chat, regional_test,
-    electricity_test, aws_integration, time_based_analysis,
+    electricity_test, aws_integration, aws_credentials, time_based_analysis,
     multi_agent_analysis, service_analytics, auth
 )
 
@@ -46,6 +46,7 @@ app.include_router(chat.router, prefix="/api")
 app.include_router(regional_test.router, prefix="/api")
 app.include_router(electricity_test.router, prefix="/api")
 app.include_router(aws_integration.router, prefix="/api")
+app.include_router(aws_credentials.router, prefix="/api")
 app.include_router(time_based_analysis.router, prefix="/api")
 app.include_router(multi_agent_analysis.router, prefix="/api")
 app.include_router(service_analytics.router, prefix="/api")
