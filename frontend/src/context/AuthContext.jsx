@@ -1,4 +1,5 @@
-import { createContext, useState, useEffect } from 'react';
+import { createContext, useEffect, useState } from 'react';
+import { authClient } from '../lib/auth';
 
 export const AuthContext = createContext(null);
 
@@ -6,92 +7,51 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Check for existing session on mount
   useEffect(() => {
-    const storedUser = localStorage.getItem('carboniq_user');
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (e) {
-        localStorage.removeItem('carboniq_user');
-      }
-    }
-    setLoading(false);
+    // Restore session on mount
+    authClient.getSession().then(({ data }) => {
+      setUser(data?.user ?? null);
+      setLoading(false);
+    });
   }, []);
 
-  const login = (email, password) => {
-    // Simulate authentication (in production, call real API)
-    const users = JSON.parse(localStorage.getItem('carboniq_users') || '[]');
-    const user = users.find(u => u.email === email && u.password === password);
-    
-    if (user) {
-      const { password, ...userWithoutPassword } = user;
-      setUser(userWithoutPassword);
-      localStorage.setItem('carboniq_user', JSON.stringify(userWithoutPassword));
+  const login = async (email, password) => {
+    try {
+      const result = await authClient.signIn.email({ email, password });
+      if (result.error) return { success: false, error: result.error.message };
+      const { data } = await authClient.getSession();
+      setUser(data?.user ?? null);
       return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message || 'Login failed' };
     }
-    
-    return { success: false, error: 'Invalid email or password' };
   };
 
-  const signup = (userData) => {
-    const users = JSON.parse(localStorage.getItem('carboniq_users') || '[]');
-    
-    // Check if user already exists
-    if (users.some(u => u.email === userData.email)) {
-      return { success: false, error: 'Email already registered' };
+  const signup = async ({ name, email, password }) => {
+    try {
+      const result = await authClient.signUp.email({ name, email, password });
+      if (result.error) return { success: false, error: result.error.message };
+      const { data } = await authClient.getSession();
+      setUser(data?.user ?? null);
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message || 'Signup failed' };
     }
-    
-    // Create new user
-    const newUser = {
-      id: Date.now().toString(),
-      ...userData,
-      createdAt: new Date().toISOString(),
-      organization: userData.organization || 'Not specified'
-    };
-    
-    users.push(newUser);
-    localStorage.setItem('carboniq_users', JSON.stringify(users));
-    
-    // Auto-login after signup
-    const { password, ...userWithoutPassword } = newUser;
-    setUser(userWithoutPassword);
-    localStorage.setItem('carboniq_user', JSON.stringify(userWithoutPassword));
-    
-    return { success: true };
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await authClient.signOut();
     setUser(null);
-    localStorage.removeItem('carboniq_user');
   };
 
   const updateProfile = (updates) => {
-    const updatedUser = { ...user, ...updates };
-    setUser(updatedUser);
-    localStorage.setItem('carboniq_user', JSON.stringify(updatedUser));
-    
-    // Update in users list
-    const users = JSON.parse(localStorage.getItem('carboniq_users') || '[]');
-    const userIndex = users.findIndex(u => u.id === user.id);
-    if (userIndex !== -1) {
-      users[userIndex] = { ...users[userIndex], ...updates };
-      localStorage.setItem('carboniq_users', JSON.stringify(users));
-    }
-  };
-
-  const value = {
-    user,
-    loading,
-    login,
-    signup,
-    logout,
-    updateProfile,
-    isAuthenticated: !!user
+    setUser((prev) => ({ ...prev, ...updates }));
   };
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider
+      value={{ user, loading, login, signup, logout, updateProfile, isAuthenticated: !!user }}
+    >
       {!loading && children}
     </AuthContext.Provider>
   );
