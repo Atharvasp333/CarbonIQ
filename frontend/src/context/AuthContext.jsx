@@ -8,16 +8,39 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Restore session on mount
-    authClient.getSession().then(({ data }) => {
+    authClient.getSession({
+      fetchOptions: {
+        onSuccess: (ctx) => {
+          const jwt = ctx.response?.headers?.get('set-auth-jwt');
+          if (jwt) {
+            localStorage.setItem('neon_jwt', jwt);
+            console.log('[Auth] JWT captured at session restore');
+          }
+        },
+      },
+    }).then(({ data }) => {
       setUser(data?.user ?? null);
       setLoading(false);
-    });
+    }).catch(() => setLoading(false));
   }, []);
 
   const login = async (email, password) => {
     try {
-      const result = await authClient.signIn.email({ email, password });
+      let capturedToken = null;
+      const result = await authClient.signIn.email({
+        email,
+        password,
+        fetchOptions: {
+          onSuccess: (ctx) => {
+            const jwt = ctx.response?.headers?.get('set-auth-jwt');
+            if (jwt) {
+              capturedToken = jwt;
+              localStorage.setItem('neon_jwt', jwt);
+              console.log('[Auth] JWT captured at login');
+            }
+          },
+        },
+      });
       if (result.error) return { success: false, error: result.error.message };
       const { data } = await authClient.getSession();
       setUser(data?.user ?? null);
@@ -29,7 +52,22 @@ export const AuthProvider = ({ children }) => {
 
   const signup = async ({ name, email, password }) => {
     try {
-      const result = await authClient.signUp.email({ name, email, password });
+      let capturedToken = null;
+      const result = await authClient.signUp.email({
+        name,
+        email,
+        password,
+        fetchOptions: {
+          onSuccess: (ctx) => {
+            const jwt = ctx.response?.headers?.get('set-auth-jwt');
+            if (jwt) {
+              capturedToken = jwt;
+              localStorage.setItem('neon_jwt', jwt);
+              console.log('[Auth] JWT captured at signup');
+            }
+          },
+        },
+      });
       if (result.error) return { success: false, error: result.error.message };
       const { data } = await authClient.getSession();
       setUser(data?.user ?? null);
@@ -41,6 +79,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     await authClient.signOut();
+    localStorage.removeItem('neon_jwt');
     setUser(null);
   };
 

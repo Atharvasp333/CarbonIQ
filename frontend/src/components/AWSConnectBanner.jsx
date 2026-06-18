@@ -1,41 +1,87 @@
-import { useState, useEffect } from 'react';
-import { Cloud, CheckCircle, X, RefreshCw, Trash2, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { CheckCircle, RefreshCw, Trash2, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
 import { getAWSCredentials, saveAWSCredentials, deleteAWSCredentials, autoSyncAWS } from '../api/client';
+import { getJwtToken } from '../lib/auth';
 import toast from 'react-hot-toast';
 
 const REGIONS = [
-  { value: 'us-east-1', label: 'US East (N. Virginia)' },
-  { value: 'us-east-2', label: 'US East (Ohio)' },
-  { value: 'us-west-1', label: 'US West (N. California)' },
-  { value: 'us-west-2', label: 'US West (Oregon)' },
-  { value: 'eu-west-1', label: 'EU (Ireland)' },
-  { value: 'eu-central-1', label: 'EU (Frankfurt)' },
-  { value: 'ap-south-1', label: 'Asia Pacific (Mumbai)' },
-  { value: 'ap-southeast-1', label: 'Asia Pacific (Singapore)' },
-  { value: 'ap-northeast-1', label: 'Asia Pacific (Tokyo)' },
+  'ap-south-1',
+  'ap-south-2',
+  'ap-southeast-1',
+  'ap-southeast-2',
+  'ap-southeast-3',
+  'ap-northeast-1',
+  'ap-northeast-2',
+  'ap-northeast-3',
+  'ap-east-1',
+  'us-east-1',
+  'us-east-2',
+  'us-west-1',
+  'us-west-2',
+  'eu-west-1',
+  'eu-west-2',
+  'eu-west-3',
+  'eu-central-1',
+  'eu-central-2',
+  'eu-north-1',
+  'eu-south-1',
+  'eu-south-2',
+  'ca-central-1',
+  'ca-west-1',
+  'sa-east-1',
+  'me-south-1',
+  'me-central-1',
+  'af-south-1',
+  'il-central-1',
 ];
 
 export default function AWSConnectBanner({ onDataLoaded }) {
-  const [status, setStatus] = useState(null); // null = loading, false = not connected, object = connected
+  const [status, setStatus] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [regionSuggestions, setRegionSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const regionRef = useRef(null);
   const [form, setForm] = useState({
     access_key: '',
     secret_key: '',
-    region: 'us-east-1',
+    region: 'ap-south-1',
     bucket_name: '',
   });
 
   useEffect(() => {
+    // Debug: confirm token is available before making API calls
+    getJwtToken().then(t => {
+      console.log('[AWSBanner] JWT token:', t ? `${t.substring(0,30)}...` : 'NULL - not authenticated');
+    });
     loadStatus();
   }, []);
+
+  // Close suggestions on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (regionRef.current && !regionRef.current.contains(e.target)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const handleRegionInput = (val) => {
+    setForm({ ...form, region: val });
+    const filtered = REGIONS.filter((r) => r.includes(val.toLowerCase().trim()));
+    setRegionSuggestions(filtered.slice(0, 6));
+    setShowSuggestions(filtered.length > 0 && val.length > 0);
+  };
 
   const loadStatus = async () => {
     try {
       const data = await getAWSCredentials();
       setStatus(data.connected ? data : false);
-    } catch {
+    } catch (err) {
+      // 401 = not authenticated yet, or no creds saved — either way show disconnected
       setStatus(false);
     }
   };
@@ -155,9 +201,9 @@ export default function AWSConnectBanner({ onDataLoaded }) {
         </div>
         <div className="flex items-center gap-2 text-sm text-amber-700 font-medium">
           {showForm ? (
-            <><ChevronUp className="w-4 h-4" /> Hide</>
+            <span className="flex items-center gap-1"><ChevronUp className="w-4 h-4" /> Hide</span>
           ) : (
-            <><ChevronDown className="w-4 h-4" /> Connect</>
+            <span className="flex items-center gap-1"><ChevronDown className="w-4 h-4" /> Connect</span>
           )}
         </div>
       </button>
@@ -190,15 +236,37 @@ export default function AWSConnectBanner({ onDataLoaded }) {
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">AWS Region</label>
-              <select
-                value={form.region}
-                onChange={(e) => setForm({ ...form, region: e.target.value })}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-              >
-                {REGIONS.map((r) => (
-                  <option key={r.value} value={r.value}>{r.label}</option>
-                ))}
-              </select>
+              <div className="relative" ref={regionRef}>
+                <input
+                  type="text"
+                  value={form.region}
+                  onChange={(e) => handleRegionInput(e.target.value)}
+                  onFocus={() => {
+                    const filtered = REGIONS.filter((r) => r.includes(form.region.toLowerCase()));
+                    setRegionSuggestions(filtered.slice(0, 6));
+                    setShowSuggestions(filtered.length > 0);
+                  }}
+                  placeholder="e.g. ap-south-1"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  required
+                />
+                {showSuggestions && (
+                  <ul className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                    {regionSuggestions.map((r) => (
+                      <li
+                        key={r}
+                        onMouseDown={() => {
+                          setForm({ ...form, region: r });
+                          setShowSuggestions(false);
+                        }}
+                        className="px-3 py-2 text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer"
+                      >
+                        {r}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">S3 Bucket Name</label>
