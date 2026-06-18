@@ -1,42 +1,42 @@
 import { useState, useEffect, useRef } from 'react';
 import { CheckCircle, RefreshCw, Trash2, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
-import { getAWSCredentials, saveAWSCredentials, deleteAWSCredentials, autoSyncAWS } from '../api/client';
-import { getJwtToken } from '../lib/auth';
+import { fetchAWSData, uploadCSV } from '../api/client';
+import { useAuth } from '../hooks/useAuth';
 import toast from 'react-hot-toast';
+import axios from 'axios';
 
 const REGIONS = [
-  'ap-south-1',
-  'ap-south-2',
-  'ap-southeast-1',
-  'ap-southeast-2',
-  'ap-southeast-3',
-  'ap-northeast-1',
-  'ap-northeast-2',
-  'ap-northeast-3',
-  'ap-east-1',
-  'us-east-1',
-  'us-east-2',
-  'us-west-1',
-  'us-west-2',
-  'eu-west-1',
-  'eu-west-2',
-  'eu-west-3',
-  'eu-central-1',
-  'eu-central-2',
-  'eu-north-1',
-  'eu-south-1',
-  'eu-south-2',
-  'ca-central-1',
-  'ca-west-1',
-  'sa-east-1',
-  'me-south-1',
-  'me-central-1',
-  'af-south-1',
-  'il-central-1',
+  'ap-south-1','ap-south-2','ap-southeast-1','ap-southeast-2','ap-southeast-3',
+  'ap-northeast-1','ap-northeast-2','ap-northeast-3','ap-east-1',
+  'us-east-1','us-east-2','us-west-1','us-west-2',
+  'eu-west-1','eu-west-2','eu-west-3','eu-central-1','eu-central-2',
+  'eu-north-1','eu-south-1','eu-south-2',
+  'ca-central-1','ca-west-1','sa-east-1',
+  'me-south-1','me-central-1','af-south-1','il-central-1',
 ];
 
+// Store creds in localStorage keyed per user — no backend auth needed
+function getStorageKey(email) {
+  return `aws_creds_${email}`;
+}
+
+function loadCreds(email) {
+  try {
+    return JSON.parse(localStorage.getItem(getStorageKey(email)));
+  } catch { return null; }
+}
+
+function saveCreds(email, creds) {
+  localStorage.setItem(getStorageKey(email), JSON.stringify(creds));
+}
+
+function deleteCreds(email) {
+  localStorage.removeItem(getStorageKey(email));
+}
+
 export default function AWSConnectBanner({ onDataLoaded }) {
-  const [status, setStatus] = useState(null);
+  const { user } = useAuth();
+  const [status, setStatus] = useState(null); // null=loading, false=none, obj=connected
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -51,12 +51,10 @@ export default function AWSConnectBanner({ onDataLoaded }) {
   });
 
   useEffect(() => {
-    // Debug: confirm token is available before making API calls
-    getJwtToken().then(t => {
-      console.log('[AWSBanner] JWT token:', t ? `${t.substring(0,30)}...` : 'NULL - not authenticated');
-    });
-    loadStatus();
-  }, []);
+    if (!user?.email) return;
+    const saved = loadCreds(user.email);
+    setStatus(saved ?? false);
+  }, [user?.email]);
 
   // Close suggestions on outside click
   useEffect(() => {
@@ -76,16 +74,6 @@ export default function AWSConnectBanner({ onDataLoaded }) {
     setShowSuggestions(filtered.length > 0 && val.length > 0);
   };
 
-  const loadStatus = async () => {
-    try {
-      const data = await getAWSCredentials();
-      setStatus(data.connected ? data : false);
-    } catch (err) {
-      // 401 = not authenticated yet, or no creds saved — either way show disconnected
-      setStatus(false);
-    }
-  };
-
   const handleSave = async (e) => {
     e.preventDefault();
     if (!form.access_key || !form.secret_key || !form.bucket_name) {
@@ -94,58 +82,79 @@ export default function AWSConnectBanner({ onDataLoaded }) {
     }
     setSaving(true);
     try {
-      await saveAWSCredentials(form);
-      toast.success('AWS connected and verified!');
+      // Verify by actually fetching from S3
+      toast.loading('Verifying S3 access...', { id: 'verify' });
+      const data = await fetchAWSData({
+        access_key: form.access_key,
+        secret_key: form.secret_key,
+        region: form.region,
+        bucket_name: form.bucket_name,
+      });
+      toast.dismiss('verify');
+
+      const creds = {
+        access_key: form.access_key,
+        secret_key: form.secret_key,
+        region: form.region,
+        bucket_name: form.bucket_name,
+        access_key_masked: `${form.access_key.slice(0, 4)}****${form.access_key.slice(-4)}`,
+        verified_at: new Date().toISOString(),
+      };
+      saveCreds(user.email, creds);
+      setStatus(creds);
       setShowForm(false);
-      setForm({ access_key: '', secret_key: '', region: 'us-east-1', bucket_name: '' });
-      await loadStatus();
-      // Auto-trigger sync after connecting
-      await handleSync();
+      setForm({ access_key: '', secret_key: '', region: 'ap-south-1', bucket_name: '' });
+      toast.success('AWS connected!');
+
+      // Pass result to parent
+      if (data) {
+        localStorage.setItem('awsAnalysisData', JSON.stringify(data));
+        localStorage.setItem('hasLoadedData', 'true');
+        onDataLoaded?.(data);
+      }
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Could not connect to AWS');
+      toast.dismiss('verify');
+      toast.error(err.response?.data?.detail || err.message || 'Could not connect to S3');
     } finally {
       setSaving(false);
     }
   };
 
   const handleSync = async () => {
+    if (!status) return;
     setSyncing(true);
     try {
       toast.loading('Fetching latest CUR from S3...', { id: 'sync' });
-      const data = await autoSyncAWS();
+      const data = await fetchAWSData({
+        access_key: status.access_key,
+        secret_key: status.secret_key,
+        region: status.region,
+        bucket_name: status.bucket_name,
+      });
       toast.dismiss('sync');
-      if (data?.success !== false) {
-        localStorage.setItem('awsAnalysisData', JSON.stringify(data));
-        localStorage.setItem('hasLoadedData', 'true');
-        toast.success('S3 data synced and analyzed!');
-        onDataLoaded?.(data);
-      } else {
-        toast.error(data.message || 'Sync failed');
-      }
+      localStorage.setItem('awsAnalysisData', JSON.stringify(data));
+      localStorage.setItem('hasLoadedData', 'true');
+      toast.success('S3 data synced!');
+      onDataLoaded?.(data);
     } catch (err) {
       toast.dismiss('sync');
-      toast.error(err.response?.data?.detail || 'Auto-sync failed');
+      toast.error(err.response?.data?.detail || 'Sync failed');
     } finally {
       setSyncing(false);
     }
   };
 
-  const handleDisconnect = async () => {
-    if (!confirm('Remove your saved AWS credentials?')) return;
-    try {
-      await deleteAWSCredentials();
-      setStatus(false);
-      toast.success('AWS credentials removed');
-    } catch {
-      toast.error('Failed to remove credentials');
-    }
+  const handleDisconnect = () => {
+    if (!confirm('Remove saved AWS credentials?')) return;
+    deleteCreds(user.email);
+    setStatus(false);
+    toast.success('AWS credentials removed');
   };
 
-  // Still loading
-  if (status === null) return null;
+  if (!user || status === null) return null;
 
-  // ── CONNECTED STATE ────────────────────────────────────────────────────────
-  if (status && status.connected) {
+  // ── CONNECTED ──────────────────────────────────────────────────────────────
+  if (status) {
     return (
       <div className="bg-gradient-to-r from-emerald-50 to-green-50 border-2 border-emerald-300 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
@@ -155,7 +164,7 @@ export default function AWSConnectBanner({ onDataLoaded }) {
           <div>
             <p className="font-semibold text-gray-900 text-sm">AWS Connected</p>
             <p className="text-xs text-gray-500">
-              {status.bucket_name} · {status.region} · key {status.access_key_masked}
+              {status.bucket_name} · {status.region} · {status.access_key_masked}
             </p>
           </div>
         </div>
@@ -171,7 +180,7 @@ export default function AWSConnectBanner({ onDataLoaded }) {
           <button
             onClick={handleDisconnect}
             className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-            title="Disconnect AWS"
+            title="Disconnect"
           >
             <Trash2 className="w-4 h-4" />
           </button>
@@ -180,10 +189,9 @@ export default function AWSConnectBanner({ onDataLoaded }) {
     );
   }
 
-  // ── NOT CONNECTED STATE ────────────────────────────────────────────────────
+  // ── NOT CONNECTED ──────────────────────────────────────────────────────────
   return (
     <div className="border-2 border-dashed border-amber-300 bg-amber-50 rounded-xl overflow-hidden">
-      {/* Header row */}
       <button
         onClick={() => setShowForm((v) => !v)}
         className="w-full flex items-center justify-between p-4 text-left hover:bg-amber-100 transition-colors"
@@ -194,21 +202,14 @@ export default function AWSConnectBanner({ onDataLoaded }) {
           </div>
           <div>
             <p className="font-semibold text-gray-900 text-sm">Connect AWS for automatic CUR sync</p>
-            <p className="text-xs text-gray-500">
-              Link your S3 bucket once — we'll auto-fetch your latest CUR on every session
-            </p>
+            <p className="text-xs text-gray-500">Link your S3 bucket — we'll auto-fetch your latest CUR</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 text-sm text-amber-700 font-medium">
-          {showForm ? (
-            <span className="flex items-center gap-1"><ChevronUp className="w-4 h-4" /> Hide</span>
-          ) : (
-            <span className="flex items-center gap-1"><ChevronDown className="w-4 h-4" /> Connect</span>
-          )}
-        </div>
+        <span className="flex items-center gap-1 text-sm text-amber-700 font-medium">
+          {showForm ? <><ChevronUp className="w-4 h-4" /> Hide</> : <><ChevronDown className="w-4 h-4" /> Connect</>}
+        </span>
       </button>
 
-      {/* Credential form */}
       {showForm && (
         <form onSubmit={handleSave} className="border-t border-amber-200 p-4 bg-white space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -255,10 +256,7 @@ export default function AWSConnectBanner({ onDataLoaded }) {
                     {regionSuggestions.map((r) => (
                       <li
                         key={r}
-                        onMouseDown={() => {
-                          setForm({ ...form, region: r });
-                          setShowSuggestions(false);
-                        }}
+                        onMouseDown={() => { setForm({ ...form, region: r }); setShowSuggestions(false); }}
                         className="px-3 py-2 text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer"
                       >
                         {r}
@@ -280,26 +278,18 @@ export default function AWSConnectBanner({ onDataLoaded }) {
               />
             </div>
           </div>
-
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-3">
             <p className="text-xs text-gray-500">
-              Needs <code className="bg-gray-100 px-1 rounded">s3:GetObject</code> + <code className="bg-gray-100 px-1 rounded">s3:ListBucket</code> on your CUR bucket.
-              Keys are verified then stored in your account — never logged.
+              Needs <code className="bg-gray-100 px-1 rounded">s3:GetObject</code> + <code className="bg-gray-100 px-1 rounded">s3:ListBucket</code>. Stored locally in your browser.
             </p>
-            <div className="flex gap-2 ml-4 flex-shrink-0">
-              <button
-                type="button"
-                onClick={() => setShowForm(false)}
-                className="px-3 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg"
-              >
+            <div className="flex gap-2 flex-shrink-0">
+              <button type="button" onClick={() => setShowForm(false)}
+                className="px-3 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg">
                 Cancel
               </button>
-              <button
-                type="submit"
-                disabled={saving}
-                className="px-4 py-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg transition-all"
-              >
-                {saving ? 'Verifying...' : 'Connect & Sync'}
+              <button type="submit" disabled={saving}
+                className="px-4 py-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg transition-all">
+                {saving ? 'Connecting...' : 'Connect & Sync'}
               </button>
             </div>
           </div>

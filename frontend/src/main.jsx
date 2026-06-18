@@ -8,7 +8,7 @@ import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <NeonAuthUIProvider authClient={authClient} emailOTP>
+    <NeonAuthUIProvider authClient={authClient}>
       <BrowserRouter>
         <App />
       </BrowserRouter>
