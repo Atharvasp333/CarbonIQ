@@ -1,27 +1,25 @@
-import { useState, useEffect } from 'react';
-import { loadDemoData, fetchAWSData, uploadCSV } from '../../api/client';
-import Dashboard from '../../components/Dashboard';
-import AWSIntegration from '../../components/AWSIntegration';
+import { useState } from 'react';
+import { loadDemoData, uploadCSV } from '../../api/client';
 import ChatBot from '../../components/ChatBot/ChatBot';
 import toast from 'react-hot-toast';
-import { Upload, FileSpreadsheet } from 'lucide-react';
+import { Upload, FileSpreadsheet, CheckCircle, BarChart3, Server, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function Home() {
-  const [awsData, setAwsData] = useState(null);
-  const [insights, setInsights] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [showAWSIntegration, setShowAWSIntegration] = useState(!localStorage.getItem('hasLoadedData'));
   const [uploadProgress, setUploadProgress] = useState(false);
+  const [dataUploaded, setDataUploaded] = useState(!!localStorage.getItem('hasLoadedData'));
+  const [lastUploadSummary, setLastUploadSummary] = useState(null);
 
   const loadMockDataHandler = async () => {
     setLoading(true);
     try {
       const data = await loadDemoData();
-      setAwsData(data);
       // Store data in localStorage for Services and Reports pages
       localStorage.setItem('awsAnalysisData', JSON.stringify(data));
       localStorage.setItem('hasLoadedData', 'true');
-      setShowAWSIntegration(false);
+      setDataUploaded(true);
+      setLastUploadSummary(data.summary);
       toast.success('Demo data loaded successfully!');
     } catch (error) {
       console.error('Error loading demo data:', error);
@@ -29,15 +27,6 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleAWSDataLoaded = async (data) => {
-    setAwsData(data);
-    // Store data in localStorage for Services and Reports pages
-    localStorage.setItem('awsAnalysisData', JSON.stringify(data));
-    localStorage.setItem('hasLoadedData', 'true');
-    setShowAWSIntegration(false);
-    toast.success('AWS data loaded successfully!');
   };
 
   const handleFileUpload = async (event) => {
@@ -60,11 +49,11 @@ export default function Home() {
       toast.dismiss('csv-upload');
       
       if (data.success) {
-        setAwsData(data);
         // Store complete analysis data in localStorage
         localStorage.setItem('awsAnalysisData', JSON.stringify(data));
         localStorage.setItem('hasLoadedData', 'true');
-        setShowAWSIntegration(false);
+        setDataUploaded(true);
+        setLastUploadSummary(data.summary);
         toast.success(`✅ CSV processed! ${data.summary.total_emissions_kg.toFixed(2)} kg CO₂ calculated`);
       } else {
         toast.error(data.message || 'Failed to process CSV');
@@ -78,44 +67,101 @@ export default function Home() {
     }
   };
 
-  const handleBackToIntegration = () => {
-    setShowAWSIntegration(true);
+  const handleUploadAnother = () => {
+    // Clear file input
+    const fileInput = document.getElementById('csv-upload');
+    if (fileInput) fileInput.value = '';
   };
 
-  if (showAWSIntegration) {
-    return (
-      <div className="max-w-4xl mx-auto space-y-6">
+  return (
+    <>
+      <div className="max-w-6xl mx-auto space-y-6">
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900">Welcome to CarbonIQ</h1>
-          <p className="text-gray-600 mt-2">Connect your AWS account to start analyzing carbon emissions</p>
+          <p className="text-gray-600 mt-2">Upload your AWS Cost and Usage Report to analyze carbon emissions</p>
         </div>
 
-        {/* AWS Integration */}
-        <AWSIntegration onDataLoaded={handleAWSDataLoaded} />
+        {/* Success Message - Show after data is uploaded */}
+        {dataUploaded && lastUploadSummary && (
+          <div className="bg-gradient-to-r from-emerald-50 to-green-50 border-2 border-emerald-300 rounded-xl p-6 shadow-lg">
+            <div className="flex items-start">
+              <CheckCircle className="w-8 h-8 text-emerald-600 mr-4 flex-shrink-0 mt-1" />
+              <div className="flex-grow">
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">✅ Data Processed Successfully!</h2>
+                <p className="text-gray-700 mb-4">
+                  Your AWS data has been analyzed through our 6-agent pipeline. View detailed insights in the tabs below.
+                </p>
+                
+                {/* Summary Stats */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="bg-white rounded-lg p-4 border border-emerald-200">
+                    <p className="text-sm text-gray-600 mb-1">Total Emissions</p>
+                    <p className="text-2xl font-bold text-red-600">{lastUploadSummary.total_emissions_kg?.toFixed(2)} kg CO₂</p>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 border border-emerald-200">
+                    <p className="text-sm text-gray-600 mb-1">Total Cost</p>
+                    <p className="text-2xl font-bold text-blue-600">${lastUploadSummary.total_cost?.toFixed(2)}</p>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 border border-emerald-200">
+                    <p className="text-sm text-gray-600 mb-1">Energy Used</p>
+                    <p className="text-2xl font-bold text-purple-600">{lastUploadSummary.total_energy_kwh?.toFixed(2)} kWh</p>
+                  </div>
+                </div>
 
-        {/* OR Divider */}
-        <div className="relative py-4">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300"></div>
+                {/* Navigation Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Link
+                    to="/services"
+                    className="group bg-white hover:bg-emerald-50 border-2 border-emerald-300 hover:border-emerald-500 rounded-lg p-5 transition-all flex items-center justify-between"
+                  >
+                    <div className="flex items-center">
+                      <div className="bg-emerald-100 p-3 rounded-lg mr-4">
+                        <Server className="w-6 h-6 text-emerald-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-900 group-hover:text-emerald-700">Services</h3>
+                        <p className="text-sm text-gray-600">View service breakdown & regional analysis</p>
+                      </div>
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-emerald-600 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+
+                  <Link
+                    to="/reports"
+                    className="group bg-white hover:bg-blue-50 border-2 border-blue-300 hover:border-blue-500 rounded-lg p-5 transition-all flex items-center justify-between"
+                  >
+                    <div className="flex items-center">
+                      <div className="bg-blue-100 p-3 rounded-lg mr-4">
+                        <BarChart3 className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-700">Reports</h3>
+                        <p className="text-sm text-gray-600">Detailed analytics & time-based trends</p>
+                      </div>
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-blue-600 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-4 bg-gray-50 text-gray-500 font-medium">OR</span>
-          </div>
-        </div>
+        )}
 
         {/* CSV Upload Section */}
-        <div className="bg-white rounded-xl p-6 shadow-xl border-2 border-emerald-200">
+        <div className="bg-white rounded-xl p-6 shadow-xl border-2 border-gray-200">
           <div className="flex items-center mb-4">
             <FileSpreadsheet className="w-6 h-6 text-emerald-600 mr-2" />
-            <h2 className="text-2xl font-bold text-gray-800">Upload CUR Report</h2>
+            <h2 className="text-2xl font-bold text-gray-800">
+              {dataUploaded ? 'Upload Another CUR Report' : 'Upload CUR Report'}
+            </h2>
           </div>
           
           <p className="text-gray-600 mb-4">
             Upload your AWS Cost and Usage Report (CUR) CSV file for complete analysis through our multi-agent system.
           </p>
 
-          <div className="border-2 border-dashed border-emerald-300 rounded-lg p-8 text-center hover:border-emerald-500 transition-colors">
-            <Upload className="w-12 h-12 text-emerald-600 mx-auto mb-4" />
+          <div className="border-2 border-dashed border-gray-300 hover:border-emerald-500 rounded-lg p-8 text-center transition-colors">
+            <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             
             <label htmlFor="csv-upload" className="cursor-pointer">
               <div className="text-lg font-medium text-gray-900 mb-2">
@@ -136,6 +182,7 @@ export default function Home() {
               onChange={handleFileUpload}
               className="hidden"
               disabled={uploadProgress}
+              onClick={handleUploadAnother}
             />
           </div>
 
@@ -160,19 +207,20 @@ export default function Home() {
             </div>
           )}
         </div>
-      </div>
-    );
-  }
 
-  return (
-    <>
-      <Dashboard
-        awsData={awsData}
-        insights={insights}
-        loading={loading}
-        onLoadMock={loadMockDataHandler}
-        onBackToIntegration={handleBackToIntegration}
-      />
+        {/* Demo Data Button */}
+        {!dataUploaded && (
+          <div className="text-center">
+            <button
+              onClick={loadMockDataHandler}
+              disabled={loading}
+              className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold rounded-lg transition-all border-2 border-gray-300"
+            >
+              {loading ? 'Loading...' : 'Or Load Demo Data'}
+            </button>
+          </div>
+        )}
+      </div>
       <ChatBot />
     </>
   );
