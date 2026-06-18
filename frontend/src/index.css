@@ -1,6 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@import '@neondatabase/auth-ui/tailwind';
 
 :root {
   --primary: #1B4332;
