@@ -81,8 +81,14 @@ function Dashboard({ awsData, insights, loading, onUpload, onLoadMock, onBackToI
                 <MetricsBar data={awsData} />
                 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <EmissionsPieChart data={awsData.by_service} title="Emissions by Service" />
-                  <TrendChart data={awsData.by_region} title="Emissions by Region" />
+                  <EmissionsPieChart 
+                    data={awsData.analytics?.service_breakdown || awsData.by_service} 
+                    title="Emissions by Service" 
+                  />
+                  <TrendChart 
+                    data={awsData.analytics?.region_breakdown || awsData.by_region} 
+                    title="Emissions by Region" 
+                  />
                 </div>
 
                 {awsData.by_instance && awsData.by_instance.length > 0 && (
