@@ -1,75 +1,54 @@
-# CarbonIQ Cloud Analyzer
+# CarbonIQ — AWS Carbon Emissions Analyzer
 
-A full-stack web dashboard that converts AWS billing CSV data into carbon emissions insights and visual analytics. Upload your AWS Cost and Usage Report and get instant carbon intelligence with AI-powered optimization recommendations.
+Upload your AWS Cost & Usage Report (CUR) CSV and get instant carbon emissions insights powered by a 6-agent AI pipeline.
 
-## 🎯 NEW: Multi-Agent Architecture
+## Tech Stack
 
-CarbonIQ now features a **6-agent AI system** for advanced AWS CUR analysis:
+**Backend:** Python 3.12 · FastAPI 0.137 · httpx · Pydantic v2  
+**Frontend:** React 19 · Vite 6 · Tailwind CSS · Recharts 3 · React Router 7
 
-- 🤖 **Agent 1:** CUR Ingestion & Normalization
-- 🗺️ **Agent 2:** Region Mapping (AWS → Electricity Maps)
-- ⚡ **Agent 3:** Historical Carbon Intensity (Real-time API)
-- 🧮 **Agent 4:** Emission Calculation (Service-aware)
-- 📊 **Agent 5:** Analytics Generation
-- 💡 **Agent 6:** Optimization Engine
+## Prerequisites
 
-**[📖 Multi-Agent Quick Start →](MULTI_AGENT_QUICKSTART.md)** | **[🏗️ Architecture Details →](MULTI_AGENT_ARCHITECTURE.md)**
-
-### Key Features:
-- ✅ **Historical Carbon Intensity** - Uses actual timestamps from CUR data
-- ✅ **Smart Caching** - Reduces API calls by 80%
-- ✅ **20+ AWS Regions** - Mapped to Electricity Maps zones
-- ✅ **Service-Specific Calculations** - EC2, Lambda, S3, RDS, SageMaker, etc.
-- ✅ **Optimization Insights** - Region migration, time-shifting, rightsizing
-
----
-
-## 🌟 Features
-
-### Core Functionality
-- 📊 **CSV Upload**: Accept AWS billing CSV with automatic parsing
-- 🌍 **Carbon Conversion**: Convert AWS usage into CO₂ emissions using region-specific factors
-- 📈 **Visual Analytics**: Interactive charts and graphs
-- 🤖 **AI Insights**: Google Gemini-powered optimization recommendations
-- 🔮 **What-If Simulator**: Test different optimization scenarios
-- ⚠️ **Idle Resource Detection**: Identify wasteful spending
-- 💰 **Cost vs Emissions**: Understand the relationship between spend and carbon
-
-### Dashboard Components
-- **Top Metrics Cards**: Total CO₂, Cost, Top Region, Top Service
-- **Pie Chart**: Emissions by Service (EC2, RDS, Lambda, S3, etc.)
-- **Bar Charts**: Emissions by Region and Instance Type
-- **Scatter Plot**: Cost vs CO₂ correlation
-- **Data Table**: Detailed line items with service, region, usage, cost, CO₂
-- **AI Insights Panel**: Actionable recommendations with priority levels
-- **What-If Simulator**: Scenario planning for optimization
-
-## 🚀 Quick Start
-
-### Prerequisites
 - Python 3.11+
 - Node.js 18+
-- AWS billing CSV (or use included demo data)
 
-### 1. Backend Setup
+## Setup
+
+### 1. Clone
+
+```bash
+git clone https://github.com/Atharvasp333/CarbonIQ.git
+cd CarbonIQ
+```
+
+### 2. Backend
 
 ```bash
 cd backend
 pip install -r requirements.txt
 ```
 
-Edit `backend/.env` and add your API keys (optional):
-```
-CLIMATIQ_API_KEY=your_key_here
-GEMINI_API_KEY=your_key_here
+Copy `.env.example` to `.env` and fill in your API keys:
+
+```bash
+cp .env.example .env
 ```
 
-Start the backend:
+```env
+CLIMATIQ_API_KEY=your_key_here
+GEMINI_API_KEY=your_key_here
+ELECTRICITY_MAPS_API_KEY=your_key_here
+```
+
+> All keys are optional — the app falls back to hardcoded emission factors if not provided.
+
+Start the server:
+
 ```bash
 python -m uvicorn main:app --reload --port 8000
 ```
 
-### 2. Frontend Setup
+### 3. Frontend
 
 ```bash
 cd frontend
@@ -79,177 +58,77 @@ npm run dev
 
 Open http://localhost:5173
 
-## 📊 AWS CSV Format
+---
 
-The app expects AWS Cost and Usage Report CSV with these headers:
+## API Keys
 
-```
-identity/LineItemId
-bill/BillingPeriodStartDate
-lineItem/UsageStartDate
-lineItem/UsageEndDate
-product/ProductName
-product/region
-lineItem/UsageType
-lineItem/UsageAmount
-product/instanceType
-lineItem/ResourceId
-lineItem/UnblendedCost
-```
-
-## 🧮 Carbon Calculation
-
-### Region Emission Factors (kg CO₂/kWh)
-- us-west-1 (California): 0.285 - Low carbon
-- us-west-2 (Oregon): 0.285 - Low carbon
-- eu-west-1 (Ireland): 0.295 - Low carbon
-- us-east-1 (Virginia): 0.415 - Medium carbon
-- ap-northeast-1 (Tokyo): 0.463 - Medium carbon
-- ap-south-1 (Mumbai): 0.708 - High carbon
-- us-east-2 (Ohio): 0.744 - High carbon
-
-### Formula
-```
-CO₂ (kg) = UsageAmount × ServicePowerFactor × RegionEmissionFactor
-```
-
-## 🤖 AI Features
-
-### Gemini-Powered Insights
-- Region optimization recommendations
-- Instance right-sizing suggestions
-- Idle resource identification
-- Carbon budget tracking
-- Cost-saving opportunities
-
-### Chatbot Assistant
-- Ask questions about AWS carbon footprint
-- Get sustainability best practices
-- Learn about emission reduction strategies
-- Understand cloud optimization
-
-## 🎯 Demo Data
-
-The app includes realistic mock data showing:
-- ~450 kg CO₂ total emissions
-- Multiple AWS services (EC2, RDS, Lambda, S3, EBS)
-- Various regions (us-east-1, us-west-2, eu-west-1, ap-south-1)
-- Different instance types (m5.large, t3.medium, etc.)
-- Idle resource examples
-
-## 🛠️ Tech Stack
-
-**Backend**
-- FastAPI (Python)
-- Pydantic for data validation
-- Google Gemini API for AI insights
-- Climatiq API for emission factors (optional)
-
-**Frontend**
-- React 18 + Vite
-- Tailwind CSS for styling
-- Recharts for data visualization
-- Axios for API calls
-
-## 📁 Project Structure
-
-```
-carboniq/
-├── backend/
-│   ├── main.py                 # FastAPI app
-│   ├── routes/
-│   │   ├── emissions.py        # CSV upload & analysis
-│   │   ├── insights.py         # AI recommendations
-│   │   ├── whatif.py           # Scenario simulator
-│   │   └── chat.py             # Chatbot endpoint
-│   ├── services/
-│   │   ├── aws_analyzer.py     # CSV parser & calculator
-│   │   ├── gemini.py           # AI integration
-│   │   └── climatiq.py         # Emission factors
-│   ├── models/
-│   │   └── schemas.py          # Pydantic models
-│   └── data/
-│       └── mock_csv.csv        # Demo data
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── Dashboard.jsx
-│   │   │   ├── UploadSection.jsx
-│   │   │   ├── MetricsBar.jsx
-│   │   │   ├── EmissionsPieChart.jsx
-│   │   │   ├── TrendChart.jsx
-│   │   │   ├── DataTable.jsx
-│   │   │   ├── AIInsightsPanel.jsx
-│   │   │   ├── WhatIfSimulator.jsx
-│   │   │   └── ChatBot/
-│   │   ├── api/
-│   │   │   └── client.js
-│   │   └── App.jsx
-│   └── package.json
-└── README.md
-```
-
-## 🔑 API Keys
-
-### Gemini API (Free)
-1. Visit https://aistudio.google.com/app/apikey
-2. Create a new API key
-3. Add to `backend/.env`
-
-### Climatiq API (Optional)
-1. Visit https://climatiq.io
-2. Sign up for free tier
-3. Add to `backend/.env`
-
-**Note**: The app works without API keys using fallback calculations and suggestions.
-
-## 🌐 API Endpoints
-
-- `GET /api/health` - Health check
-- `POST /api/upload-csv` - Upload AWS billing CSV
-- `GET /api/mock-data` - Load demo data
-- `POST /api/insights` - Get AI recommendations
-- `POST /api/whatif` - Run scenario simulation
-- `POST /api/chat` - Chat with AI assistant
-
-## 💡 Usage Tips
-
-1. **Start with Demo Data**: Click "Load Demo Data" to see the dashboard in action
-2. **Upload Your CSV**: Export AWS Cost and Usage Report and upload
-3. **Review Insights**: Check the AI Insights tab for optimization recommendations
-4. **Test Scenarios**: Use What-If simulator to plan changes
-5. **Ask Questions**: Use the chatbot for specific sustainability questions
-
-## 🎨 Key Insights Provided
-
-- **Region Optimization**: Move workloads to low-carbon regions (30-40% reduction)
-- **Idle Resources**: Identify and remove unused resources (15-20% savings)
-- **Instance Right-Sizing**: Downsize over-provisioned instances (25% reduction)
-- **Service Optimization**: Optimize storage and serverless configurations (10% savings)
-
-## 📈 Carbon Budget
-
-The app calculates:
-- Current monthly emissions
-- Recommended target (30% reduction)
-- Budget status (over_budget / on_track / excellent)
-- Progress visualization
-
-## 🤝 Contributing
-
-This is a demo application. Feel free to fork and customize for your needs.
-
-## 📄 License
-
-MIT
-
-## 🙏 Acknowledgments
-
-- AWS for cloud infrastructure
-- Google Gemini for AI capabilities
-- Climatiq for emission factor data
-- Recharts for visualization components
+| Key | Where to get | Used for |
+|-----|-------------|----------|
+| `ELECTRICITY_MAPS_API_KEY` | [electricitymaps.com](https://electricitymaps.com) | Real carbon intensity per region/day |
+| `GEMINI_API_KEY` | [aistudio.google.com](https://aistudio.google.com/app/apikey) | AI insights & chatbot |
+| `CLIMATIQ_API_KEY` | [climatiq.io](https://climatiq.io) | Appliance emission calculations |
 
 ---
 
-**Built with ❤️ for a sustainable cloud future**
+## Multi-Agent Pipeline
+
+When you upload a CUR CSV, 6 agents run in sequence:
+
+1. **Ingestion** — parses CSV, skips Tax/Credit rows, compresses to daily buckets `(service, region, usage_type, day)`. 5600 rows → ~350 records.
+2. **Region Mapping** — maps AWS regions to Electricity Maps zones (`ap-south-1` → `IN-WE`, etc.)
+3. **Carbon Intensity** — fetches historical intensity per `(zone, day)` from Electricity Maps API. Past dates use `/carbon-intensity/past`, today uses `/latest`. Result is cached.
+4. **Emission Calculation** — `emissions_kg = usage × power_factor × carbon_intensity / 1000`
+5. **Analytics** — aggregates by service, region, and day for dashboard charts
+6. **Optimization** — identifies region migration, time-shifting, and right-sizing opportunities
+
+**API calls are minimal:** a CSV with 5000+ rows across 3 regions and 16 days = ~48 Electricity Maps API calls max (one per zone/day combo), all cached on re-upload.
+
+---
+
+## Supported AWS Services
+
+EC2, Lambda, S3, RDS, SageMaker, EBS, ECS, EKS, DynamoDB, CloudFront, ElastiCache, CloudWatch, Glue, Amplify, EFS, API Gateway, DataZone, Cognito, SNS
+
+---
+
+## Project Structure
+
+```
+CarbonIQ/
+├── backend/
+│   ├── main.py
+│   ├── .env.example
+│   ├── requirements.txt
+│   ├── agents/
+│   │   ├── ingestion_agent.py
+│   │   ├── region_mapping_agent.py
+│   │   ├── carbon_intensity_agent.py
+│   │   ├── emission_calculation_agent.py
+│   │   ├── analytics_agent.py
+│   │   ├── optimization_agent.py
+│   │   └── orchestrator.py
+│   ├── routes/
+│   │   ├── multi_agent_analysis.py
+│   │   ├── service_analytics.py
+│   │   └── ...
+│   └── services/
+│       ├── service_analyzer.py
+│       ├── electricity_maps.py
+│       ├── gemini.py
+│       └── ...
+└── frontend/
+    ├── package.json
+    └── src/
+        └── components/
+            ├── MultiAgentDashboard.jsx
+            ├── ServiceDetailDashboard.jsx
+            └── ...
+```
+
+---
+
+## Notes
+
+- **Do not commit your `.env` file** — it's gitignored.
+- **Do not commit CUR CSV files** — they contain your AWS account ID. They're gitignored (`CUR_report*.csv`).
+- The app works fully offline using fallback carbon intensity values if no API keys are set.
