@@ -35,6 +35,16 @@ async def init_db():
     pool = await get_pool()
     async with pool.acquire() as conn:
         await conn.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id          SERIAL PRIMARY KEY,
+                name        TEXT NOT NULL,
+                email       TEXT UNIQUE NOT NULL,
+                password    TEXT NOT NULL,
+                created_at  TIMESTAMPTZ DEFAULT NOW()
+            );
+        """)
+
+        await conn.execute("""
             CREATE TABLE IF NOT EXISTS analyses (
                 id              SERIAL PRIMARY KEY,
                 filename        TEXT,
