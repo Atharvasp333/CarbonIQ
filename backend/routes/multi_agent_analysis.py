@@ -111,7 +111,17 @@ async def analyze_cur_multiagent(file: UploadFile = File(...)):
         
         request_duration = time.time() - request_start
         logger.info(f"[10] RESPONSE SENT - Total time: {request_duration:.2f}s")
-        
+
+        # Save to NeonDB (non-blocking — don't fail if DB is down)
+        if result.get('success'):
+            try:
+                from database import save_analysis
+                analysis_id = await save_analysis(file.filename or 'upload.csv', result)
+                result['analysis_id'] = analysis_id
+                logger.info(f"Saved to NeonDB: analysis_id={analysis_id}")
+            except Exception as db_err:
+                logger.warning(f"DB save failed (non-fatal): {db_err}")
+
         return result
         
     except Exception as e:
