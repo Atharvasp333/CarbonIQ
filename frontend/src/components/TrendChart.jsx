@@ -1,9 +1,21 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 function TrendChart({ data, title, dataKey = 'region' }) {
+  // Handle missing or empty data
+  if (!data || !Array.isArray(data) || data.length === 0) {
+    return (
+      <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700">
+        <h3 className="text-lg font-semibold text-white mb-4">{title}</h3>
+        <div className="flex items-center justify-center h-[300px] text-slate-400">
+          No data available
+        </div>
+      </div>
+    );
+  }
+
   const chartData = data.map(item => ({
     name: item[dataKey] || item.region || item.service,
-    co2_kg: item.co2_kg,
+    co2_kg: item.co2_kg || item.emissions_kg,
     cost: item.cost
   }));
 

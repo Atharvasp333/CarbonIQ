@@ -52,20 +52,23 @@ export default function Services() {
 
       const analysisData = JSON.parse(storedData);
       
-      if (analysisData.analytics && analysisData.analytics.by_service) {
+      // Handle both old format (by_service) and new format (analytics.service_breakdown)
+      const serviceData = analysisData.analytics?.service_breakdown || analysisData.by_service || [];
+      
+      if (serviceData && serviceData.length > 0) {
         // Transform analytics data to services format
-        const servicesData = analysisData.analytics.by_service.map(service => ({
+        const servicesData = serviceData.map(service => ({
           name: service.service,
-          emissions: service.co2_kg,
-          cost: service.cost,
-          energy: service.energy_kwh,
-          intensity: service.avg_carbon_intensity,
-          records: service.record_count,
+          emissions: service.emissions_kg || service.co2_kg || 0,
+          cost: service.cost || 0,
+          energy: service.energy_kwh || 0,
+          intensity: service.avg_carbon_intensity || 0,
+          records: service.usage_count || service.record_count || 0,
         }));
 
         setServices(servicesData);
-        setTotalEmissions(analysisData.summary.total_emissions_kg || 0);
-        setTotalCost(analysisData.summary.total_cost || 0);
+        setTotalEmissions(analysisData.summary?.total_emissions_kg || analysisData.analytics?.total_emissions_kg || 0);
+        setTotalCost(analysisData.summary?.total_cost || analysisData.analytics?.total_cost || 0);
       }
       setLoading(false);
     } catch (error) {

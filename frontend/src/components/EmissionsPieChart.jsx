@@ -3,9 +3,21 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recha
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
 
 function EmissionsPieChart({ data, title }) {
+  // Handle missing or empty data
+  if (!data || !Array.isArray(data) || data.length === 0) {
+    return (
+      <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700">
+        <h3 className="text-lg font-semibold text-white mb-4">{title}</h3>
+        <div className="flex items-center justify-center h-[400px] text-slate-400">
+          No data available
+        </div>
+      </div>
+    );
+  }
+
   const chartData = data.map(item => ({
     name: item.service || item.region,
-    value: item.co2_kg
+    value: item.co2_kg || item.emissions_kg
   }));
 
   // Custom label renderer with better visibility

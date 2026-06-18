@@ -98,18 +98,21 @@ export default function Reports() {
 
   const { analytics, summary } = analysisData;
 
-  // Prepare chart data
-  const serviceChartData = analytics.by_service?.slice(0, 10).map(s => ({
-    name: s.service.replace('Amazon ', '').replace(' Service', ''),
-    emissions: parseFloat(s.co2_kg.toFixed(2)),
-    cost: parseFloat(s.cost.toFixed(2))
-  })) || [];
+  // Prepare chart data - handle both old and new format
+  const serviceChartData = (analytics.service_breakdown || analytics.by_service || [])
+    .slice(0, 10)
+    .map(s => ({
+      name: s.service.replace('Amazon ', '').replace(' Service', ''),
+      emissions: parseFloat((s.emissions_kg || s.co2_kg || 0).toFixed(2)),
+      cost: parseFloat((s.cost || 0).toFixed(2))
+    }));
 
-  const regionChartData = analytics.by_region?.map(r => ({
-    name: r.region,
-    emissions: parseFloat(r.co2_kg.toFixed(2)),
-    value: parseFloat(r.co2_kg.toFixed(2))
-  })) || [];
+  const regionChartData = (analytics.region_breakdown || analytics.by_region || [])
+    .map(r => ({
+      name: r.region,
+      emissions: parseFloat((r.emissions_kg || r.co2_kg || 0).toFixed(2)),
+      value: parseFloat((r.emissions_kg || r.co2_kg || 0).toFixed(2))
+    }));
 
   return (
     <div className="space-y-6">
@@ -246,6 +249,117 @@ export default function Reports() {
           </BarChart>
         </ResponsiveContainer>
       </div>
+
+      {/* Time Series Chart */}
+      {analytics.time_series && analytics.time_series.length > 0 && (
+        <>
+          <div className="bg-white rounded-xl shadow-sm border-2 border-gray-200 p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Emissions & Carbon Intensity Timeline</h3>
+            <ResponsiveContainer width="100%" height={350}>
+              <LineChart data={analytics.time_series.slice(0, 48)}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="timestamp" 
+                  angle={-45} 
+                  textAnchor="end" 
+                  height={100}
+                  tick={{ fontSize: 10 }}
+                  tickFormatter={(value) => {
+                    const parts = value.split(' ');
+                    return parts.length > 1 ? parts[1] : value;
+                  }}
+                />
+                <YAxis yAxisId="left" />
+                <YAxis yAxisId="right" orientation="right" />
+                <Tooltip 
+                  contentStyle={{
+                    backgroundColor: '#1e293b',
+                    border: '1px solid #475569',
+                    borderRadius: '8px'
+                  }}
+                  labelStyle={{ color: '#e2e8f0' }}
+                />
+                <Legend />
+                <Line 
+                  yAxisId="left"
+                  type="monotone" 
+                  dataKey="emissions_kg" 
+                  stroke="#8b5cf6" 
+                  name="Emissions (kg CO₂)" 
+                  strokeWidth={2} 
+                  dot={{ r: 3 }}
+                />
+                <Line 
+                  yAxisId="right"
+                  type="monotone" 
+                  dataKey="avg_carbon_intensity" 
+                  stroke="#f59e0b" 
+                  name="Carbon Intensity (gCO₂/kWh)" 
+                  strokeWidth={2}
+                  dot={{ r: 3 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Time Series Data Table */}
+          <div className="bg-white rounded-xl shadow-sm border-2 border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-900">Hourly Breakdown</h3>
+              <span className="text-sm text-gray-600">Showing {Math.min(analytics.time_series.length, 50)} of {analytics.time_series.length} time periods</span>
+            </div>
+            <div className="overflow-x-auto max-h-96 overflow-y-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50 sticky top-0">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Carbon Intensity</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Emissions</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Energy</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cost</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {analytics.time_series.slice(0, 50).map((timePoint, idx) => (
+                    <tr key={idx} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {timePoint.timestamp}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          timePoint.avg_carbon_intensity < 100 ? 'bg-green-100 text-green-800' :
+                          timePoint.avg_carbon_intensity < 300 ? 'bg-yellow-100 text-yellow-800' :
+                          timePoint.avg_carbon_intensity < 500 ? 'bg-orange-100 text-orange-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {timePoint.avg_carbon_intensity.toFixed(0)} gCO₂/kWh
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-semibold">
+                        {timePoint.emissions_kg.toFixed(2)} kg CO₂
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
+                        {timePoint.energy_kwh.toFixed(2)} kWh
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
+                        ${timePoint.cost.toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            
+            {/* Info box */}
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-xs text-blue-700">
+                💡 Carbon intensity values are fetched from Electricity Maps API for each specific timestamp and region, 
+                showing real grid conditions at the time your workloads ran.
+              </p>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Optimization Opportunities */}
       {analysisData.optimization && analysisData.optimization.opportunities && analysisData.optimization.opportunities.length > 0 && (
