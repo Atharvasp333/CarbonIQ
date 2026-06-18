@@ -7,8 +7,9 @@ const api = axios.create({
 export const uploadCSV = async (file) => {
   const formData = new FormData();
   formData.append('file', file);
-  const response = await api.post('/api/upload-csv', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
+  const response = await api.post('/api/multi-agent/analyze', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 120000 // 2 minutes timeout for large CSV processing
   });
   return response.data;
 };
@@ -44,7 +45,17 @@ export const fetchAWSData = async (credentials) => {
 };
 
 export const loadDemoData = async () => {
-  const response = await api.post('/api/aws/demo');
+  const response = await api.post('/api/multi-agent/analyze-demo', { load_demo: true });
+  return response.data;
+};
+
+export const getServiceAnalytics = async () => {
+  const response = await api.get('/api/service-analytics/summary');
+  return response.data;
+};
+
+export const getServiceDetail = async (serviceName) => {
+  const response = await api.get(`/api/service-analytics/service/${serviceName}`);
   return response.data;
 };
 

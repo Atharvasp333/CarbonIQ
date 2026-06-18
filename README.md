@@ -58,40 +58,101 @@ npm run dev
 
 Open http://localhost:5173
 
----
+**First Time Setup:**
+1. Create an account at `/signup`
+2. Login at `/login`
+3. Navigate to Dashboard (`/home`)
+4. Connect AWS or load demo data
 
-## API Keys
+### Authentication
+- Create account with any email/password
+- Data stored in localStorage (demo mode)
+- All routes protected except login/signup
 
-| Key | Where to get | Used for |
-|-----|-------------|----------|
-| `ELECTRICITY_MAPS_API_KEY` | [electricitymaps.com](https://electricitymaps.com) | Real carbon intensity per region/day |
-| `GEMINI_API_KEY` | [aistudio.google.com](https://aistudio.google.com/app/apikey) | AI insights & chatbot |
-| `CLIMATIQ_API_KEY` | [climatiq.io](https://climatiq.io) | Appliance emission calculations |
+### Routes
+- `/` - Redirects to login or home
+- `/login` - Login page
+- `/signup` - Create account
+- `/home` - Main dashboard (protected)
+- `/reports` - Carbon reports with filters (protected)
+- `/services` - AWS services overview (protected)
+- `/service/:name` - Individual service details (protected)
+- `/profile` - User profile (protected)
+- `/settings` - App settings (protected)
 
----
+## 📊 AWS CSV Format
 
-## Multi-Agent Pipeline
+The app expects AWS Cost and Usage Report CSV with these headers:
 
-When you upload a CUR CSV, 6 agents run in sequence:
+```
+identity/LineItemId
+bill/BillingPeriodStartDate
+lineItem/UsageStartDate
+lineItem/UsageEndDate
+product/ProductName
+product/region
+lineItem/UsageType
+lineItem/UsageAmount
+product/instanceType
+lineItem/ResourceId
+lineItem/UnblendedCost
+```
 
-1. **Ingestion** — parses CSV, skips Tax/Credit rows, compresses to daily buckets `(service, region, usage_type, day)`. 5600 rows → ~350 records.
-2. **Region Mapping** — maps AWS regions to Electricity Maps zones (`ap-south-1` → `IN-WE`, etc.)
-3. **Carbon Intensity** — fetches historical intensity per `(zone, day)` from Electricity Maps API. Past dates use `/carbon-intensity/past`, today uses `/latest`. Result is cached.
-4. **Emission Calculation** — `emissions_kg = usage × power_factor × carbon_intensity / 1000`
-5. **Analytics** — aggregates by service, region, and day for dashboard charts
-6. **Optimization** — identifies region migration, time-shifting, and right-sizing opportunities
+## 🧮 Carbon Calculation
 
-**API calls are minimal:** a CSV with 5000+ rows across 3 regions and 16 days = ~48 Electricity Maps API calls max (one per zone/day combo), all cached on re-upload.
+### Region Emission Factors (kg CO₂/kWh)
+- us-west-1 (California): 0.285 - Low carbon
+- us-west-2 (Oregon): 0.285 - Low carbon
+- eu-west-1 (Ireland): 0.295 - Low carbon
+- us-east-1 (Virginia): 0.415 - Medium carbon
+- ap-northeast-1 (Tokyo): 0.463 - Medium carbon
+- ap-south-1 (Mumbai): 0.708 - High carbon
+- us-east-2 (Ohio): 0.744 - High carbon
 
----
+### Formula
+```
+CO₂ (kg) = UsageAmount × ServicePowerFactor × RegionEmissionFactor
+```
 
-## Supported AWS Services
+## 🤖 AI Features
 
-EC2, Lambda, S3, RDS, SageMaker, EBS, ECS, EKS, DynamoDB, CloudFront, ElastiCache, CloudWatch, Glue, Amplify, EFS, API Gateway, DataZone, Cognito, SNS
+### Gemini-Powered Insights
+- Region optimization recommendations
+- Instance right-sizing suggestions
+- Idle resource identification
+- Carbon budget tracking
+- Cost-saving opportunities
 
----
+### Chatbot Assistant
+- Ask questions about AWS carbon footprint
+- Get sustainability best practices
+- Learn about emission reduction strategies
+- Understand cloud optimization
 
-## Project Structure
+## 🎯 Demo Data
+
+The app includes realistic mock data showing:
+- ~450 kg CO₂ total emissions
+- Multiple AWS services (EC2, RDS, Lambda, S3, EBS)
+- Various regions (us-east-1, us-west-2, eu-west-1, ap-south-1)
+- Different instance types (m5.large, t3.medium, etc.)
+- Idle resource examples
+
+## 🛠️ Tech Stack
+
+**Backend**
+- FastAPI (Python)
+- Pydantic for data validation
+- Google Gemini API for AI insights
+- Climatiq API for emission factors (optional)
+
+**Frontend**
+- React 18 + Vite
+- Tailwind CSS for styling
+- Recharts for data visualization
+- Axios for API calls
+
+## 📁 Project Structure
 
 ```
 CarbonIQ/
