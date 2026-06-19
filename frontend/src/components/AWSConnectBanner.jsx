@@ -48,6 +48,7 @@ export default function AWSConnectBanner({ onDataLoaded }) {
     secret_key: '',
     region: 'ap-south-1',
     bucket_name: '',
+    file_key: '',
   });
 
   useEffect(() => {
@@ -82,13 +83,14 @@ export default function AWSConnectBanner({ onDataLoaded }) {
     }
     setSaving(true);
     try {
-      // Verify by actually fetching from S3
-      toast.loading('Verifying S3 access...', { id: 'verify' });
+      // Verify by actually fetching from S3 and running through pipeline
+      toast.loading('Connecting to S3 & running pipeline... (may take 30–60s)', { id: 'verify' });
       const data = await fetchAWSData({
         access_key: form.access_key,
         secret_key: form.secret_key,
         region: form.region,
         bucket_name: form.bucket_name,
+        file_key: form.file_key || null,
       });
       toast.dismiss('verify');
 
@@ -97,13 +99,14 @@ export default function AWSConnectBanner({ onDataLoaded }) {
         secret_key: form.secret_key,
         region: form.region,
         bucket_name: form.bucket_name,
+        file_key: form.file_key || null,
         access_key_masked: `${form.access_key.slice(0, 4)}****${form.access_key.slice(-4)}`,
         verified_at: new Date().toISOString(),
       };
       saveCreds(user.email, creds);
       setStatus(creds);
       setShowForm(false);
-      setForm({ access_key: '', secret_key: '', region: 'ap-south-1', bucket_name: '' });
+      setForm({ access_key: '', secret_key: '', region: 'ap-south-1', bucket_name: '', file_key: '' });
       toast.success('AWS connected!');
 
       // Pass result to parent
@@ -124,17 +127,19 @@ export default function AWSConnectBanner({ onDataLoaded }) {
     if (!status) return;
     setSyncing(true);
     try {
-      toast.loading('Fetching latest CUR from S3...', { id: 'sync' });
+      toast.loading('Fetching & processing CUR from S3... (may take 30–60s)', { id: 'sync' });
       const data = await fetchAWSData({
         access_key: status.access_key,
         secret_key: status.secret_key,
         region: status.region,
         bucket_name: status.bucket_name,
+        file_key: status.file_key || null,
       });
       toast.dismiss('sync');
       localStorage.setItem('awsAnalysisData', JSON.stringify(data));
       localStorage.setItem('hasLoadedData', 'true');
-      toast.success('S3 data synced!');
+      const emissions = data?.summary?.total_emissions_kg?.toFixed(2);
+      toast.success(emissions ? `Synced! ${emissions} kg CO₂ calculated` : 'S3 data synced!');
       onDataLoaded?.(data);
     } catch (err) {
       toast.dismiss('sync');
@@ -277,6 +282,19 @@ export default function AWSConnectBanner({ onDataLoaded }) {
                 required
               />
             </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              S3 File Path <span className="text-gray-400 font-normal">(optional — auto-detects latest if empty)</span>
+            </label>
+            <input
+              type="text"
+              value={form.file_key}
+              onChange={(e) => setForm({ ...form, file_key: e.target.value })}
+              placeholder="reports/CUR_report/20260601-20260701/CUR_report-00001.csv.gz"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent font-mono"
+            />
+            <p className="text-xs text-gray-400 mt-1">Full S3 key path. Leave blank to auto-find the latest CSV/CSV.GZ.</p>
           </div>
           <div className="flex items-center justify-between flex-wrap gap-3">
             <p className="text-xs text-gray-500">
