@@ -47,6 +47,15 @@ export const authMe = async () => {
   return res.data;
 };
 
+export const syncUser = async (email, name) => {
+  // No auth header needed — just syncs Neon Auth user into our users table
+  const res = await axios.post(
+    `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/auth/sync`,
+    { email, name }
+  );
+  return res.data;
+};
+
 // --- AWS Credentials --------------------------------------------------------
 
 export const saveAWSCredentials = async (creds) => {

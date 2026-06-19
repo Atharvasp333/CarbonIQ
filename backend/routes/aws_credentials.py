@@ -1,83 +1,58 @@
 """
-AWS Credentials routes — save, fetch (masked), delete, auto-sync.
-All endpoints require a valid JWT (get_current_user dependency).
+AWS credentials stored per user email — no JWT required.
+Email comes from the Neon Auth session (trusted on frontend, passed in body).
 """
 import logging
 from datetime import datetime, timezone
-
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
-
-from routes.auth import get_current_user
-from services.s3_fetcher import fetch_csv_from_s3
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Models
-# ---------------------------------------------------------------------------
-
-class AWSCredentialsRequest(BaseModel):
+class AWSCredsRequest(BaseModel):
+    email: str
     access_key: str
     secret_key: str
-    region: str = "us-east-1"
+    region: str = "ap-south-1"
     bucket_name: str
+    file_key: Optional[str] = None
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def _mask_key(key: str) -> str:
-    """Show first 4 + last 4 chars, mask the middle."""
-    if not key or len(key) < 8:
-        return "****"
-    return f"{key[:4]}{'*' * (len(key) - 8)}{key[-4:]}"
+class AWSCredsEmailRequest(BaseModel):
+    email: str
 
 
-async def _verify_s3_access(access_key: str, secret_key: str, region: str, bucket_name: str) -> str | None:
-    """
-    Try to list one object in the bucket to confirm credentials work.
-    Returns None on success, error string on failure.
-    """
-    _, error = await fetch_csv_from_s3(
-        access_key=access_key,
-        secret_key=secret_key,
-        region=region,
-        bucket_name=bucket_name,
-        file_key=None,          # just discovery, don't download
-        verify_only=True,
+async def _get_or_create_user_id(conn, email: str) -> int:
+    """Get user id by email, creating the row if it doesn't exist."""
+    row = await conn.fetchrow("SELECT id FROM users WHERE email = $1", email.lower())
+    if row:
+        return row["id"]
+    row = await conn.fetchrow(
+        "INSERT INTO users (name, email, password) VALUES ($1, $2, 'neon_auth_managed') "
+        "ON CONFLICT (email) DO UPDATE SET email = EXCLUDED.email RETURNING id",
+        email.split("@")[0], email.lower()
     )
-    return error
+    return row["id"]
 
 
-# ---------------------------------------------------------------------------
-# Endpoints
-# ---------------------------------------------------------------------------
-
-@router.post("/aws/credentials")
-async def save_credentials(req: AWSCredentialsRequest, current_user=Depends(get_current_user)):
-    """
-    Save (or update) the user's AWS S3 credentials after verifying access.
-    Secret key is stored as-is — Neon encrypts at rest.
-    """
-    user_id = current_user["id"]
-
-    # Verify access before saving
-    error = await _verify_s3_access(req.access_key, req.secret_key, req.region, req.bucket_name)
-    if error:
-        raise HTTPException(status_code=400, detail=f"Could not connect to S3: {error}")
+@router.post("/aws/creds/save")
+async def save_creds(req: AWSCredsRequest):
+    """Save/update AWS credentials for a user (keyed by email)."""
+    if not req.email:
+        raise HTTPException(status_code=400, detail="email required")
 
     from database import get_pool
     pool = await get_pool()
     now = datetime.now(timezone.utc)
 
     async with pool.acquire() as conn:
+        user_id = await _get_or_create_user_id(conn, req.email)
         await conn.execute("""
-            INSERT INTO aws_credentials (user_id, access_key, secret_key, region, bucket_name, verified, verified_at, updated_at)
+            INSERT INTO aws_credentials
+                (user_id, access_key, secret_key, region, bucket_name, verified, verified_at, updated_at)
             VALUES ($1, $2, $3, $4, $5, TRUE, $6, $6)
             ON CONFLICT (user_id) DO UPDATE
                 SET access_key  = EXCLUDED.access_key,
@@ -89,29 +64,36 @@ async def save_credentials(req: AWSCredentialsRequest, current_user=Depends(get_
                     updated_at  = EXCLUDED.updated_at
         """, user_id, req.access_key, req.secret_key, req.region, req.bucket_name, now)
 
-    logger.info(f"Saved AWS credentials for user {user_id}, bucket={req.bucket_name}")
-    return {"success": True, "message": "AWS credentials saved and verified"}
+    logger.info(f"Saved AWS creds for {req.email}, bucket={req.bucket_name}")
+    return {"success": True}
 
 
-@router.get("/aws/credentials")
-async def get_credentials(current_user=Depends(get_current_user)):
-    """Return saved credentials for the user (keys masked)."""
-    user_id = current_user["id"]
+@router.post("/aws/creds/get")
+async def get_creds(req: AWSCredsEmailRequest):
+    """Get saved AWS credentials for a user (secret key masked for display)."""
+    if not req.email:
+        raise HTTPException(status_code=400, detail="email required")
+
     from database import get_pool
     pool = await get_pool()
 
     async with pool.acquire() as conn:
-        row = await conn.fetchrow(
-            "SELECT access_key, region, bucket_name, verified, verified_at FROM aws_credentials WHERE user_id = $1",
-            user_id,
-        )
+        row = await conn.fetchrow("""
+            SELECT c.access_key, c.secret_key, c.region, c.bucket_name, c.verified, c.verified_at
+            FROM aws_credentials c
+            JOIN users u ON u.id = c.user_id
+            WHERE u.email = $1
+        """, req.email.lower())
 
     if not row:
         return {"connected": False}
 
+    k = row["access_key"]
     return {
         "connected": True,
-        "access_key_masked": _mask_key(row["access_key"]),
+        "access_key": row["access_key"],        # full key — needed for sync
+        "secret_key": row["secret_key"],        # full key — needed for sync
+        "access_key_masked": f"{k[:4]}{'*'*(len(k)-8)}{k[-4:]}",
         "region": row["region"],
         "bucket_name": row["bucket_name"],
         "verified": row["verified"],
@@ -119,62 +101,19 @@ async def get_credentials(current_user=Depends(get_current_user)):
     }
 
 
-@router.delete("/aws/credentials")
-async def delete_credentials(current_user=Depends(get_current_user)):
-    """Remove the user's saved AWS credentials."""
-    user_id = current_user["id"]
+@router.post("/aws/creds/delete")
+async def delete_creds(req: AWSCredsEmailRequest):
+    """Remove AWS credentials for a user."""
+    if not req.email:
+        raise HTTPException(status_code=400, detail="email required")
+
     from database import get_pool
     pool = await get_pool()
 
     async with pool.acquire() as conn:
-        result = await conn.execute(
-            "DELETE FROM aws_credentials WHERE user_id = $1", user_id
-        )
+        result = await conn.execute("""
+            DELETE FROM aws_credentials
+            WHERE user_id = (SELECT id FROM users WHERE email = $1)
+        """, req.email.lower())
 
-    deleted = result.split()[-1] != "0"
-    return {"success": True, "deleted": deleted}
-
-
-@router.post("/aws/auto-sync")
-async def auto_sync(current_user=Depends(get_current_user)):
-    """
-    Fetch the latest CUR CSV from the user's saved S3 bucket and run the
-    multi-agent pipeline. Returns the full analysis result.
-    """
-    user_id = current_user["id"]
-    from database import get_pool
-    pool = await get_pool()
-
-    async with pool.acquire() as conn:
-        row = await conn.fetchrow(
-            "SELECT access_key, secret_key, region, bucket_name FROM aws_credentials WHERE user_id = $1 AND verified = TRUE",
-            user_id,
-        )
-
-    if not row:
-        raise HTTPException(
-            status_code=404,
-            detail="No verified AWS credentials found. Please connect your AWS account first."
-        )
-
-    # Fetch latest CSV from S3
-    csv_content, error = await fetch_csv_from_s3(
-        access_key=row["access_key"],
-        secret_key=row["secret_key"],
-        region=row["region"],
-        bucket_name=row["bucket_name"],
-        file_key=None,
-    )
-
-    if error:
-        raise HTTPException(status_code=400, detail=f"S3 fetch failed: {error}")
-
-    # Run multi-agent pipeline
-    try:
-        from agents.orchestrator import CarbonIQOrchestrator
-        orchestrator = CarbonIQOrchestrator()
-        result = await orchestrator.process_cur_data(csv_content, filename=f"auto-sync:{row['bucket_name']}")
-        return result
-    except Exception as e:
-        logger.error(f"Auto-sync pipeline error for user {user_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Pipeline error: {str(e)}")
+    return {"success": True, "deleted": result.split()[-1] != "0"}
