@@ -2,9 +2,9 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 import logging
+import time
 
 from services.s3_fetcher import fetch_csv_from_s3
-from services.aws_analyzer import parse_aws_csv, load_mock_data
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -21,48 +21,70 @@ class AWSFetchRequest(BaseModel):
 @router.post("/aws/fetch")
 async def fetch_aws_data(request: AWSFetchRequest):
     """
-    Fetch AWS CUR data from S3 and calculate emissions
+    Fetch AWS CUR CSV from S3, then run it through the full 6-agent
+    orchestrator pipeline (same as /multi-agent/analyze).
+    Returns rich analytics: service/region breakdown, time-series, optimization.
     """
+    request_start = time.time()
     logger.info(f"Fetching AWS data from bucket: {request.bucket_name}")
-    
-    # Fetch CSV from S3
+
+    # 1. Pull CSV from S3
     csv_content, error = await fetch_csv_from_s3(
         access_key=request.access_key,
         secret_key=request.secret_key,
         region=request.region,
         bucket_name=request.bucket_name,
-        file_key=request.file_key
+        file_key=request.file_key,
     )
-    
+
     if error:
         raise HTTPException(status_code=400, detail=error)
-    
-    # Parse and analyze
+
+    # 2. Run through full multi-agent orchestrator pipeline
     try:
-        result = await parse_aws_csv(csv_content)
-        return result
-    except Exception as e:
-        logger.error(f"Error parsing CSV: {e}")
-        raise HTTPException(
-            status_code=400,
-            detail=f"CSV format not supported: {str(e)}"
+        from agents.orchestrator import CarbonIQOrchestrator
+        orchestrator = CarbonIQOrchestrator()
+
+        filename = request.file_key or f"s3://{request.bucket_name}/latest"
+        result = await orchestrator.process_cur_data(
+            csv_content,
+            max_rows=10000,
+            debug_skip_api=False,
         )
+
+        duration = time.time() - request_start
+        logger.info(f"S3 pipeline complete in {duration:.2f}s — success={result.get('success')}")
+
+        # Save to NeonDB (non-blocking)
+        if result.get("success"):
+            try:
+                from database import save_analysis
+                analysis_id = await save_analysis(filename, result)
+                result["analysis_id"] = analysis_id
+                logger.info(f"Saved S3 analysis to NeonDB: analysis_id={analysis_id}")
+            except Exception as db_err:
+                logger.warning(f"DB save failed (non-fatal): {db_err}")
+
+        return result
+
+    except Exception as e:
+        duration = time.time() - request_start
+        logger.error(f"S3 pipeline error after {duration:.2f}s: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Pipeline error: {str(e)}")
 
 
 @router.post("/aws/demo")
 async def load_demo_data():
-    """
-    Load demo AWS data for testing
-    """
-    logger.info("Loading demo AWS data")
-    
+    """Load demo AWS data through the full pipeline."""
     try:
-        csv_content = load_mock_data()
-        result = await parse_aws_csv(csv_content)
+        from routes.multi_agent_analysis import load_demo_cur_data
+        from agents.orchestrator import CarbonIQOrchestrator
+
+        csv_content = load_demo_cur_data()
+        orchestrator = CarbonIQOrchestrator()
+        result = await orchestrator.process_cur_data(csv_content, max_rows=1000, debug_skip_api=False)
+        result["is_demo"] = True
         return result
     except Exception as e:
-        logger.error(f"Error loading demo data: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error loading demo data: {str(e)}"
-        )
+        logger.error(f"Demo error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error loading demo: {str(e)}")
