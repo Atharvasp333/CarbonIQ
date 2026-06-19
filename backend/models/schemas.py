@@ -1,5 +1,6 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
+from datetime import datetime
 
 
 # Appliance/Server Emissions Schemas
@@ -125,3 +126,90 @@ class TimeBasedAnalysisResponse(BaseModel):
     cached_calls: int  # Number of cached results used
     fallback_calls: int  # Number of fallback values used
     cache_size: int  # Current cache size
+
+
+# Organization Profile Schemas
+class OrganizationProfileCreate(BaseModel):
+    organization_name: str
+    primary_user_region: str  # India, North America, Europe, Asia Pacific, Global
+    workload_type: str  # Production, Development, Testing, Analytics, Machine Learning, Mixed
+    latency_sensitivity: str  # High, Medium, Low
+    migration_flexibility: str  # Yes, Some Workloads, No
+    optimization_priority: str  # Reduce Carbon, Reduce Cost, Balance Both
+
+
+class OrganizationProfileUpdate(BaseModel):
+    organization_name: Optional[str] = None
+    primary_user_region: Optional[str] = None
+    workload_type: Optional[str] = None
+    latency_sensitivity: Optional[str] = None
+    migration_flexibility: Optional[str] = None
+    optimization_priority: Optional[str] = None
+
+
+class OrganizationProfileResponse(BaseModel):
+    id: int
+    organization_name: str
+    primary_user_region: str
+    workload_type: str
+    latency_sensitivity: str
+    migration_flexibility: str
+    optimization_priority: str
+    created_at: datetime
+    updated_at: datetime
+
+
+# Sustainability Intelligence Schemas
+class CarbonHotspot(BaseModel):
+    service: str
+    region: str
+    zone: str
+    timestamp: str
+    emissions_kg: float
+    cost: float
+    carbon_intensity: float
+
+
+class RegionOpportunity(BaseModel):
+    current_region: str
+    suggested_region: str
+    current_intensity: float
+    suggested_intensity: float
+    potential_reduction_pct: float
+    potential_savings_kg: float
+    confidence: str  # High, Medium, Low
+    reasoning: str
+
+
+class TimeOpportunity(BaseModel):
+    service: str
+    region: str
+    current_time_window: str
+    suggested_time_window: str
+    current_avg_intensity: float
+    suggested_avg_intensity: float
+    potential_reduction_pct: float
+    potential_savings_kg: float
+    confidence: str
+    reasoning: str
+
+
+class ServiceRecommendation(BaseModel):
+    title: str
+    category: str  # EC2, Lambda, S3, RDS, SageMaker, Region, Time
+    service: str
+    carbon_reduction_pct: float
+    cost_impact: str  # Negative, Neutral, Positive
+    confidence: str  # High, Medium, Low
+    reasoning: str
+    details: dict
+
+
+class SustainabilityInsights(BaseModel):
+    service_analysis: dict
+    region_analysis: dict
+    time_analysis: dict
+    hotspots: List[CarbonHotspot]
+    region_opportunities: List[RegionOpportunity]
+    time_opportunities: List[TimeOpportunity]
+    recommendations: List[ServiceRecommendation]

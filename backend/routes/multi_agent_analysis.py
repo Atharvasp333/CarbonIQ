@@ -77,11 +77,17 @@ def _get_fallback_demo_data():
 
 
 @router.post("/multi-agent/analyze")
-async def analyze_cur_multiagent(file: UploadFile = File(...)):
+async def analyze_cur_multiagent(
+    file: UploadFile = File(...),
+    use_intelligence: bool = True,
+    use_gemini: bool = False
+):
     """
-    Analyze AWS CUR using multi-agent architecture
+    Analyze AWS CUR using multi-agent architecture with intelligence layer
     
-    DEBUG MODE: Processes ONLY first 1000 rows, SKIPS API calls for fast testing
+    Query params:
+    - use_intelligence: Enable sustainability intelligence layer (default: True)
+    - use_gemini: Use Gemini for explanations (default: False)
     """
     import time
     request_start = time.time()
@@ -97,22 +103,45 @@ async def analyze_cur_multiagent(file: UploadFile = File(...)):
         
         logger.info(f"File: {file.filename}")
         logger.info(f"Size: {len(csv_content):,} bytes")
+        logger.info(f"Intelligence Layer: {'Enabled' if use_intelligence else 'Disabled'}")
+        logger.info(f"Gemini Explanations: {'Enabled' if use_gemini else 'Disabled'}")
+        
+        # Get organization profile
+        org_profile = None
+        if use_intelligence:
+            try:
+                from database import get_pool
+                pool = await get_pool()
+                async with pool.acquire() as conn:
+                    row = await conn.fetchrow("""
+                        SELECT * FROM organization_profile
+                        ORDER BY created_at DESC
+                        LIMIT 1
+                    """)
+                    if row:
+                        org_profile = dict(row)
+                        logger.info(f"Using organization profile: {org_profile.get('organization_name')}")
+            except Exception as e:
+                logger.warning(f"Could not load org profile: {e}")
         
         # Initialize orchestrator
         orchestrator = CarbonIQOrchestrator()
         
-        # Process through pipeline (HARD LIMIT: 1000 rows, TRY REAL API)
-        logger.info("Starting pipeline with max_rows=1000, fast API timeout mode")
+        # Process through pipeline
+        logger.info("Starting pipeline with intelligence layer")
         result = await orchestrator.process_cur_data(
             csv_content, 
-            max_rows=10000,  # Scan up to 10k rows
-            debug_skip_api=False
+            max_rows=10000,
+            debug_skip_api=False,
+            org_profile=org_profile,
+            use_intelligence=use_intelligence,
+            use_gemini=use_gemini
         )
         
         request_duration = time.time() - request_start
         logger.info(f"[10] RESPONSE SENT - Total time: {request_duration:.2f}s")
 
-        # Save to NeonDB (non-blocking — don't fail if DB is down)
+        # Save to NeonDB
         if result.get('success'):
             try:
                 from database import save_analysis
@@ -128,7 +157,6 @@ async def analyze_cur_multiagent(file: UploadFile = File(...)):
         request_duration = time.time() - request_start
         logger.error(f"Multi-agent analysis failed after {request_duration:.2f}s: {str(e)}", exc_info=True)
         
-        # ALWAYS return a response, never leave hanging
         return {
             'success': False,
             'message': f'Analysis failed: {str(e)}',

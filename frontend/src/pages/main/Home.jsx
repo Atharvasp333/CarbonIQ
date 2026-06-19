@@ -3,7 +3,7 @@ import { loadDemoData, uploadCSV } from '../../api/client';
 import ChatBot from '../../components/ChatBot/ChatBot';
 import AWSConnectBanner from '../../components/AWSConnectBanner';
 import toast from 'react-hot-toast';
-import { Upload, FileSpreadsheet, CheckCircle, BarChart3, Server, ArrowRight } from 'lucide-react';
+import { Upload, FileSpreadsheet, CheckCircle, BarChart3, Server, ArrowRight, Lightbulb } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 function loadSavedSummary() {
@@ -133,7 +133,23 @@ export default function Home() {
                 </div>
 
                 {/* Navigation Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Link
+                    to="/insights"
+                    className="group bg-white hover:bg-green-50 border-2 border-green-300 hover:border-green-500 rounded-lg p-5 transition-all flex items-center justify-between"
+                  >
+                    <div className="flex items-center">
+                      <div className="bg-green-100 p-3 rounded-lg mr-4">
+                        <Lightbulb className="w-6 h-6 text-green-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-900 group-hover:text-green-700">Insights</h3>
+                        <p className="text-sm text-gray-600">AI-powered sustainability recommendations</p>
+                      </div>
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-green-600 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+
                   <Link
                     to="/services"
                     className="group bg-white hover:bg-emerald-50 border-2 border-emerald-300 hover:border-emerald-500 rounded-lg p-5 transition-all flex items-center justify-between"

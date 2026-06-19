@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { Home, FileText, Layers, User, Settings, LogOut, Menu, X } from 'lucide-react';
+import { Home, FileText, Layers, User, Settings, LogOut, Menu, X, Lightbulb } from 'lucide-react';
 
 export default function MainLayout() {
   const { user, logout } = useAuth();
@@ -16,6 +16,7 @@ export default function MainLayout() {
 
   const navItems = [
     { path: '/home', icon: Home, label: 'Dashboard' },
+    { path: '/insights', icon: Lightbulb, label: 'Insights' },
     { path: '/reports', icon: FileText, label: 'Reports' },
     { path: '/services', icon: Layers, label: 'Services' },
     { path: '/profile', icon: User, label: 'Profile' },

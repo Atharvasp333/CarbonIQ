@@ -127,6 +127,21 @@ async def init_db():
             );
         """)
 
+        # Organization Profile Table
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS organization_profile (
+                id                      SERIAL PRIMARY KEY,
+                organization_name       TEXT NOT NULL,
+                primary_user_region     TEXT NOT NULL,
+                workload_type           TEXT NOT NULL,
+                latency_sensitivity     TEXT NOT NULL,
+                migration_flexibility   TEXT NOT NULL,
+                optimization_priority   TEXT NOT NULL,
+                created_at              TIMESTAMPTZ DEFAULT NOW(),
+                updated_at              TIMESTAMPTZ DEFAULT NOW()
+            );
+        """)
+
     logger.info("NeonDB tables ready")
 
 

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Upload, Activity, TrendingDown, AlertCircle, Zap, MapPin } from 'lucide-react';
 import axios from 'axios';
 import ServiceDetailDashboard from './ServiceDetailDashboard';
+import SustainabilityRecommendations from './SustainabilityRecommendations';
 
 const apiClient = axios.create({
   baseURL: 'http://localhost:8000',
@@ -208,6 +209,13 @@ const MultiAgentDashboard = () => {
                 </div>
               </div>
             </div>
+
+            {/* Sustainability Recommendations - NEW INTELLIGENCE LAYER */}
+            {results.intelligence && (
+              <div className="mb-8">
+                <SustainabilityRecommendations intelligence={results.intelligence} />
+              </div>
+            )}
 
             {/* Optimization */}
             <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 mb-8">

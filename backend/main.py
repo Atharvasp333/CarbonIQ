@@ -10,7 +10,7 @@ from database import init_db, close_pool
 from routes import (
     emissions, insights, whatif, chat, regional_test,
     electricity_test, aws_integration, aws_credentials, time_based_analysis,
-    multi_agent_analysis, service_analytics, auth
+    multi_agent_analysis, service_analytics, auth, profile
 )
 
 import logging
@@ -51,6 +51,7 @@ app.include_router(time_based_analysis.router, prefix="/api")
 app.include_router(multi_agent_analysis.router, prefix="/api")
 app.include_router(service_analytics.router, prefix="/api")
 app.include_router(auth.router, prefix="/api")
+app.include_router(profile.router)
 
 
 @app.get("/api/health")

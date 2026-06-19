@@ -17,6 +17,7 @@ from .carbon_intensity_agent import CarbonIntensityAgent
 from .emission_calculation_agent import EmissionCalculationAgent
 from .analytics_agent import AnalyticsAgent
 from .optimization_agent import OptimizationAgent
+from .explainable_intelligence_orchestrator import ExplainableIntelligenceOrchestrator
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,7 @@ class CarbonIQOrchestrator:
         self.emission_agent = EmissionCalculationAgent()
         self.analytics_agent = AnalyticsAgent()
         self.optimization_agent = OptimizationAgent()
+        self.intelligence_orchestrator = ExplainableIntelligenceOrchestrator()
         
         self.pipeline_errors = []
     
@@ -49,7 +51,10 @@ class CarbonIQOrchestrator:
         self, 
         csv_content: str, 
         max_rows: int = 1000,
-        debug_skip_api: bool = False
+        debug_skip_api: bool = False,
+        org_profile: dict = None,
+        use_intelligence: bool = True,
+        use_gemini: bool = False
     ) -> Dict:
         """
         Process AWS CUR CSV through optimized multi-agent pipeline
@@ -268,6 +273,27 @@ class CarbonIQOrchestrator:
             
             logger.info(f"✓ Found {len(optimization['opportunities'])} optimization opportunities")
             
+            # STAGE 7: Explainable Intelligence Layer (NEW)
+            intelligence = None
+            if use_intelligence:
+                stage_start = time.time()
+                logger.info("="*60)
+                logger.info("[Agent 7] Explainable Intelligence Layer")
+                logger.info("="*60)
+                
+                intelligence = await self.intelligence_orchestrator.generate_intelligence(
+                    emission_records=emission_records,
+                    analytics=analytics,
+                    org_profile=org_profile,
+                    use_ai=use_gemini
+                )
+                
+                stage_duration = time.time() - stage_start
+                logger.info(f"✓ Explainable intelligence generated: {len(intelligence['recommendations'])} recommendations")
+                
+                if stage_duration > 10:
+                    logger.warning(f"⚠️  [WARNING] Intelligence layer taking too long: {stage_duration:.1f}s")
+            
             # Compile final response
             response = {
                 'success': True,
@@ -287,6 +313,9 @@ class CarbonIQOrchestrator:
                 
                 # Optimization insights
                 'optimization': optimization,
+                
+                # Intelligence Layer (NEW)
+                'intelligence': intelligence,
                 
                 # Detailed records (limited to 100 for UI display)
                 'detailed_records': emission_records[:100],

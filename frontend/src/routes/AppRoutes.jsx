@@ -10,6 +10,7 @@ import Services from '../pages/main/Services';
 import ServiceDetail from '../pages/main/ServiceDetail';
 import Profile from '../pages/main/Profile';
 import Settings from '../pages/main/Settings';
+import Insights from '../pages/main/Insights';
 import NotFound from '../pages/NotFound';
 
 export default function AppRoutes() {
@@ -30,6 +31,7 @@ export default function AppRoutes() {
       {/* Protected routes with layout */}
       <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
         <Route path="/home" element={<Home />} />
+        <Route path="/insights" element={<Insights />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/services" element={<Services />} />
         <Route path="/service/:serviceName" element={<ServiceDetail />} />

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Bell, Moon, Zap, Trash2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Bell, Moon, Zap, Trash2, Building2, Globe, Cpu, RefreshCw, Target } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function Settings() {
@@ -10,6 +10,119 @@ export default function Settings() {
     refreshInterval: '5',
     theme: 'light'
   });
+
+  const [orgProfile, setOrgProfile] = useState(null);
+  const [profileOptions, setProfileOptions] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileForm, setProfileForm] = useState({
+    organization_name: '',
+    primary_user_region: '',
+    workload_type: '',
+    latency_sensitivity: '',
+    migration_flexibility: '',
+    optimization_priority: ''
+  });
+
+  useEffect(() => {
+    loadOrgProfile();
+    loadProfileOptions();
+  }, []);
+
+  const loadOrgProfile = async () => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiUrl}/api/profile/`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data) {
+          setOrgProfile(data);
+          setProfileForm(data);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load organization profile:', error);
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  const loadProfileOptions = async () => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiUrl}/api/profile/options`);
+      if (response.ok) {
+        const data = await response.json();
+        setProfileOptions(data);
+        console.log('Loaded profile options:', data);
+      } else {
+        console.error('Failed to fetch options, using fallback');
+        setProfileOptions(getFallbackOptions());
+      }
+    } catch (error) {
+      console.error('Failed to load profile options:', error);
+      // Use fallback options if API fails
+      setProfileOptions(getFallbackOptions());
+    }
+  };
+
+  const getFallbackOptions = () => ({
+    primary_user_region: [
+      "India",
+      "North America",
+      "Europe",
+      "Asia Pacific",
+      "Global"
+    ],
+    workload_type: [
+      "Production",
+      "Development",
+      "Testing",
+      "Analytics",
+      "Machine Learning",
+      "Mixed"
+    ],
+    latency_sensitivity: [
+      "High",
+      "Medium",
+      "Low"
+    ],
+    migration_flexibility: [
+      "Yes",
+      "Some Workloads",
+      "No"
+    ],
+    optimization_priority: [
+      "Reduce Carbon",
+      "Reduce Cost",
+      "Balance Both"
+    ]
+  });
+
+  const saveOrgProfile = async () => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiUrl}/api/profile/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(profileForm)
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setOrgProfile(data);
+        toast.success('Organization profile saved successfully!');
+      } else {
+        toast.error('Failed to save organization profile');
+      }
+    } catch (error) {
+      console.error('Failed to save profile:', error);
+      toast.error('Error saving organization profile');
+    }
+  };
+
+  const handleProfileChange = (field, value) => {
+    setProfileForm(prev => ({ ...prev, [field]: value }));
+  };
 
   const handleToggle = (key) => {
     setSettings(prev => ({
@@ -119,6 +232,156 @@ export default function Settings() {
             </select>
           </div>
         </div>
+      </div>
+
+      {/* Organization Profile Section (NEW) */}
+      <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-xl shadow-sm border border-green-200">
+        <div className="p-6 border-b border-green-200">
+          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+            <Building2 className="text-green-600" size={24} />
+            Organization Profile
+          </h2>
+          <p className="text-sm text-gray-600 mt-1">
+            Configure sustainability preferences for personalized recommendations
+          </p>
+        </div>
+        
+        {profileLoading ? (
+          <div className="p-6 text-center text-gray-600">Loading profile...</div>
+        ) : (
+          <div className="p-6 space-y-4">
+            {/* Debug info - remove in production */}
+            {!profileOptions && (
+              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-sm text-yellow-800">
+                  ⚠️ Backend API not responding. Using default options. Start backend with: <code className="font-mono bg-yellow-100 px-2 py-1 rounded">python -m uvicorn main:app --reload --port 8000</code>
+                </p>
+              </div>
+            )}
+            
+            {/* Organization Name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Organization Name
+              </label>
+              <input
+                type="text"
+                value={profileForm.organization_name}
+                onChange={(e) => handleProfileChange('organization_name', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                placeholder="Enter your organization name"
+              />
+            </div>
+
+            {/* Primary User Region */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                <Globe size={16} />
+                Primary User Region
+              </label>
+              <select
+                value={profileForm.primary_user_region}
+                onChange={(e) => handleProfileChange('primary_user_region', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              >
+                <option value="">Select region...</option>
+                {profileOptions?.primary_user_region?.map(option => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Workload Type */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                <Cpu size={16} />
+                Workload Type
+              </label>
+              <select
+                value={profileForm.workload_type}
+                onChange={(e) => handleProfileChange('workload_type', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              >
+                <option value="">Select workload type...</option>
+                {profileOptions?.workload_type?.map(option => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Latency Sensitivity */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                <Zap size={16} />
+                Latency Sensitivity
+              </label>
+              <select
+                value={profileForm.latency_sensitivity}
+                onChange={(e) => handleProfileChange('latency_sensitivity', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              >
+                <option value="">Select sensitivity...</option>
+                {profileOptions?.latency_sensitivity?.map(option => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Migration Flexibility */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                <RefreshCw size={16} />
+                Migration Flexibility
+              </label>
+              <select
+                value={profileForm.migration_flexibility}
+                onChange={(e) => handleProfileChange('migration_flexibility', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              >
+                <option value="">Select flexibility...</option>
+                {profileOptions?.migration_flexibility?.map(option => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Optimization Priority */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                <Target size={16} />
+                Optimization Priority
+              </label>
+              <select
+                value={profileForm.optimization_priority}
+                onChange={(e) => handleProfileChange('optimization_priority', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              >
+                <option value="">Select priority...</option>
+                {profileOptions?.optimization_priority?.map(option => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Save Button */}
+            <div className="pt-4">
+              <button
+                onClick={saveOrgProfile}
+                className="w-full px-6 py-3 bg-gradient-to-r from-green-600 to-blue-600 text-white font-semibold rounded-lg hover:from-green-700 hover:to-blue-700 transition"
+              >
+                Save Organization Profile
+              </button>
+            </div>
+
+            {/* Info */}
+            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                💡 Your profile helps CarbonIQ generate personalized sustainability recommendations 
+                that respect your constraints and priorities.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Account Section */}
