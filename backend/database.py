@@ -48,10 +48,11 @@ async def init_db():
             CREATE TABLE IF NOT EXISTS aws_credentials (
                 id          SERIAL PRIMARY KEY,
                 user_id     INTEGER REFERENCES users(id) ON DELETE CASCADE,
-                access_key  TEXT NOT NULL,
-                secret_key  TEXT NOT NULL,
-                region      TEXT NOT NULL DEFAULT 'us-east-1',
+                access_key  TEXT NOT NULL,          -- Fernet-encrypted (enc:...)
+                secret_key  TEXT NOT NULL,          -- Fernet-encrypted (enc:...)
+                region      TEXT NOT NULL DEFAULT 'ap-south-1',
                 bucket_name TEXT NOT NULL,
+                file_key    TEXT,                   -- optional S3 key path
                 verified    BOOLEAN DEFAULT FALSE,
                 verified_at TIMESTAMPTZ,
                 created_at  TIMESTAMPTZ DEFAULT NOW(),
@@ -102,6 +103,12 @@ async def init_db():
                 ON emission_records(service);
             CREATE INDEX IF NOT EXISTS idx_emission_records_date
                 ON emission_records(record_date);
+        """)
+
+        # ── Migrations for existing tables ──────────────────────────────────
+        # Add file_key column if it doesn't exist yet (safe to run repeatedly)
+        await conn.execute("""
+            ALTER TABLE aws_credentials ADD COLUMN IF NOT EXISTS file_key TEXT;
         """)
 
         await conn.execute("""
