@@ -238,28 +238,55 @@ async def me(current_user=Depends(get_current_user)):
     }
 
 
+@router.post("/auth/sync")
+async def sync_user(request: Request):
+    """
+    Called from frontend after Neon Auth login/signup.
+    Creates or updates the user row in our users table.
+    No JWT needed — trusts the payload from Neon Auth session.
+    """
+    body = await request.json()
+    email = body.get("email", "").lower().strip()
+    name = body.get("name") or email.split("@")[0]
+
+    if not email:
+        raise HTTPException(status_code=400, detail="email required")
+
+    from database import get_pool
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        user = await conn.fetchrow("""
+            INSERT INTO users (name, email, password)
+            VALUES ($1, $2, 'neon_auth_managed')
+            ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name
+            RETURNING id, name, email, created_at
+        """, name, email)
+
+    return {
+        "success": True,
+        "user": {
+            "id": user["id"],
+            "name": user["name"],
+            "email": user["email"],
+            "createdAt": user["created_at"].isoformat(),
+        },
+    }
+
+
 @router.get("/auth/debug-token")
 async def debug_token(request: Request):
-    """Temporary debug endpoint — logs what token the backend receives."""
+    """Debug endpoint — shows what token the backend receives."""
     auth_header = request.headers.get("authorization", "MISSING")
     if auth_header == "MISSING":
-        return {"received": "no Authorization header", "hint": "token not being sent from frontend"}
-
+        return {"received": "no Authorization header"}
     token = auth_header.replace("Bearer ", "").replace("bearer ", "")
-    # Decode without verification to see payload
     try:
-        import base64, json
+        import base64, json as _json
         parts = token.split(".")
         pad = lambda s: s + "=" * (-len(s) % 4)
-        header = json.loads(base64.urlsafe_b64decode(pad(parts[0])))
-        payload = json.loads(base64.urlsafe_b64decode(pad(parts[1])))
-        return {
-            "received": "token present",
-            "header": header,
-            "payload_email": payload.get("email"),
-            "payload_sub": payload.get("sub"),
-            "payload_iss": payload.get("iss"),
-            "payload_exp": payload.get("exp"),
-        }
+        header = _json.loads(base64.urlsafe_b64decode(pad(parts[0])))
+        payload = _json.loads(base64.urlsafe_b64decode(pad(parts[1])))
+        return {"received": "token present", "header": header,
+                "email": payload.get("email"), "iss": payload.get("iss")}
     except Exception as e:
-        return {"received": "token present but could not decode", "error": str(e), "raw_prefix": token[:40]}
+        return {"received": "token present but undecipherable", "error": str(e)}

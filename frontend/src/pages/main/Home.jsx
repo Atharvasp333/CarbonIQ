@@ -6,11 +6,22 @@ import toast from 'react-hot-toast';
 import { Upload, FileSpreadsheet, CheckCircle, BarChart3, Server, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+function loadSavedSummary() {
+  try {
+    const raw = localStorage.getItem('awsAnalysisData');
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    return data?.summary ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export default function Home() {
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(false);
   const [dataUploaded, setDataUploaded] = useState(!!localStorage.getItem('hasLoadedData'));
-  const [lastUploadSummary, setLastUploadSummary] = useState(null);
+  const [lastUploadSummary, setLastUploadSummary] = useState(() => loadSavedSummary());
 
   const loadMockDataHandler = async () => {
     setLoading(true);

@@ -1,5 +1,6 @@
 import { createContext, useEffect, useState } from 'react';
 import { authClient } from '../lib/auth';
+import { syncUser } from '../api/client';
 
 export const AuthContext = createContext(null);
 
@@ -8,42 +9,23 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    authClient.getSession({
-      fetchOptions: {
-        onSuccess: (ctx) => {
-          const jwt = ctx.response?.headers?.get('set-auth-jwt');
-          if (jwt) {
-            localStorage.setItem('neon_jwt', jwt);
-            console.log('[Auth] JWT captured at session restore');
-          }
-        },
-      },
-    }).then(({ data }) => {
-      setUser(data?.user ?? null);
+    authClient.getSession().then(({ data }) => {
+      const u = data?.user ?? null;
+      setUser(u);
+      // Sync to our users table silently
+      if (u?.email) syncUser(u.email, u.name).catch(() => {});
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
 
   const login = async (email, password) => {
     try {
-      let capturedToken = null;
-      const result = await authClient.signIn.email({
-        email,
-        password,
-        fetchOptions: {
-          onSuccess: (ctx) => {
-            const jwt = ctx.response?.headers?.get('set-auth-jwt');
-            if (jwt) {
-              capturedToken = jwt;
-              localStorage.setItem('neon_jwt', jwt);
-              console.log('[Auth] JWT captured at login');
-            }
-          },
-        },
-      });
+      const result = await authClient.signIn.email({ email, password });
       if (result.error) return { success: false, error: result.error.message };
       const { data } = await authClient.getSession();
-      setUser(data?.user ?? null);
+      const u = data?.user ?? null;
+      setUser(u);
+      if (u?.email) syncUser(u.email, u.name).catch(() => {});
       return { success: true };
     } catch (err) {
       return { success: false, error: err.message || 'Login failed' };
@@ -52,25 +34,12 @@ export const AuthProvider = ({ children }) => {
 
   const signup = async ({ name, email, password }) => {
     try {
-      let capturedToken = null;
-      const result = await authClient.signUp.email({
-        name,
-        email,
-        password,
-        fetchOptions: {
-          onSuccess: (ctx) => {
-            const jwt = ctx.response?.headers?.get('set-auth-jwt');
-            if (jwt) {
-              capturedToken = jwt;
-              localStorage.setItem('neon_jwt', jwt);
-              console.log('[Auth] JWT captured at signup');
-            }
-          },
-        },
-      });
+      const result = await authClient.signUp.email({ name, email, password });
       if (result.error) return { success: false, error: result.error.message };
       const { data } = await authClient.getSession();
-      setUser(data?.user ?? null);
+      const u = data?.user ?? null;
+      setUser(u);
+      if (u?.email) syncUser(u.email, u.name || name).catch(() => {});
       return { success: true };
     } catch (err) {
       return { success: false, error: err.message || 'Signup failed' };
@@ -80,6 +49,9 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     await authClient.signOut();
     localStorage.removeItem('neon_jwt');
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('awsAnalysisData');
+    localStorage.removeItem('hasLoadedData');
     setUser(null);
   };
 

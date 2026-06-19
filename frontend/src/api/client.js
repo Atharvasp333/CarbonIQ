@@ -5,22 +5,22 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
 });
 
-// Inject Neon Auth JWT on every request
+// Inject JWT on every request
 api.interceptors.request.use(async (config) => {
-  const token = await getJwtToken();
+  const token = getJwtToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
 
-// On 401 retry once with a fresh token, then just reject (no redirect loops)
+// On 401 retry once with a fresh token, then reject
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
     if (error.response?.status === 401 && !error.config?._retried) {
       error.config._retried = true;
-      const token = await getJwtToken();
+      const token = getJwtToken();
       if (token) {
         error.config.headers.Authorization = `Bearer ${token}`;
         return api(error.config);
@@ -30,7 +30,7 @@ api.interceptors.response.use(
   }
 );
 
-// --- Auth (kept for backward compat, prefer authClient from lib/auth.js) ----
+// --- Auth -------------------------------------------------------------------
 
 export const authSignup = async ({ name, email, password }) => {
   const res = await api.post('/api/auth/signup', { name, email, password });
@@ -47,20 +47,31 @@ export const authMe = async () => {
   return res.data;
 };
 
-// --- AWS Credentials --------------------------------------------------------
+export const syncUser = async (email, name) => {
+  // No auth header needed — syncs Neon Auth user into our users table
+  const res = await axios.post(
+    `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/auth/sync`,
+    { email, name }
+  );
+  return res.data;
+};
+
+// --- AWS Credentials (DB-backed, email-keyed) --------------------------------
+
+const BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 export const saveAWSCredentials = async (creds) => {
-  const res = await api.post('/api/aws/credentials', creds);
+  const res = await axios.post(`${BASE}/api/aws/creds/save`, creds);
   return res.data;
 };
 
-export const getAWSCredentials = async () => {
-  const res = await api.get('/api/aws/credentials');
+export const getAWSCredentials = async (email) => {
+  const res = await axios.post(`${BASE}/api/aws/creds/get`, { email });
   return res.data;
 };
 
-export const deleteAWSCredentials = async () => {
-  const res = await api.delete('/api/aws/credentials');
+export const deleteAWSCredentials = async (email) => {
+  const res = await axios.post(`${BASE}/api/aws/creds/delete`, { email });
   return res.data;
 };
 
@@ -69,7 +80,7 @@ export const autoSyncAWS = async () => {
   return res.data;
 };
 
-// --- Existing endpoints ------------------------------------------------------
+// --- Analysis endpoints ------------------------------------------------------
 
 export const uploadCSV = async (file) => {
   const formData = new FormData();
@@ -107,7 +118,7 @@ export const sendChatMessage = async (message) => {
 };
 
 export const fetchAWSData = async (credentials) => {
-  const response = await api.post('/api/aws/fetch', credentials);
+  const response = await api.post('/api/aws/fetch', credentials, { timeout: 180000 });
   return response.data;
 };
 

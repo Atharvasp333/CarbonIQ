@@ -1,22 +1,9 @@
-import { createInternalNeonAuth } from '@neondatabase/neon-js/auth';
-import { BetterAuthReactAdapter } from '@neondatabase/neon-js/auth/react/adapters';
+import { createAuthClient } from '@neondatabase/neon-js/auth';
 
-export const _neonAuth = createInternalNeonAuth(import.meta.env.VITE_NEON_AUTH_URL, {
-  adapter: BetterAuthReactAdapter(),
-  fetchOptions: { credentials: 'include' },
-});
+// Simple auth client — signIn, signUp, getSession, signOut
+export const authClient = createAuthClient(import.meta.env.VITE_NEON_AUTH_URL);
 
-// React-aware client — has useSession, signIn, signUp, getSession, signOut
-export const authClient = _neonAuth.adapter;
-
-// Get JWT for the current session (for backend API calls)
-export async function getJwtToken() {
-  try {
-    const token = await _neonAuth.getJWTToken();
-    if (token) {
-      localStorage.setItem('neon_jwt', token);
-      return token;
-    }
-  } catch { /* ignore */ }
-  return localStorage.getItem('neon_jwt') ?? null;
-}
+// Returns stored JWT token for backend API request headers
+export const getJwtToken = () => {
+  return localStorage.getItem('auth_token') ?? null;
+};
