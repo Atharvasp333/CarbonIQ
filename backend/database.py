@@ -131,6 +131,7 @@ async def init_db():
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS organization_profile (
                 id                      SERIAL PRIMARY KEY,
+                user_id                 INTEGER REFERENCES users(id) ON DELETE CASCADE,
                 organization_name       TEXT NOT NULL,
                 primary_user_region     TEXT NOT NULL,
                 workload_type           TEXT NOT NULL,
@@ -138,8 +139,112 @@ async def init_db():
                 migration_flexibility   TEXT NOT NULL,
                 optimization_priority   TEXT NOT NULL,
                 created_at              TIMESTAMPTZ DEFAULT NOW(),
-                updated_at              TIMESTAMPTZ DEFAULT NOW()
+                updated_at              TIMESTAMPTZ DEFAULT NOW(),
+                UNIQUE(user_id)
             );
+        """)
+
+        # Analysis Summary Table (precomputed for fast dashboard loading)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS analysis_summary (
+                id                  SERIAL PRIMARY KEY,
+                user_id             INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                analysis_id         INTEGER NOT NULL REFERENCES analyses(id) ON DELETE CASCADE,
+                service_breakdown   JSONB NOT NULL,
+                region_breakdown    JSONB NOT NULL,
+                daily_breakdown     JSONB,
+                time_breakdown      JSONB,
+                top_hotspots        JSONB,
+                metadata            JSONB,
+                created_at          TIMESTAMPTZ DEFAULT NOW(),
+                updated_at          TIMESTAMPTZ DEFAULT NOW(),
+                UNIQUE(analysis_id)
+            );
+        """)
+
+        await conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_analysis_summary_user ON analysis_summary(user_id);
+            CREATE INDEX IF NOT EXISTS idx_analysis_summary_analysis ON analysis_summary(analysis_id);
+        """)
+
+        # Recommendation Runs Table (stores intelligence engine outputs)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS recommendation_runs (
+                id                      SERIAL PRIMARY KEY,
+                user_id                 INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                analysis_id             INTEGER NOT NULL REFERENCES analyses(id) ON DELETE CASCADE,
+                run_type                TEXT NOT NULL,
+                generated_at            TIMESTAMPTZ DEFAULT NOW(),
+                findings                JSONB NOT NULL,
+                recommendations         JSONB NOT NULL,
+                hotspots                JSONB,
+                region_opportunities    JSONB,
+                time_opportunities      JSONB,
+                confidence_score        NUMERIC(3,2),
+                metadata                JSONB,
+                status                  TEXT DEFAULT 'completed'
+            );
+        """)
+
+        await conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_recommendation_runs_user ON recommendation_runs(user_id);
+            CREATE INDEX IF NOT EXISTS idx_recommendation_runs_analysis ON recommendation_runs(analysis_id);
+            CREATE INDEX IF NOT EXISTS idx_recommendation_runs_type ON recommendation_runs(run_type);
+            CREATE INDEX IF NOT EXISTS idx_recommendation_runs_generated ON recommendation_runs(generated_at DESC);
+        """)
+
+        # User Insights Table
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS user_insights (
+                id                  SERIAL PRIMARY KEY,
+                user_id             INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                insight_type        TEXT NOT NULL,
+                time_period         TEXT,
+                period_start        DATE,
+                period_end          DATE,
+                total_emissions_kg  NUMERIC(12,6),
+                total_cost          NUMERIC(12,4),
+                total_energy_kwh    NUMERIC(12,6),
+                analysis_count      INTEGER,
+                top_services        JSONB,
+                top_regions         JSONB,
+                trends              JSONB,
+                alerts              JSONB,
+                created_at          TIMESTAMPTZ DEFAULT NOW(),
+                updated_at          TIMESTAMPTZ DEFAULT NOW()
+            );
+        """)
+
+        await conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_user_insights_user ON user_insights(user_id);
+            CREATE INDEX IF NOT EXISTS idx_user_insights_type ON user_insights(insight_type);
+            CREATE INDEX IF NOT EXISTS idx_user_insights_period ON user_insights(period_start, period_end);
+        """)
+
+        # Audit Log Table
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS audit_log (
+                id              SERIAL PRIMARY KEY,
+                user_id         INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                action          TEXT NOT NULL,
+                entity_type     TEXT NOT NULL,
+                entity_id       INTEGER,
+                ip_address      TEXT,
+                user_agent      TEXT,
+                details         JSONB,
+                created_at      TIMESTAMPTZ DEFAULT NOW()
+            );
+        """)
+
+        await conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_audit_log_user ON audit_log(user_id);
+            CREATE INDEX IF NOT EXISTS idx_audit_log_entity ON audit_log(entity_type, entity_id);
+            CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at DESC);
+        """)
+
+        # Add user_id to organization_profile if not present
+        await conn.execute("""
+            ALTER TABLE organization_profile ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE CASCADE;
         """)
 
     logger.info("NeonDB tables ready")

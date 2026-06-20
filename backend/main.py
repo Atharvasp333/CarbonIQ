@@ -10,7 +10,7 @@ from database import init_db, close_pool
 from routes import (
     emissions, insights, whatif, chat, regional_test,
     electricity_test, aws_integration, aws_credentials, time_based_analysis,
-    multi_agent_analysis, service_analytics, auth, profile
+    multi_agent_analysis, service_analytics, auth, profile, intelligence
 )
 
 import logging
@@ -52,6 +52,17 @@ app.include_router(multi_agent_analysis.router, prefix="/api")
 app.include_router(service_analytics.router, prefix="/api")
 app.include_router(auth.router, prefix="/api")
 app.include_router(profile.router)
+app.include_router(intelligence.router)
+
+# Log all registered routes for debugging
+logger = logging.getLogger(__name__)
+logger.info("=" * 80)
+logger.info("REGISTERED ROUTES:")
+logger.info("=" * 80)
+for route in app.routes:
+    if hasattr(route, 'path') and hasattr(route, 'methods'):
+        logger.info(f"{list(route.methods)[0]:8s} {route.path}")
+logger.info("=" * 80)
 
 
 @app.get("/api/health")

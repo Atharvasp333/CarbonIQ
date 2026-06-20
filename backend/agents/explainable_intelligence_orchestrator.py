@@ -1,6 +1,9 @@
 """
-EXPLAINABLE INTELLIGENCE ORCHESTRATOR
+EXPLAINABLE INTELLIGENCE ORCHESTRATOR (DEPRECATED - USE intelligence_engine.py)
 Coordinates the evidence-based recommendation pipeline
+
+For new code, use:
+    from agents.intelligence.intelligence_engine import SustainabilityIntelligenceEngine
 
 Pipeline:
 1. Insight Generation Agent → Generate factual observations with evidence
@@ -14,12 +17,14 @@ import logging
 from typing import Dict, List, Optional
 import time
 
+# Updated imports for new structure
 from .insight_generation_agent import InsightGenerationAgent
 from .optimization_discovery_agent import OptimizationDiscoveryAgent
-from .constraint_validation_agent import ConstraintValidationAgent
+from .intelligence.constraint_validation_agent import ConstraintValidationAgent
 from .ai_recommendation_agent import AIRecommendationAgent
 
 logger = logging.getLogger(__name__)
+logger.warning("DEPRECATED: Using old explainable_intelligence_orchestrator.py. Please migrate to intelligence_engine.py")
 
 
 class ExplainableIntelligenceOrchestrator:

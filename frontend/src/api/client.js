@@ -152,3 +152,20 @@ export const loadTimeBasedDemo = async () => {
 };
 
 export default api;
+
+// --- Intelligence Engine endpoints ------------------------------------------------------
+
+export const generateInsights = async () => {
+  const response = await api.post('/api/intelligence/generate-insights', {}, { timeout: 120000 });
+  return response.data;
+};
+
+export const getRecommendations = async () => {
+  const response = await api.get('/api/intelligence/recommendations');
+  return response.data;
+};
+
+export const getRecommendationHistory = async () => {
+  const response = await api.get('/api/intelligence/recommendations/history');
+  return response.data;
+};

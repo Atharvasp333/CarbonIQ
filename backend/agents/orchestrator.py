@@ -1,6 +1,9 @@
 """
-MULTI-AGENT ORCHESTRATOR (OPTIMIZED)
-Coordinates all agents in the CarbonIQ pipeline with performance optimizations
+MULTI-AGENT ORCHESTRATOR (DEPRECATED - USE carbon_iq_orchestrator.py)
+This file maintained for backward compatibility only.
+
+For new code, use:
+    from agents.carbon_iq_orchestrator import CarbonIQOrchestrator
 
 OPTIMIZATIONS APPLIED:
 - Aggressive data compression at ingestion
@@ -11,15 +14,18 @@ OPTIMIZATIONS APPLIED:
 """
 import logging
 from typing import Dict, List
-from .ingestion_agent import CURIngestionAgent
-from .region_mapping_agent import RegionMappingAgent
-from .carbon_intensity_agent import CarbonIntensityAgent
-from .emission_calculation_agent import EmissionCalculationAgent
+
+# Import from new locations for backward compatibility
+from .accounting.csv_agent import CURIngestionAgent
+from .accounting.region_mapping_agent import RegionMappingAgent
+from .accounting.carbon_intensity_agent import CarbonIntensityAgent
+from .accounting.emission_calculation_agent import EmissionCalculationAgent
 from .analytics_agent import AnalyticsAgent
 from .optimization_agent import OptimizationAgent
 from .explainable_intelligence_orchestrator import ExplainableIntelligenceOrchestrator
 
 logger = logging.getLogger(__name__)
+logger.warning("DEPRECATED: Using old orchestrator.py. Please migrate to carbon_iq_orchestrator.py")
 
 
 class CarbonIQOrchestrator:
