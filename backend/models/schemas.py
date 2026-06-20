@@ -213,3 +213,141 @@ class SustainabilityInsights(BaseModel):
     region_opportunities: List[RegionOpportunity]
     time_opportunities: List[TimeOpportunity]
     recommendations: List[ServiceRecommendation]
+
+
+
+# ============================================================
+# User Ownership & Intelligence Schemas (Migration 001)
+# ============================================================
+
+class AnalysisSummaryCreate(BaseModel):
+    """Request to create/update precomputed analysis summary."""
+    service_breakdown: dict
+    region_breakdown: dict
+    daily_breakdown: Optional[dict] = None
+    time_breakdown: Optional[dict] = None
+    top_hotspots: Optional[list] = None
+    metadata: Optional[dict] = None
+
+
+class AnalysisSummaryResponse(BaseModel):
+    """Response containing cached analysis summary."""
+    id: int
+    user_id: int
+    analysis_id: int
+    service_breakdown: dict
+    region_breakdown: dict
+    daily_breakdown: Optional[dict]
+    time_breakdown: Optional[dict]
+    top_hotspots: Optional[list]
+    metadata: Optional[dict]
+    created_at: datetime
+    updated_at: datetime
+
+
+class RecommendationRunCreate(BaseModel):
+    """Request to create AI recommendation run."""
+    run_type: str  # 'sustainability', 'cost', 'performance', 'explainable'
+    findings: dict
+    recommendations: list
+    hotspots: Optional[list] = None
+    region_opportunities: Optional[list] = None
+    time_opportunities: Optional[list] = None
+    confidence_score: Optional[float] = None
+    metadata: Optional[dict] = None
+
+
+class RecommendationRunResponse(BaseModel):
+    """Response containing cached AI recommendations."""
+    id: int
+    user_id: int
+    analysis_id: int
+    run_type: str
+    generated_at: datetime
+    findings: dict
+    recommendations: list
+    hotspots: Optional[list]
+    region_opportunities: Optional[list]
+    time_opportunities: Optional[list]
+    confidence_score: Optional[float]
+    metadata: Optional[dict]
+    status: str
+
+
+class UserInsightCreate(BaseModel):
+    """Request to create/update user insight."""
+    insight_type: str  # 'monthly_trend', 'cost_alert', 'carbon_goal', 'service_pattern'
+    time_period: Optional[str] = None  # 'daily', 'weekly', 'monthly', 'yearly'
+    period_start: Optional[datetime] = None
+    period_end: Optional[datetime] = None
+    total_emissions_kg: Optional[float] = None
+    total_cost: Optional[float] = None
+    total_energy_kwh: Optional[float] = None
+    analysis_count: Optional[int] = None
+    top_services: Optional[dict] = None
+    top_regions: Optional[dict] = None
+    trends: Optional[dict] = None
+    alerts: Optional[dict] = None
+
+
+class UserInsightResponse(BaseModel):
+    """Response containing user insight data."""
+    id: int
+    user_id: int
+    insight_type: str
+    time_period: Optional[str]
+    period_start: Optional[datetime]
+    period_end: Optional[datetime]
+    total_emissions_kg: Optional[float]
+    total_cost: Optional[float]
+    total_energy_kwh: Optional[float]
+    analysis_count: Optional[int]
+    top_services: Optional[dict]
+    top_regions: Optional[dict]
+    trends: Optional[dict]
+    alerts: Optional[dict]
+    created_at: datetime
+    updated_at: datetime
+
+
+class AuditLogEntry(BaseModel):
+    """Audit log entry for compliance tracking."""
+    id: int
+    user_id: Optional[int]
+    action: str  # 'create', 'read', 'update', 'delete'
+    entity_type: str
+    entity_id: Optional[int]
+    ip_address: Optional[str]
+    user_agent: Optional[str]
+    details: Optional[dict]
+    created_at: datetime
+
+
+class AnalysisHistoryResponse(BaseModel):
+    """Response for user's analysis history."""
+    id: int
+    user_id: int
+    filename: Optional[str]
+    uploaded_at: datetime
+    total_emissions: Optional[float]
+    total_cost: Optional[float]
+    total_energy: Optional[float]
+    top_service: Optional[str]
+    top_region: Optional[str]
+    original_rows: Optional[int]
+    compressed_rows: Optional[int]
+    api_calls: Optional[int]
+
+
+class UserDataStats(BaseModel):
+    """Statistics about user's data ownership."""
+    user_id: int
+    email: str
+    analyses_count: int
+    emission_records_count: int
+    api_logs_count: int
+    org_profiles_count: int
+    total_emissions_kg: Optional[float]
+    total_cost: Optional[float]
+    earliest_analysis: Optional[datetime]
+    latest_analysis: Optional[datetime]
