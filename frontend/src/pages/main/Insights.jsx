@@ -544,6 +544,8 @@ export default function Insights() {
 
 // Recommendation Card Component
 function RecommendationCard({ recommendation, onExpand }) {
+  const [showWhy, setShowWhy] = useState(false);
+
   const getCategoryColor = (category) => {
     const colors = {
       scheduling: 'bg-green-100 text-green-800 border-green-300',
@@ -565,43 +567,84 @@ function RecommendationCard({ recommendation, onExpand }) {
     return colors[confidence] || 'bg-gray-100 text-gray-800 border-gray-300';
   };
 
+  const getCardStyle = (status) => {
+    if (status === 'rejected') {
+      return 'from-red-50/20 to-white border-red-300 hover:border-red-400';
+    }
+    if (status === 'flagged') {
+      return 'from-yellow-50/20 to-white border-yellow-300 hover:border-yellow-400';
+    }
+    return 'from-gray-50 to-white border-gray-200 hover:border-green-300';
+  };
+
   return (
-    <div className="bg-gradient-to-r from-gray-50 to-white rounded-lg p-6 border-2 border-gray-200 hover:border-green-300 transition cursor-pointer"
+    <div className={`bg-gradient-to-r ${getCardStyle(recommendation.constraint_status)} rounded-lg p-6 border-2 transition cursor-pointer`}
          onClick={onExpand}>
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center flex-wrap gap-2 mb-3">
             <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getCategoryColor(recommendation.category)}`}>
               {recommendation.category?.toUpperCase()}
             </span>
             <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getConfidenceColor(recommendation.confidence)}`}>
               {recommendation.confidence} Confidence
             </span>
+            {recommendation.effort && (
+              <span className="px-3 py-1 bg-gray-100 text-gray-700 border border-gray-300 rounded-full text-xs font-bold">
+                Effort: {recommendation.effort}
+              </span>
+            )}
+            {recommendation.constraint_status === 'flagged' && (
+              <span className="px-3 py-1 bg-yellow-100 text-yellow-800 border border-yellow-300 rounded-full text-xs font-bold flex items-center gap-1">
+                ⚠️ constraint flagged
+              </span>
+            )}
+            {recommendation.constraint_status === 'rejected' && (
+              <span className="px-3 py-1 bg-red-100 text-red-800 border border-red-300 rounded-full text-xs font-bold flex items-center gap-1">
+                ❌ constraint rejected
+              </span>
+            )}
           </div>
-          <h3 className="text-lg font-bold text-gray-900 mb-2">{recommendation.title || recommendation.recommendation}</h3>
+          <h3 className="text-xl font-bold text-gray-900 mb-4">{recommendation.title || recommendation.recommendation}</h3>
           
-          {/* Observation */}
-          <div className="bg-blue-50 border-l-4 border-blue-500 rounded p-3 mb-3">
-            <p className="text-sm font-semibold text-blue-900 mb-1">Observation</p>
-            <p className="text-sm text-blue-800">{recommendation.observation}</p>
-          </div>
-          
-          {/* Root Cause */}
-          {recommendation.root_cause && (
-            <div className="bg-yellow-50 border-l-4 border-yellow-500 rounded p-3 mb-3">
-              <p className="text-sm font-semibold text-yellow-900 mb-1">Root Cause</p>
-              <p className="text-sm text-yellow-800">{recommendation.root_cause}</p>
+          {recommendation.constraint_reason && recommendation.constraint_status !== 'compatible' && (
+            <div className={`p-3 rounded text-sm mb-3 border ${
+              recommendation.constraint_status === 'rejected' 
+                ? 'bg-red-50 text-red-800 border-red-200' 
+                : 'bg-yellow-50 text-yellow-800 border-yellow-200'
+            }`}>
+              {recommendation.constraint_reason}
+            </div>
+          )}
+
+            <div className="bg-emerald-50 border-l-4 border-emerald-500 rounded p-3 mb-3">
+              <p className="text-sm font-semibold text-emerald-950 mb-1">📈 Impact Metrics</p>
+              <p className="text-sm text-emerald-900 font-bold">{recommendation.impact}</p>
+              <p className="text-xs text-emerald-800 mt-1">Total potential reduction: {recommendation.carbon_reduction_kg?.toFixed(2)} kg CO₂</p>
+            </div>
+          )}
+
+          {(recommendation.explanation?.why || recommendation.reasoning) && (
+            <div className="bg-blue-50 border-l-4 border-blue-500 rounded p-3 mb-3">
+              <p className="text-sm font-semibold text-blue-950 mb-1">💡 Why (Sustainability Mechanism)</p>
+              <p className="text-sm text-blue-900">{recommendation.explanation?.why || recommendation.reasoning}</p>
             </div>
           )}
           
-          {/* Recommendation */}
-          <div className="bg-green-50 border-l-4 border-green-500 rounded p-3">
-            <p className="text-sm font-semibold text-green-900 mb-1">Recommendation</p>
-            <p className="text-sm text-green-800">{recommendation.recommendation}</p>
-          </div>
+          {/* 3. HOW (ACTION STEPS) BLOCK */}
+          {recommendation.explanation?.how && recommendation.explanation.how.length > 0 && (
+            <div className="bg-indigo-50 border-l-4 border-indigo-500 rounded p-3 mb-3">
+              <p className="text-sm font-semibold text-indigo-950 mb-2">🛠️ How to Implement (Action Steps)</p>
+              <ul className="text-sm text-indigo-900 space-y-1 pl-1 list-none">
+                {recommendation.explanation.how.map((step, sIdx) => (
+                  <li key={sIdx} className="pl-1">{step}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
         
-        {/* Expected Impact */}
+        {/* Expected Impact Badge */}
         <div className="text-right ml-6">
           <div className="bg-green-100 rounded-lg p-4 border-2 border-green-300">
             <div className="text-sm text-green-700 mb-1">Expected Impact</div>
@@ -614,8 +657,74 @@ function RecommendationCard({ recommendation, onExpand }) {
           </div>
         </div>
       </div>
+
+      {/* Expandable "Why this recommendation" section */}
+      <div className="mt-4 pt-3 border-t border-gray-200" onClick={(e) => e.stopPropagation()}>
+        <button
+          onClick={() => setShowWhy(!showWhy)}
+          className="flex items-center gap-2 text-sm font-semibold text-green-600 hover:text-green-700 transition"
+        >
+          <span>{showWhy ? 'Hide' : 'Show'} "Evidence Grid Details"</span>
+          <ChevronRight className={`w-4 h-4 transform transition-transform ${showWhy ? 'rotate-90' : ''}`} />
+        </button>
+
+        {showWhy && (
+          <div className="mt-3 bg-green-50/30 rounded-lg p-4 border border-green-100/60 space-y-3 text-left">
+            {recommendation.root_cause && (
+              <div>
+                <span className="text-xs font-bold text-green-800 uppercase tracking-wider">Root Cause:</span>
+                <p className="text-sm text-gray-700 mt-1">{recommendation.root_cause}</p>
+              </div>
+            )}
+
+            {recommendation.evidence && typeof recommendation.evidence === 'object' && Object.keys(recommendation.evidence).length > 0 && (
+              <div className="space-y-3">
+                <span className="text-xs font-bold text-green-800 uppercase tracking-wider block">Structured Evidence:</span>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {recommendation.evidence.current_region && (
+                    <div className="bg-white p-3 rounded border border-green-100/40">
+                      <span className="text-xs text-gray-500 font-semibold uppercase block border-b pb-1 mb-1">Current State</span>
+                      <div className="text-sm text-gray-700 space-y-1">
+                        <div><strong className="text-xs text-gray-500 font-semibold">Zone:</strong> {recommendation.evidence.current_region.zone || 'N/A'}</div>
+                        <div><strong className="text-xs text-gray-500 font-semibold">Grid Intensity:</strong> {recommendation.evidence.current_region.avg_intensity_gco2 ? `${recommendation.evidence.current_region.avg_intensity_gco2} gCO₂/kWh` : 'N/A'}</div>
+                        <div><strong className="text-xs text-gray-500 font-semibold">Estimated Cost:</strong> {recommendation.evidence.current_region.monthly_cost !== undefined ? `$${recommendation.evidence.current_region.monthly_cost.toFixed(2)}` : 'N/A'}</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {recommendation.evidence.target_region && (
+                    <div className="bg-white p-3 rounded border border-green-100/40">
+                      <span className="text-xs text-gray-500 font-semibold uppercase block border-b pb-1 mb-1">Target State</span>
+                      <div className="text-sm text-gray-700 space-y-1">
+                        <div><strong className="text-xs text-gray-500 font-semibold">Zone:</strong> {recommendation.evidence.target_region.zone || 'N/A'}</div>
+                        <div><strong className="text-xs text-gray-500 font-semibold">Grid Intensity:</strong> {recommendation.evidence.target_region.avg_intensity_gco2 ? `${recommendation.evidence.target_region.avg_intensity_gco2} gCO₂/kWh` : 'N/A'}</div>
+                        <div><strong className="text-xs text-gray-500 font-semibold">Estimated Cost:</strong> {recommendation.evidence.target_region.monthly_cost !== undefined ? `$${recommendation.evidence.target_region.monthly_cost.toFixed(2)}` : 'N/A'}</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {recommendation.evidence.basis && (
+                  <div className="bg-white p-3 rounded border border-green-100/40 text-sm">
+                    <strong className="text-xs text-gray-500 font-semibold uppercase block mb-1">Methodology Basis:</strong>
+                    <span className="text-gray-700">{recommendation.evidence.basis}</span>
+                  </div>
+                )}
+
+                {recommendation.evidence.workload_pattern && (
+                  <div className="bg-white p-3 rounded border border-green-100/40 text-sm">
+                    <strong className="text-xs text-gray-500 font-semibold uppercase block mb-1">Workload Pattern:</strong>
+                    <span className="text-gray-700">{recommendation.evidence.workload_pattern}</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
       
-      <div className="flex items-center justify-between pt-3 border-t border-gray-200">
+      <div className="flex items-center justify-between pt-3 mt-4 border-t border-gray-200">
         <div className="text-sm text-gray-600">
           {recommendation.service && <span>Service: {recommendation.service}</span>}
         </div>
@@ -635,17 +744,28 @@ function RecommendationModal({ recommendation, onClose }) {
          onClick={onClose}>
       <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
            onClick={(e) => e.stopPropagation()}>
-        <div className="sticky top-0 bg-gradient-to-r from-green-600 to-blue-600 text-white p-6 rounded-t-xl">
+        <div className={`sticky top-0 bg-gradient-to-r ${
+          recommendation.constraint_status === 'rejected'
+            ? 'from-red-600 to-red-800'
+            : recommendation.constraint_status === 'flagged'
+            ? 'from-yellow-600 to-yellow-800'
+            : 'from-green-600 to-blue-600'
+        } text-white p-6 rounded-t-xl`}>
           <div className="flex items-start justify-between">
             <div>
               <h2 className="text-2xl font-bold mb-2">{recommendation.title || recommendation.recommendation}</h2>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center flex-wrap gap-2">
                 <span className="px-3 py-1 bg-white/20 rounded-full text-xs font-bold">
                   {recommendation.category?.toUpperCase()}
                 </span>
                 <span className="px-3 py-1 bg-white/20 rounded-full text-xs font-bold">
                   {recommendation.confidence} Confidence
                 </span>
+                {recommendation.effort && (
+                  <span className="px-3 py-1 bg-white/20 rounded-full text-xs font-bold">
+                    Effort: {recommendation.effort}
+                  </span>
+                )}
               </div>
             </div>
             <button onClick={onClose} className="text-white hover:text-gray-200 text-2xl font-bold">
@@ -655,47 +775,48 @@ function RecommendationModal({ recommendation, onClose }) {
         </div>
         
         <div className="p-6 space-y-6">
-          {/* Observation */}
-          <div className="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-5">
-            <h3 className="text-lg font-bold text-blue-900 mb-2">📊 Observation</h3>
-            <p className="text-blue-800">{recommendation.observation}</p>
-          </div>
-          
-          {/* Evidence */}
-          {recommendation.evidence && (
-            <div className="bg-purple-50 border-l-4 border-purple-500 rounded-lg p-5">
-              <h3 className="text-lg font-bold text-purple-900 mb-3">🔍 Evidence</h3>
-              <div className="grid grid-cols-2 gap-3">
-                {Object.entries(recommendation.evidence).map(([key, value]) => {
-                  if (key === 'data_source') return null;
-                  return (
-                    <div key={key} className="bg-white rounded p-3">
-                      <span className="text-sm text-gray-600 capitalize block">{key.replace(/_/g, ' ')}:</span>
-                      <span className="font-semibold text-gray-900">
-                        {typeof value === 'number' ? value.toFixed(2) : 
-                         Array.isArray(value) ? value.join(', ') : 
-                         value}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
+          {/* Constraint Warning/Error Alert */}
+          {recommendation.constraint_status === 'rejected' && (
+            <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-5">
+              <h3 className="text-lg font-bold text-red-900 mb-2">❌ Constraint Violation</h3>
+              <p className="text-red-800">{recommendation.constraint_reason}</p>
             </div>
           )}
-          
-          {/* Root Cause */}
-          {recommendation.root_cause && (
+          {recommendation.constraint_status === 'flagged' && (
             <div className="bg-yellow-50 border-l-4 border-yellow-500 rounded-lg p-5">
-              <h3 className="text-lg font-bold text-yellow-900 mb-2">🎯 Root Cause</h3>
-              <p className="text-yellow-800">{recommendation.root_cause}</p>
+              <h3 className="text-lg font-bold text-yellow-900 mb-2">⚠️ Constraint Warning</h3>
+              <p className="text-yellow-800">{recommendation.constraint_reason}</p>
+            </div>
+          )}
+
+          {/* Impact Metrics */}
+          {recommendation.impact && (
+            <div className="bg-emerald-50 border-l-4 border-emerald-500 rounded-lg p-5">
+              <h3 className="text-lg font-bold text-emerald-950 mb-2">📈 Impact Metrics</h3>
+              <p className="text-sm text-emerald-900 font-bold">{recommendation.impact}</p>
+              <p className="text-xs text-emerald-800 mt-1">Total potential reduction: {recommendation.carbon_reduction_kg?.toFixed(2)} kg CO₂</p>
+            </div>
+          )}
+
+          {/* Why (Reasoning) */}
+          {(recommendation.explanation?.why || recommendation.reasoning) && (
+            <div className="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-5">
+              <h3 className="text-lg font-bold text-blue-900 mb-2">💡 Why (Sustainability Mechanism)</h3>
+              <p className="text-blue-800">{recommendation.explanation?.why || recommendation.reasoning}</p>
             </div>
           )}
           
-          {/* Recommendation */}
-          <div className="bg-green-50 border-l-4 border-green-500 rounded-lg p-5">
-            <h3 className="text-lg font-bold text-green-900 mb-2">💡 Recommendation</h3>
-            <p className="text-green-800">{recommendation.recommendation}</p>
-          </div>
+          {/* How (Action Steps) */}
+          {recommendation.explanation?.how && recommendation.explanation.how.length > 0 && (
+            <div className="bg-indigo-50 border-l-4 border-indigo-500 rounded-lg p-5">
+              <h3 className="text-lg font-bold text-indigo-950 mb-2">🛠️ How to Implement (Action Steps)</h3>
+              <ul className="text-sm text-indigo-900 space-y-2 list-none">
+                {recommendation.explanation.how.map((step, sIdx) => (
+                  <li key={sIdx}>{step}</li>
+                ))}
+              </ul>
+            </div>
+          )}
           
           {/* Expected Impact */}
           <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-5 border-2 border-green-200">

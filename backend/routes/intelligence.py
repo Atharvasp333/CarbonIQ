@@ -5,8 +5,9 @@ Handles sustainability intelligence generation and recommendations
 from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional, List
 import logging
+import os
 
-from database import get_pool
+from database import get_pool, get_analysis_summary, get_analysis_records, save_recommendation_run
 from models.schemas import RecommendationRunResponse
 
 logger = logging.getLogger(__name__)
@@ -25,9 +26,6 @@ async def generate_insights():
     4. Runs Intelligence Engine pipeline
     5. Stores results in recommendation_runs table
     6. Returns recommendations
-    
-    NOTE: Currently returns placeholder response
-    TODO: Implement full intelligence engine integration
     """
     logger.info("=" * 80)
     logger.info("POST /api/intelligence/generate-insights - Request received")
@@ -40,18 +38,18 @@ async def generate_insights():
         async with pool.acquire() as conn:
             logger.info("✓ Database connection acquired")
             
-            # Check if analysis_history table exists
+            # Check if analyses table exists
             table_exists = await conn.fetchval("""
                 SELECT EXISTS (
                     SELECT FROM information_schema.tables 
-                    WHERE table_name = 'analysis_history'
+                    WHERE table_name = 'analyses'
                 )
             """)
             
-            logger.info(f"✓ Table 'analysis_history' exists: {table_exists}")
+            logger.info(f"✓ Table 'analyses' exists: {table_exists}")
             
             if not table_exists:
-                logger.warning("✗ Table 'analysis_history' does not exist")
+                logger.warning("✗ Table 'analyses' does not exist")
                 return {
                     'success': False,
                     'message': 'Database tables not initialized. Please run migrations.',
@@ -62,7 +60,7 @@ async def generate_insights():
             # Get latest analysis
             analysis = await conn.fetchrow("""
                 SELECT id, user_id, total_emissions, total_cost
-                FROM analysis_history
+                FROM analyses
                 ORDER BY uploaded_at DESC
                 LIMIT 1
             """)
@@ -74,27 +72,90 @@ async def generate_insights():
                     detail="No analysis data found. Please upload CUR data first."
                 )
             
-            logger.info(f"✓ Found analysis: ID={analysis['id']}")
+            analysis_id = analysis['id']
+            user_id = analysis['user_id']
+            logger.info(f"✓ Found analysis: ID={analysis_id}, User={user_id}")
             
             # Get organization profile
             profile = await conn.fetchrow("""
                 SELECT * FROM organization_profile
+                WHERE user_id = $1
                 ORDER BY created_at DESC
                 LIMIT 1
-            """)
+            """, user_id)
+            org_profile_dict = dict(profile) if profile else None
             
-            logger.info(f"✓ Organization profile: {'Found' if profile else 'Not found'}")
+            logger.info(f"✓ Organization profile: {'Found' if org_profile_dict else 'Not found'}")
             
-            # TODO: Implement intelligence engine integration
-            # For now, return success message
+            # Get stored accounting records
+            analysis_summary = await get_analysis_summary(analysis_id, user_id)
+            emission_records = await get_analysis_records(analysis_id, user_id)
+            
+            if not emission_records:
+                raise HTTPException(
+                    status_code=404,
+                    detail="No emission records found for the latest analysis."
+                )
+            
+            # If summary is missing, generate it on the fly
+            if not analysis_summary:
+                logger.info("Summary not found in DB. Regenerating on-the-fly via AnalyticsAgent")
+                from agents.analytics_agent import AnalyticsAgent
+                analytics_agent = AnalyticsAgent()
+                analysis_summary = analytics_agent.generate_analytics(emission_records)
+            
+            # Run Sustainability Intelligence Engine
+            from agents.carbon_iq_orchestrator import CarbonIQOrchestrator
+            orchestrator = CarbonIQOrchestrator()
+            
+            use_gemini = False
+            gemini_key = os.getenv("GEMINI_API_KEY")
+            if gemini_key and gemini_key != "your_gemini_api_key_here":
+                use_gemini = True
+            
+            logger.info(f"Running intelligence engine (Gemini: {use_gemini})...")
+            result = await orchestrator.generate_insights_only(
+                analysis_summary=analysis_summary,
+                emission_records=emission_records,
+                org_profile=org_profile_dict,
+                use_gemini=use_gemini
+            )
+            
+            if not result or not result.get('success'):
+                raise HTTPException(
+                    status_code=500,
+                    detail=result.get('error', 'Intelligence generation failed')
+                )
+            
+            intelligence = result['intelligence']
+            
+            # Save the recommendation run to NeonDB
+            run_id = await save_recommendation_run(
+                user_id=user_id,
+                analysis_id=analysis_id,
+                run_type='sustainability',
+                findings=intelligence['summary'],
+                recommendations=intelligence['recommendations'],
+                hotspots=intelligence['workload_analysis'].get('hotspots'),
+                region_opportunities=intelligence['workload_analysis'].get('region_opportunities'),
+                time_opportunities=intelligence['workload_analysis'].get('time_opportunities'),
+                confidence_score=None,
+                metadata={
+                    'intelligence_stats': intelligence['intelligence_stats'],
+                    'patterns_detected': len(intelligence['patterns']),
+                    'opportunities_found': len(intelligence['opportunities'])
+                }
+            )
+            
             response = {
                 'success': True,
-                'message': 'Intelligence generation triggered',
-                'analysis_id': analysis['id'],
-                'profile_configured': profile is not None
+                'message': 'Intelligence generation complete',
+                'analysis_id': analysis_id,
+                'run_id': run_id,
+                'profile_configured': org_profile_dict is not None
             }
             
-            logger.info(f"✓ Response: {response}")
+            logger.info(f"✓ Saved recommendation run: ID={run_id}")
             logger.info("=" * 80)
             return response
             

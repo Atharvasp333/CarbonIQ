@@ -201,7 +201,6 @@ export default function ServiceDetail() {
           <div className="flex items-center justify-between mb-2">
             <DollarSign className="w-8 h-8 opacity-80" />
           </div>
-          <p className="text-sm font-medium opacity-90">Total Cost</p>
           <p className="text-3xl font-bold mt-1">${serviceData.totalCost.toFixed(2)}</p>
           <p className="text-xs opacity-75 mt-1">USD</p>
         </div>
@@ -385,7 +384,7 @@ export default function ServiceDetail() {
                           {timePoint.energy_kwh.toFixed(4)} kWh
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
-                          ${timePoint.cost.toFixed(4)}
+                           ${timePoint.cost.toFixed(4)}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                           {timePoint.count}
@@ -423,7 +422,7 @@ export default function ServiceDetail() {
                                       </div>
                                       <div>
                                         <span className="text-gray-500">Cost:</span>
-                                        <span className="ml-1">${record.cost.toFixed(4)}</span>
+                                         <span className="ml-1">${record.cost.toFixed(4)}</span>
                                       </div>
                                     </div>
                                   </div>
@@ -469,7 +468,7 @@ export default function ServiceDetail() {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Region</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Emissions (kg CO₂)</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cost ($)</th>
+                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cost ($)</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Energy (kWh)</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Intensity</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Records</th>
@@ -480,7 +479,7 @@ export default function ServiceDetail() {
                 <tr key={idx} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{region.region}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{region.emissions_kg.toFixed(2)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${region.cost.toFixed(2)}</td>
+                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${region.cost.toFixed(2)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{region.energy_kwh.toFixed(2)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{region.avg_carbon_intensity.toFixed(0)} gCO₂/kWh</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{region.count}</td>

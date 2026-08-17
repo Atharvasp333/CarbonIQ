@@ -131,34 +131,27 @@ class SustainabilityIntelligenceEngine:
             logger.info("-"*80)
             recommendations_result = self.recommendation_agent.generate_recommendations(
                 validated_opportunities=validated_opportunities,
-                workload_analysis=workload_analysis
+                workload_analysis=workload_analysis,
+                org_profile=org_profile
             )
             recommendations = recommendations_result['recommendations']
             recommendation_stats = self.recommendation_agent.get_recommendation_stats()
             logger.info(f"✓ Generated {len(recommendations)} recommendations")
             logger.info(f"  Total potential reduction: {recommendations_result['summary']['total_potential_reduction_kg']:.2f}kg CO2")
             
-            # STAGE 6: Explanation (Optional)
-            explained_recommendations = recommendations
-            explanation_stats = {}
-            
-            if use_gemini:
-                logger.info("\n[6/6] Gemini Explanation Agent")
-                logger.info("-"*80)
-                explained_result = await self.explanation_agent.explain_recommendations(
-                    recommendations=recommendations,
-                    workload_analysis=workload_analysis,
-                    use_gemini=True
-                )
-                explained_recommendations = explained_result['explained_recommendations']
-                explanation_stats = self.explanation_agent.get_explanation_stats()
-                logger.info(f"✓ Generated explanations")
-                logger.info(f"  Gemini calls: {explanation_stats.get('gemini_calls', 0)}")
-                logger.info(f"  Fallback used: {explanation_stats.get('fallback_used', 0)}")
-            else:
-                logger.info("\n[6/6] Explanation Agent (Skipped)")
-                logger.info("-"*80)
-                logger.info("Gemini disabled - using template explanations")
+            # STAGE 6: Explanation (Always run to apply structured fallback explanations and filters)
+            logger.info("\n[6/6] Explanation Agent")
+            logger.info("-"*80)
+            explained_result = await self.explanation_agent.explain_recommendations(
+                recommendations=recommendations,
+                workload_analysis=workload_analysis,
+                use_gemini=use_gemini
+            )
+            explained_recommendations = explained_result['explained_recommendations']
+            explanation_stats = self.explanation_agent.get_explanation_stats()
+            logger.info(f"✓ Generated explanations")
+            logger.info(f"  Gemini calls: {explanation_stats.get('gemini_calls', 0)}")
+            logger.info(f"  Fallback used: {explanation_stats.get('fallback_used', 0)}")
             
             duration = time.time() - start_time
             
