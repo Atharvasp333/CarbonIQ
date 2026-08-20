@@ -1,0 +1,17 @@
+tree a12e64a7f00209c22c58d20ebd5e8b8f53a95406
+parent 8bbdb924da63f90ef44c2913ae44b3ea3410315e
+author Varun Rahatgaonkar <52694208+Kingslaye-varun@users.noreply.github.com> 1781763618 +0530
+committer Varun Rahatgaonkar <52694208+Kingslaye-varun@users.noreply.github.com> 1781763618 +0530
+
+feat(backend): add NeonDB PostgreSQL integration for data persistence
+
+- Create database.py with asyncpg connection pooling and async operations
+- Initialize analyses table to store multi-agent analysis summaries
+- Initialize emission_records table with indexed fields for service, region, and date queries
+- Initialize api_call_logs table for tracking carbon intensity API usage
+- Add DATABASE_URL to .env.example configuration
+- Update requirements.txt with asyncpg dependency for async PostgreSQL support
+- Integrate database initialization in main.py startup
+- Add save_analysis() function to persist results with transaction support
+- Add connection pool lifecycle management (get_pool, close_pool, init_db)
+- Support cascading deletes and referential integrity across all tables
