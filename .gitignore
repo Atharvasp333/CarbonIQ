@@ -50,3 +50,6 @@ dist-ssr/
 # OS
 .DS_Store
 Thumbs.db
+
+# Capstone Project IPR Draft
+CarbonIQ_IPR_Draft.docx
