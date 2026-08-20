@@ -105,15 +105,26 @@ class PatternDetectionAgent:
         })
         
         for record in records:
+            # Handle both timestamp (from API) and record_date (from DB)
+            timestamp_val = record.get('timestamp') or record.get('record_date')
+            if not timestamp_val:
+                continue
+                
             try:
-                dt = datetime.fromisoformat(record['timestamp'].replace('Z', '+00:00'))
+                if isinstance(timestamp_val, str):
+                    dt = datetime.fromisoformat(timestamp_val.replace('Z', '+00:00'))
+                else:
+                    # Already a date/datetime object
+                    dt = timestamp_val if isinstance(timestamp_val, datetime) else datetime.combine(timestamp_val, datetime.min.time())
+                
                 hour = dt.hour
                 
                 hourly_data[hour]['emissions'] += record['emissions_kg']
                 hourly_data[hour]['count'] += 1
                 hourly_data[hour]['intensity'].append(record['carbon_intensity'])
                 hourly_data[hour]['services'].add(record['service'])
-            except Exception:
+            except Exception as e:
+                logger.warning(f"Failed to parse timestamp in pattern detection: {timestamp_val} - {e}")
                 continue
         
         if not hourly_data:
@@ -226,14 +237,28 @@ class PatternDetectionAgent:
             
             for record in records:
                 service = record['service']
-                try:
-                    dt = datetime.fromisoformat(record['timestamp'].replace('Z', '+00:00'))
-                    hour = dt.hour
+                # Handle both timestamp (from API) and record_date (from DB)
+                timestamp_val = record.get('timestamp') or record.get('record_date')
+                if timestamp_val:
+                    try:
+                        if isinstance(timestamp_val, str):
+                            dt = datetime.fromisoformat(timestamp_val.replace('Z', '+00:00'))
+                        else:
+                            # Already a date/datetime object
+                            dt = timestamp_val if isinstance(timestamp_val, datetime) else datetime.combine(timestamp_val, datetime.min.time())
+                        
+                        hour = dt.hour
+                        service_frequency[service]['count'] += 1
+                        service_frequency[service]['regions'].add(record['region'])
+                        service_frequency[service]['hours'].add(hour)
+                    except Exception as e:
+                        logger.warning(f"Failed to parse timestamp in frequency detection: {timestamp_val} - {e}")
+                        service_frequency[service]['count'] += 1
+                        service_frequency[service]['regions'].add(record['region'])
+                else:
+                    # No timestamp, just count
                     service_frequency[service]['count'] += 1
                     service_frequency[service]['regions'].add(record['region'])
-                    service_frequency[service]['hours'].add(hour)
-                except Exception:
-                    continue
             
             # Identify services with repeated executions in same time window
             for service, data in service_frequency.items():

@@ -6,16 +6,18 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional, List
 import logging
 import os
+import json
 
 from database import get_pool, get_analysis_summary, get_analysis_records, save_recommendation_run
 from models.schemas import RecommendationRunResponse
+from routes.auth import get_current_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/intelligence", tags=["intelligence"])
 
 
 @router.post("/generate-insights")
-async def generate_insights():
+async def generate_insights(current_user=Depends(get_current_user)):
     """
     Generate sustainability insights from stored analysis data
     
@@ -30,6 +32,10 @@ async def generate_insights():
     logger.info("=" * 80)
     logger.info("POST /api/intelligence/generate-insights - Request received")
     logger.info("=" * 80)
+    
+    # Extract authenticated user ID
+    user_id = current_user['id']
+    logger.info(f"✓ Authenticated user: ID={user_id}, Email={current_user['email']}")
     
     try:
         pool = await get_pool()
@@ -57,26 +63,37 @@ async def generate_insights():
                     'profile_configured': False
                 }
             
-            # Get latest analysis
+            # Get latest analysis for this user
             analysis = await conn.fetchrow("""
-                SELECT id, user_id, total_emissions, total_cost
+                SELECT id, user_id, filename, total_emissions, total_cost, uploaded_at
                 FROM analyses
+                WHERE user_id = $1
                 ORDER BY uploaded_at DESC
                 LIMIT 1
-            """)
+            """, user_id)
             
             if not analysis:
-                logger.warning("✗ No analysis data found in database")
+                logger.warning(f"✗ No analysis data found for user {user_id}")
+                
+                # Diagnostic: Check if any analyses exist at all
+                total_analyses = await conn.fetchval("SELECT COUNT(*) FROM analyses")
+                analyses_with_user = await conn.fetchval("SELECT COUNT(*) FROM analyses WHERE user_id IS NOT NULL")
+                
+                logger.info(f"[DIAGNOSTIC] Total analyses in DB: {total_analyses}")
+                logger.info(f"[DIAGNOSTIC] Analyses with user_id: {analyses_with_user}")
+                logger.info(f"[DIAGNOSTIC] User {user_id} needs to upload CUR data")
+                
                 raise HTTPException(
                     status_code=404, 
-                    detail="No analysis data found. Please upload CUR data first."
+                    detail="No analysis data found. Please upload your AWS Cost and Usage Report (CUR) data first before generating insights."
                 )
             
             analysis_id = analysis['id']
-            user_id = analysis['user_id']
-            logger.info(f"✓ Found analysis: ID={analysis_id}, User={user_id}")
+            logger.info(f"✓ Found analysis: ID={analysis_id}, User={user_id}, File={analysis['filename']}")
+            logger.info(f"  Uploaded: {analysis['uploaded_at']}")
+            logger.info(f"  Emissions: {analysis['total_emissions']} kg, Cost: ${analysis['total_cost']}")
             
-            # Get organization profile
+            # Get organization profile for this user
             profile = await conn.fetchrow("""
                 SELECT * FROM organization_profile
                 WHERE user_id = $1
@@ -85,11 +102,16 @@ async def generate_insights():
             """, user_id)
             org_profile_dict = dict(profile) if profile else None
             
-            logger.info(f"✓ Organization profile: {'Found' if org_profile_dict else 'Not found'}")
+            if org_profile_dict:
+                logger.info(f"✓ Organization profile: Found (Name: {org_profile_dict.get('organization_name')})")
+            else:
+                logger.info(f"✓ Organization profile: Not found for user {user_id} - will continue with default constraints")
             
             # Get stored accounting records
             analysis_summary = await get_analysis_summary(analysis_id, user_id)
             emission_records = await get_analysis_records(analysis_id, user_id)
+            
+            logger.info(f"✓ Emission records found: {len(emission_records)}")
             
             if not emission_records:
                 raise HTTPException(
@@ -130,6 +152,8 @@ async def generate_insights():
             intelligence = result['intelligence']
             
             # Save the recommendation run to NeonDB
+            # Note: save_recommendation_run handles JSON serialization internally
+            # Pass Python objects directly - the function will serialize them
             run_id = await save_recommendation_run(
                 user_id=user_id,
                 analysis_id=analysis_id,
@@ -143,7 +167,10 @@ async def generate_insights():
                 metadata={
                     'intelligence_stats': intelligence['intelligence_stats'],
                     'patterns_detected': len(intelligence['patterns']),
-                    'opportunities_found': len(intelligence['opportunities'])
+                    'opportunities_found': len(intelligence['opportunities']),
+                    'patterns': intelligence['patterns'],
+                    'opportunities': intelligence['opportunities'],
+                    'workload_analysis': intelligence['workload_analysis']
                 }
             )
             
@@ -169,15 +196,19 @@ async def generate_insights():
 
 
 @router.get("/recommendations")
-async def get_recommendations():
+async def get_recommendations(current_user=Depends(get_current_user)):
     """
-    Get latest recommendation run
+    Get latest recommendation run for authenticated user
     
-    Returns the most recent recommendation_run from the database
+    Returns the most recent recommendation_run from the database for this user
     """
     logger.info("=" * 80)
     logger.info("GET /api/intelligence/recommendations - Request received")
     logger.info("=" * 80)
+    
+    # Extract authenticated user ID
+    user_id = current_user['id']
+    logger.info(f"✓ Authenticated user: ID={user_id}, Email={current_user['email']}")
     
     try:
         pool = await get_pool()
@@ -203,7 +234,7 @@ async def get_recommendations():
                     detail="Database tables not initialized. Please run migrations."
                 )
             
-            # Get latest recommendation run
+            # Get latest recommendation run for this user
             row = await conn.fetchrow("""
                 SELECT 
                     id,
@@ -220,12 +251,13 @@ async def get_recommendations():
                     metadata,
                     status
                 FROM recommendation_runs
+                WHERE user_id = $1
                 ORDER BY generated_at DESC
                 LIMIT 1
-            """)
+            """, user_id)
             
             if not row:
-                logger.info("✗ No recommendation runs found in database")
+                logger.info(f"✗ No recommendation runs found for user {user_id}")
                 # Return empty response instead of 404
                 response = {
                     'id': None,
@@ -242,23 +274,42 @@ async def get_recommendations():
                     'status': 'no_data'
                 }
             else:
-                logger.info(f"✓ Found recommendation run: ID={row['id']}")
+                logger.info(f"✓ Found recommendation run: ID={row['id']} for user {user_id}")
                 
                 # Convert row to dict and extract intelligence data
                 rec_data = dict(row)
+                
+                # Parse JSON fields (they're already deserialized by asyncpg for JSONB columns)
+                # But we need to handle the case where they might be strings
+                def safe_json_parse(value):
+                    if value is None:
+                        return None
+                    if isinstance(value, str):
+                        try:
+                            return json.loads(value)
+                        except:
+                            return value
+                    return value
+                
+                findings = safe_json_parse(rec_data['findings']) or {}
+                recommendations = safe_json_parse(rec_data['recommendations']) or []
+                hotspots = safe_json_parse(rec_data['hotspots']) or []
+                region_opportunities = safe_json_parse(rec_data['region_opportunities']) or []
+                time_opportunities = safe_json_parse(rec_data['time_opportunities']) or []
+                metadata = safe_json_parse(rec_data['metadata']) or {}
                 
                 # Return structured response
                 response = {
                     'id': rec_data['id'],
                     'generated_at': rec_data['generated_at'].isoformat() if rec_data['generated_at'] else None,
-                    'recommendations': rec_data['recommendations'] or [],
-                    'patterns': rec_data['metadata'].get('patterns', []) if rec_data['metadata'] else [],
-                    'opportunities': rec_data['metadata'].get('opportunities', []) if rec_data['metadata'] else [],
-                    'summary': rec_data['findings'] or {},
-                    'workload_analysis': rec_data['metadata'].get('workload_analysis', {}) if rec_data['metadata'] else {},
-                    'hotspots': rec_data['hotspots'] or [],
-                    'region_opportunities': rec_data['region_opportunities'] or [],
-                    'time_opportunities': rec_data['time_opportunities'] or [],
+                    'recommendations': recommendations,
+                    'patterns': metadata.get('patterns', []),
+                    'opportunities': metadata.get('opportunities', []),
+                    'summary': findings,
+                    'workload_analysis': metadata.get('workload_analysis', {}),
+                    'hotspots': hotspots,
+                    'region_opportunities': region_opportunities,
+                    'time_opportunities': time_opportunities,
                     'confidence_score': rec_data['confidence_score'],
                     'status': rec_data['status']
                 }
@@ -277,12 +328,14 @@ async def get_recommendations():
 
 
 @router.get("/recommendations/history")
-async def get_recommendation_history():
+async def get_recommendation_history(current_user=Depends(get_current_user)):
     """
-    Get all recommendation runs ordered by date
+    Get all recommendation runs for authenticated user ordered by date
     
-    Returns list of past recommendation runs
+    Returns list of past recommendation runs for this user
     """
+    user_id = current_user['id']
+    
     try:
         pool = await get_pool()
         
@@ -294,11 +347,12 @@ async def get_recommendation_history():
                     run_type,
                     status,
                     confidence_score,
-                    jsonb_array_length(recommendations) as recommendation_count
+                    jsonb_array_length(recommendations::jsonb) as recommendation_count
                 FROM recommendation_runs
+                WHERE user_id = $1
                 ORDER BY generated_at DESC
                 LIMIT 50
-            """)
+            """, user_id)
             
             history = []
             for row in rows:
@@ -322,10 +376,12 @@ async def get_recommendation_history():
 
 
 @router.get("/recommendations/{recommendation_id}")
-async def get_recommendation_by_id(recommendation_id: int):
+async def get_recommendation_by_id(recommendation_id: int, current_user=Depends(get_current_user)):
     """
-    Get specific recommendation run by ID
+    Get specific recommendation run by ID for authenticated user
     """
+    user_id = current_user['id']
+    
     try:
         pool = await get_pool()
         
@@ -346,28 +402,46 @@ async def get_recommendation_by_id(recommendation_id: int):
                     metadata,
                     status
                 FROM recommendation_runs
-                WHERE id = $1
-            """, recommendation_id)
+                WHERE id = $1 AND user_id = $2
+            """, recommendation_id, user_id)
             
             if not row:
                 raise HTTPException(
                     status_code=404,
-                    detail=f"Recommendation run {recommendation_id} not found"
+                    detail=f"Recommendation run {recommendation_id} not found or not owned by user"
                 )
             
             rec_data = dict(row)
             
+            # Parse JSON fields safely
+            def safe_json_parse(value):
+                if value is None:
+                    return None
+                if isinstance(value, str):
+                    try:
+                        return json.loads(value)
+                    except:
+                        return value
+                return value
+            
+            findings = safe_json_parse(rec_data['findings']) or {}
+            recommendations = safe_json_parse(rec_data['recommendations']) or []
+            hotspots = safe_json_parse(rec_data['hotspots']) or []
+            region_opportunities = safe_json_parse(rec_data['region_opportunities']) or []
+            time_opportunities = safe_json_parse(rec_data['time_opportunities']) or []
+            metadata = safe_json_parse(rec_data['metadata']) or {}
+            
             return {
                 'id': rec_data['id'],
                 'generated_at': rec_data['generated_at'].isoformat() if rec_data['generated_at'] else None,
-                'recommendations': rec_data['recommendations'] or [],
-                'patterns': rec_data['metadata'].get('patterns', []) if rec_data['metadata'] else [],
-                'opportunities': rec_data['metadata'].get('opportunities', []) if rec_data['metadata'] else [],
-                'summary': rec_data['findings'] or {},
-                'workload_analysis': rec_data['metadata'].get('workload_analysis', {}) if rec_data['metadata'] else {},
-                'hotspots': rec_data['hotspots'] or [],
-                'region_opportunities': rec_data['region_opportunities'] or [],
-                'time_opportunities': rec_data['time_opportunities'] or [],
+                'recommendations': recommendations,
+                'patterns': metadata.get('patterns', []),
+                'opportunities': metadata.get('opportunities', []),
+                'summary': findings,
+                'workload_analysis': metadata.get('workload_analysis', {}),
+                'hotspots': hotspots,
+                'region_opportunities': region_opportunities,
+                'time_opportunities': time_opportunities,
                 'confidence_score': rec_data['confidence_score'],
                 'status': rec_data['status']
             }

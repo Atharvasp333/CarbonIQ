@@ -1,10 +1,11 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Optional
 import logging
 import time
 
 from services.s3_fetcher import fetch_csv_from_s3
+from routes.auth import get_current_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -19,13 +20,18 @@ class AWSFetchRequest(BaseModel):
 
 
 @router.post("/aws/fetch")
-async def fetch_aws_data(request: AWSFetchRequest):
+async def fetch_aws_data(request: AWSFetchRequest, current_user=Depends(get_current_user)):
     """
     Fetch AWS CUR CSV from S3, then run it through the full 6-agent
     orchestrator pipeline (same as /multi-agent/analyze).
     Returns rich analytics: service/region breakdown, time-series, optimization.
+    
+    Requires authentication.
     """
     request_start = time.time()
+    user_id = current_user['id']
+    
+    logger.info(f"✓ Authenticated user: ID={user_id}, Email={current_user['email']}")
     logger.info(f"Fetching AWS data from bucket: {request.bucket_name}")
 
     # 1. Pull CSV from S3
@@ -55,15 +61,21 @@ async def fetch_aws_data(request: AWSFetchRequest):
         duration = time.time() - request_start
         logger.info(f"S3 pipeline complete in {duration:.2f}s — success={result.get('success')}")
 
-        # Save to NeonDB (non-blocking)
+        # Save to NeonDB with user ownership
         if result.get("success"):
             try:
                 from database import save_analysis
-                analysis_id = await save_analysis(filename, result)
+                analysis_id = await save_analysis(
+                    filename=filename,
+                    result=result,
+                    user_id=user_id
+                )
                 result["analysis_id"] = analysis_id
-                logger.info(f"Saved S3 analysis to NeonDB: analysis_id={analysis_id}")
+                logger.info(f"✓ Saved S3 analysis to NeonDB: analysis_id={analysis_id}, user_id={user_id}")
             except Exception as db_err:
-                logger.warning(f"DB save failed (non-fatal): {db_err}")
+                logger.error(f"✗ DB save failed: {db_err}", exc_info=True)
+                # Don't fail the whole request
+                pass
 
         return result
 

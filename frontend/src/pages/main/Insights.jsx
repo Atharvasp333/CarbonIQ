@@ -166,14 +166,17 @@ export default function Insights() {
         <div className="text-center py-16">
           <Lightbulb className="w-20 h-20 text-gray-300 mx-auto mb-4" />
           <h2 className="text-3xl font-bold text-gray-800 mb-2">No Analysis Data Available</h2>
-          <p className="text-gray-600 mb-8 max-w-2xl mx-auto">
-            No emissions analysis found. Upload or sync AWS data before generating insights.
+          <p className="text-gray-600 mb-4 max-w-2xl mx-auto">
+            To generate sustainability insights, you first need to upload your AWS Cost and Usage Report (CUR) data.
+          </p>
+          <p className="text-gray-500 mb-8 max-w-2xl mx-auto text-sm">
+            The insights engine analyzes your CUR data to identify patterns, detect optimization opportunities, and generate personalized carbon reduction recommendations.
           </p>
           <Link
             to="/"
             className="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition"
           >
-            Upload CUR Data
+            Upload CUR Data Now
           </Link>
         </div>
       </div>

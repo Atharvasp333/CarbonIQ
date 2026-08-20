@@ -2,7 +2,7 @@
 Organization Profile API Routes
 Manages organization sustainability profiles and questionnaires
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional
 import logging
 
@@ -12,22 +12,27 @@ from models.schemas import (
     OrganizationProfileResponse
 )
 from database import get_pool
+from routes.auth import get_current_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/profile", tags=["profile"])
 
 
 @router.post("/", response_model=OrganizationProfileResponse)
-async def create_profile(profile: OrganizationProfileCreate):
-    """Create or update organization profile"""
+async def create_profile(profile: OrganizationProfileCreate, current_user=Depends(get_current_user)):
+    """Create or update organization profile for authenticated user"""
+    user_id = current_user['id']
+    
+    logger.info(f"[AUTH] Creating/updating profile for user_id={user_id}")
+    
     try:
         pool = await get_pool()
         
         async with pool.acquire() as conn:
-            # Check if profile already exists
+            # Check if profile already exists for this user
             existing = await conn.fetchrow("""
-                SELECT id FROM organization_profile LIMIT 1
-            """)
+                SELECT id FROM organization_profile WHERE user_id = $1
+            """, user_id)
             
             if existing:
                 # Update existing profile
@@ -40,7 +45,7 @@ async def create_profile(profile: OrganizationProfileCreate):
                         migration_flexibility = $5,
                         optimization_priority = $6,
                         updated_at = NOW()
-                    WHERE id = $7
+                    WHERE user_id = $7
                     RETURNING *
                 """,
                     profile.organization_name,
@@ -49,17 +54,18 @@ async def create_profile(profile: OrganizationProfileCreate):
                     profile.latency_sensitivity,
                     profile.migration_flexibility,
                     profile.optimization_priority,
-                    existing['id']
+                    user_id
                 )
             else:
                 # Create new profile
                 row = await conn.fetchrow("""
                     INSERT INTO organization_profile
-                        (organization_name, primary_user_region, workload_type,
+                        (user_id, organization_name, primary_user_region, workload_type,
                          latency_sensitivity, migration_flexibility, optimization_priority)
-                    VALUES ($1, $2, $3, $4, $5, $6)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7)
                     RETURNING *
                 """,
+                    user_id,
                     profile.organization_name,
                     profile.primary_user_region,
                     profile.workload_type,
@@ -71,46 +77,56 @@ async def create_profile(profile: OrganizationProfileCreate):
         return dict(row)
         
     except Exception as e:
-        logger.error(f"Failed to create/update profile: {e}")
+        logger.error(f"Failed to create/update profile for user {user_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/", response_model=Optional[OrganizationProfileResponse])
-async def get_profile():
-    """Get current organization profile"""
+async def get_profile(current_user=Depends(get_current_user)):
+    """Get current organization profile for authenticated user"""
+    user_id = current_user['id']
+    
+    logger.info(f"[AUTH] Fetching profile for user_id={user_id}")
+    
     try:
         pool = await get_pool()
         
         async with pool.acquire() as conn:
             row = await conn.fetchrow("""
                 SELECT * FROM organization_profile
+                WHERE user_id = $1
                 ORDER BY created_at DESC
                 LIMIT 1
-            """)
+            """, user_id)
         
         return dict(row) if row else None
         
     except Exception as e:
-        logger.error(f"Failed to fetch profile: {e}")
+        logger.error(f"Failed to fetch profile for user {user_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.patch("/", response_model=OrganizationProfileResponse)
-async def update_profile(updates: OrganizationProfileUpdate):
-    """Partially update organization profile"""
+async def update_profile(updates: OrganizationProfileUpdate, current_user=Depends(get_current_user)):
+    """Partially update organization profile for authenticated user"""
+    user_id = current_user['id']
+    
+    logger.info(f"[AUTH] Updating profile for user_id={user_id}")
+    
     try:
         pool = await get_pool()
         
         async with pool.acquire() as conn:
-            # Get current profile
+            # Get current profile for this user
             current = await conn.fetchrow("""
                 SELECT * FROM organization_profile
+                WHERE user_id = $1
                 ORDER BY created_at DESC
                 LIMIT 1
-            """)
+            """, user_id)
             
             if not current:
-                raise HTTPException(status_code=404, detail="No profile found")
+                raise HTTPException(status_code=404, detail="No profile found for this user")
             
             # Build update query
             update_fields = []
@@ -151,12 +167,12 @@ async def update_profile(updates: OrganizationProfileUpdate):
                 return dict(current)
             
             update_fields.append("updated_at = NOW()")
-            values.append(current['id'])
+            values.append(user_id)
             
             query = f"""
                 UPDATE organization_profile
                 SET {', '.join(update_fields)}
-                WHERE id = ${param_count}
+                WHERE user_id = ${param_count}
                 RETURNING *
             """
             
@@ -167,25 +183,29 @@ async def update_profile(updates: OrganizationProfileUpdate):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to update profile: {e}")
+        logger.error(f"Failed to update profile for user {user_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.delete("/")
-async def delete_profile():
-    """Delete organization profile"""
+async def delete_profile(current_user=Depends(get_current_user)):
+    """Delete organization profile for authenticated user"""
+    user_id = current_user['id']
+    
+    logger.info(f"[AUTH] Deleting profile for user_id={user_id}")
+    
     try:
         pool = await get_pool()
         
         async with pool.acquire() as conn:
             await conn.execute("""
-                DELETE FROM organization_profile
-            """)
+                DELETE FROM organization_profile WHERE user_id = $1
+            """, user_id)
         
         return {"message": "Profile deleted successfully"}
         
     except Exception as e:
-        logger.error(f"Failed to delete profile: {e}")
+        logger.error(f"Failed to delete profile for user {user_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

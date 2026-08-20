@@ -125,15 +125,26 @@ class InsightGenerationAgent:
         })
         
         for record in records:
+            # Handle both timestamp (from API) and record_date (from DB)
+            timestamp_val = record.get('timestamp') or record.get('record_date')
+            if not timestamp_val:
+                continue
+                
             try:
-                dt = datetime.fromisoformat(record['timestamp'].replace('Z', '+00:00'))
+                if isinstance(timestamp_val, str):
+                    dt = datetime.fromisoformat(timestamp_val.replace('Z', '+00:00'))
+                else:
+                    # Already a date/datetime object
+                    dt = timestamp_val if isinstance(timestamp_val, datetime) else datetime.combine(timestamp_val, datetime.min.time())
+                
                 hour = dt.hour
                 
                 hourly_data[hour]['emissions'].append(record['emissions_kg'])
                 hourly_data[hour]['intensities'].append(record['carbon_intensity'])
                 hourly_data[hour]['executions'] += 1
                 hourly_data[hour]['services'].add(record['service'])
-            except Exception:
+            except Exception as e:
+                logger.warning(f"Failed to parse timestamp in insight generation: {timestamp_val} - {e}")
                 continue
         
         if not hourly_data:

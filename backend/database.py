@@ -527,46 +527,139 @@ async def save_recommendation_run(
     metadata: dict = None
 ) -> int:
     """
-    Save AI-generated recommendations to avoid regenerating every time.
-    
+    Save AI-generated recommendations to the recommendation_runs table.
+
     Args:
         user_id: Owner of the analysis
         analysis_id: Analysis these recommendations are for
-        run_type: Type of recommendation ('sustainability', 'cost', 'performance', 'explainable')
-        findings: Key findings from analysis
-        recommendations: List of recommendations
-        hotspots: Carbon hotspots
-        region_opportunities: Region migration opportunities
-        time_opportunities: Time-shifting opportunities
-        confidence_score: Confidence in recommendations (0.00-1.00)
-        metadata: Additional metadata
-    
+        run_type: Type of recommendation ('sustainability', 'cost', etc.)
+        findings: Key findings dict (or JSON string)
+        recommendations: List of recommendations (or JSON string)
+        hotspots: Carbon hotspots list (or JSON string, or None)
+        region_opportunities: Region migration opportunities (or None)
+        time_opportunities: Time-shifting opportunities (or None)
+        confidence_score: Confidence in recommendations (0.00–1.00)
+        metadata: Additional metadata dict (or JSON string, or None)
+
     Returns:
         Recommendation run ID
+
+    Notes:
+        asyncpg requires JSON strings with explicit ``::jsonb`` casts for JSONB
+        parameters.  Passing native Python dicts/lists fails with
+        ``expected str, got dict`` because asyncpg does not auto-serialize them
+        unless a custom codec is registered on the connection.
+
+        The correct pattern (verified):
+            json.dumps(value)  →  passed as $N  →  query uses $N::jsonb
+
+        Deduplication: a second call for the same (user_id, analysis_id, run_type)
+        updates the existing row rather than inserting a duplicate.
     """
+    import json as _json
+
+    def _to_json_str(value, default):
+        """Serialize value to a JSON string for asyncpg + ::jsonb cast.
+
+        - None        → None (SQL NULL — allowed for nullable JSONB columns)
+        - dict/list   → json.dumps(value)
+        - str         → validated as JSON then returned as-is; on error wrapped
+        - other types → wrapped in {"raw": ...}
+        """
+        if value is None:
+            return default  # use the provided default (e.g. '{}' or '[]' for NOT NULL columns)
+        if isinstance(value, (dict, list)):
+            return _json.dumps(value)
+        if isinstance(value, str):
+            try:
+                # Validate it is already a JSON string
+                _json.loads(value)
+                return value
+            except (_json.JSONDecodeError, ValueError):
+                logger.warning(
+                    "save_recommendation_run: value is not valid JSON string; "
+                    "wrapping: %.100s", value
+                )
+                return _json.dumps({"raw": value})
+        return _json.dumps({"raw": str(value)})
+
+    # Serialize all fields to JSON strings.
+    # NOT NULL columns get default JSON strings ('{}' / '[]') instead of None.
+    findings_js          = _to_json_str(findings,              '{}')
+    recommendations_js   = _to_json_str(recommendations,       '[]')
+    hotspots_js          = _to_json_str(hotspots,              None)
+    region_opp_js        = _to_json_str(region_opportunities,  None)
+    time_opp_js          = _to_json_str(time_opportunities,    None)
+    metadata_js          = _to_json_str(metadata,              None)
+
     pool = await get_pool()
     async with pool.acquire() as conn:
-        run_id = await conn.fetchval("""
-            INSERT INTO recommendation_runs
-                (user_id, analysis_id, run_type, findings, recommendations,
-                 hotspots, region_opportunities, time_opportunities,
-                 confidence_score, metadata, status)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'completed')
-            RETURNING id
-        """,
-            user_id,
-            analysis_id,
-            run_type,
-            findings,
-            recommendations,
-            hotspots,
-            region_opportunities,
-            time_opportunities,
-            confidence_score,
-            metadata
-        )
-    
-    logger.info(f"Saved recommendation run {run_id} ({run_type}) for analysis {analysis_id}")
+        # Deduplication: update the existing run rather than inserting a duplicate
+        # when the user generates insights multiple times for the same analysis.
+        existing_id = await conn.fetchval("""
+            SELECT id FROM recommendation_runs
+            WHERE user_id = $1 AND analysis_id = $2 AND run_type = $3
+            ORDER BY generated_at DESC
+            LIMIT 1
+        """, user_id, analysis_id, run_type)
+
+        if existing_id:
+            run_id = await conn.fetchval("""
+                UPDATE recommendation_runs
+                   SET findings             = $1::jsonb,
+                       recommendations      = $2::jsonb,
+                       hotspots             = $3::jsonb,
+                       region_opportunities = $4::jsonb,
+                       time_opportunities   = $5::jsonb,
+                       confidence_score     = $6,
+                       metadata             = $7::jsonb,
+                       generated_at         = NOW(),
+                       status               = 'completed'
+                 WHERE id = $8
+                RETURNING id
+            """,
+                findings_js,
+                recommendations_js,
+                hotspots_js,
+                region_opp_js,
+                time_opp_js,
+                confidence_score,
+                metadata_js,
+                existing_id,
+            )
+            logger.info(
+                "Updated existing recommendation run %s (%s) for analysis %s (user %s)",
+                run_id, run_type, analysis_id, user_id,
+            )
+        else:
+            run_id = await conn.fetchval("""
+                INSERT INTO recommendation_runs
+                    (user_id, analysis_id, run_type,
+                     findings, recommendations,
+                     hotspots, region_opportunities, time_opportunities,
+                     confidence_score, metadata, status)
+                VALUES ($1, $2, $3,
+                        $4::jsonb, $5::jsonb,
+                        $6::jsonb, $7::jsonb, $8::jsonb,
+                        $9, $10::jsonb, 'completed')
+                RETURNING id
+            """,
+                user_id,
+                analysis_id,
+                run_type,
+                findings_js,
+                recommendations_js,
+                hotspots_js,
+                region_opp_js,
+                time_opp_js,
+                confidence_score,
+                metadata_js,
+            )
+            logger.info(
+                "Inserted new recommendation run %s (%s) for analysis %s (user %s)",
+                run_id, run_type, analysis_id, user_id,
+            )
+
     return run_id
 
 

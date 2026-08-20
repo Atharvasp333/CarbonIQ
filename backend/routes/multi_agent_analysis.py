@@ -1,12 +1,13 @@
 """
 Multi-Agent CUR Analysis API Routes
 """
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
 from pydantic import BaseModel
 import logging
 import os
 
 from agents.orchestrator import CarbonIQOrchestrator
+from routes.auth import get_current_user
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -80,7 +81,8 @@ def _get_fallback_demo_data():
 async def analyze_cur_multiagent(
     file: UploadFile = File(...),
     use_intelligence: bool = True,
-    use_gemini: bool = False
+    use_gemini: bool = False,
+    current_user=Depends(get_current_user)
 ):
     """
     Analyze AWS CUR using multi-agent architecture with intelligence layer
@@ -88,12 +90,17 @@ async def analyze_cur_multiagent(
     Query params:
     - use_intelligence: Enable sustainability intelligence layer (default: True)
     - use_gemini: Use Gemini for explanations (default: False)
+    
+    Requires authentication.
     """
     import time
     request_start = time.time()
     
+    user_id = current_user['id']
+    
     logger.info("="*70)
     logger.info("[1] REQUEST RECEIVED - /multi-agent/analyze")
+    logger.info(f"✓ Authenticated user: ID={user_id}, Email={current_user['email']}")
     logger.info("="*70)
     
     try:
@@ -106,7 +113,7 @@ async def analyze_cur_multiagent(
         logger.info(f"Intelligence Layer: {'Enabled' if use_intelligence else 'Disabled'}")
         logger.info(f"Gemini Explanations: {'Enabled' if use_gemini else 'Disabled'}")
         
-        # Get organization profile
+        # Get organization profile for the authenticated user
         org_profile = None
         if use_intelligence:
             try:
@@ -115,12 +122,15 @@ async def analyze_cur_multiagent(
                 async with pool.acquire() as conn:
                     row = await conn.fetchrow("""
                         SELECT * FROM organization_profile
+                        WHERE user_id = $1
                         ORDER BY created_at DESC
                         LIMIT 1
-                    """)
+                    """, user_id)
                     if row:
                         org_profile = dict(row)
-                        logger.info(f"Using organization profile: {org_profile.get('organization_name')}")
+                        logger.info(f"✓ Using organization profile: {org_profile.get('organization_name')}")
+                    else:
+                        logger.info(f"ℹ No organization profile found for user {user_id}")
             except Exception as e:
                 logger.warning(f"Could not load org profile: {e}")
         
@@ -141,15 +151,21 @@ async def analyze_cur_multiagent(
         request_duration = time.time() - request_start
         logger.info(f"[10] RESPONSE SENT - Total time: {request_duration:.2f}s")
 
-        # Save to NeonDB
+        # Save to NeonDB with user ownership
         if result.get('success'):
             try:
                 from database import save_analysis
-                analysis_id = await save_analysis(file.filename or 'upload.csv', result)
+                analysis_id = await save_analysis(
+                    filename=file.filename or 'upload.csv',
+                    result=result,
+                    user_id=user_id
+                )
                 result['analysis_id'] = analysis_id
-                logger.info(f"Saved to NeonDB: analysis_id={analysis_id}")
+                logger.info(f"✓ Saved to NeonDB: analysis_id={analysis_id}, user_id={user_id}")
             except Exception as db_err:
-                logger.warning(f"DB save failed (non-fatal): {db_err}")
+                logger.error(f"✗ DB save failed: {db_err}", exc_info=True)
+                # Don't fail the whole request if DB save fails
+                pass
 
         return result
         

@@ -102,28 +102,73 @@ class WorkloadAnalysisAgent:
         }
     
     def _analyze_services(self, records: List[Dict]) -> Dict:
-        """Analyze service-level emissions"""
+        """Analyze service-level emissions with detailed evidence"""
         service_data = defaultdict(lambda: {
             'total_emissions': 0,
             'total_cost': 0,
             'total_energy': 0,
             'count': 0,
-            'avg_emissions': 0
+            'avg_emissions': 0,
+            'regions': set(),
+            'zones': set(),
+            'carbon_intensities': [],
+            'execution_dates': [],
+            'resource_ids': set()
         })
         
-        total_emissions = sum(r['emissions_kg'] for r in records)
+        total_emissions = sum(float(r['emissions_kg']) for r in records)
         
         for record in records:
             service = record['service']
-            service_data[service]['total_emissions'] += record['emissions_kg']
-            service_data[service]['total_cost'] += record['cost']
-            service_data[service]['total_energy'] += record['energy_kwh']
+            service_data[service]['total_emissions'] += float(record['emissions_kg'])
+            service_data[service]['total_cost'] += float(record['cost'])
+            service_data[service]['total_energy'] += float(record['energy_kwh'])
             service_data[service]['count'] += 1
+            service_data[service]['regions'].add(record['region'])
+            service_data[service]['zones'].add(record['zone'])
+            service_data[service]['carbon_intensities'].append(float(record['carbon_intensity']))
+            service_data[service]['resource_ids'].add(record.get('resource_id', ''))
+            
+            # Track execution dates
+            # Handle both timestamp (from API) and record_date (from DB)
+            timestamp_val = record.get('timestamp') or record.get('record_date')
+            if timestamp_val:
+                try:
+                    if isinstance(timestamp_val, str):
+                        dt = datetime.fromisoformat(timestamp_val.replace('Z', '+00:00'))
+                    else:
+                        # Already a date/datetime object
+                        dt = timestamp_val if isinstance(timestamp_val, datetime) else datetime.combine(timestamp_val, datetime.min.time())
+                    service_data[service]['execution_dates'].append(dt)
+                except Exception:
+                    pass
         
-        # Calculate averages and percentages
+        # Calculate averages, percentages, and evidence
         for service, data in service_data.items():
             data['avg_emissions'] = data['total_emissions'] / data['count']
             data['percentage'] = (data['total_emissions'] / total_emissions * 100) if total_emissions > 0 else 0
+            
+            # Evidence calculations
+            if data['carbon_intensities']:
+                data['avg_carbon_intensity'] = sum(data['carbon_intensities']) / len(data['carbon_intensities'])
+                data['min_carbon_intensity'] = min(data['carbon_intensities'])
+                data['max_carbon_intensity'] = max(data['carbon_intensities'])
+            else:
+                data['avg_carbon_intensity'] = 0
+                data['min_carbon_intensity'] = 0
+                data['max_carbon_intensity'] = 0
+            
+            # Convert sets to lists for JSON serialization
+            data['regions'] = list(data['regions'])
+            data['zones'] = list(data['zones'])
+            data['resource_ids'] = list(data['resource_ids'])
+            
+            # Keep only summary of dates (first, last, count)
+            if data['execution_dates']:
+                data['first_execution'] = min(data['execution_dates']).isoformat()
+                data['last_execution'] = max(data['execution_dates']).isoformat()
+            del data['execution_dates']  # Remove to avoid bloat
+            del data['carbon_intensities']  # Keep only aggregates
         
         # Sort by total emissions
         top_services = sorted(
@@ -149,15 +194,15 @@ class WorkloadAnalysisAgent:
             'carbon_intensities': []
         })
         
-        total_emissions = sum(r['emissions_kg'] for r in records)
+        total_emissions = sum(float(r['emissions_kg']) for r in records)
         
         for record in records:
             region = record['region']
-            region_data[region]['total_emissions'] += record['emissions_kg']
-            region_data[region]['total_cost'] += record['cost']
-            region_data[region]['total_energy'] += record['energy_kwh']
+            region_data[region]['total_emissions'] += float(record['emissions_kg'])
+            region_data[region]['total_cost'] += float(record['cost'])
+            region_data[region]['total_energy'] += float(record['energy_kwh'])
             region_data[region]['count'] += 1
-            region_data[region]['carbon_intensities'].append(record['carbon_intensity'])
+            region_data[region]['carbon_intensities'].append(float(record['carbon_intensity']))
         
         # Calculate averages
         for region, data in region_data.items():
@@ -186,36 +231,96 @@ class WorkloadAnalysisAgent:
         }
     
     def _analyze_time_patterns(self, records: List[Dict]) -> Dict:
-        """Analyze time-based emission patterns"""
+        """Analyze time-based emission patterns with detailed execution windows"""
         # Group by hour, day, week, month
-        hourly_data = defaultdict(lambda: {'emissions': 0, 'count': 0, 'avg_intensity': 0, 'intensities': []})
+        hourly_data = defaultdict(lambda: {
+            'emissions': 0, 
+            'count': 0, 
+            'avg_intensity': 0, 
+            'intensities': [],
+            'services': set()
+        })
         daily_data = defaultdict(lambda: {'emissions': 0, 'count': 0})
         monthly_data = defaultdict(lambda: {'emissions': 0, 'count': 0})
         
+        # Track service-specific execution windows
+        service_time_windows = defaultdict(lambda: defaultdict(lambda: {
+            'count': 0,
+            'emissions': 0,
+            'intensities': []
+        }))
+        
         for record in records:
+            # Handle both timestamp (from API) and record_date (from DB)
+            timestamp_val = record.get('timestamp') or record.get('record_date')
+            if not timestamp_val:
+                continue
+                
             try:
-                dt = datetime.fromisoformat(record['timestamp'].replace('Z', '+00:00'))
+                if isinstance(timestamp_val, str):
+                    dt = datetime.fromisoformat(timestamp_val.replace('Z', '+00:00'))
+                else:
+                    # Already a date/datetime object
+                    dt = timestamp_val if isinstance(timestamp_val, datetime) else datetime.combine(timestamp_val, datetime.min.time())
+                
                 hour = dt.hour
                 date = dt.date()
                 month = dt.strftime('%Y-%m')
+                service = record['service']
                 
-                hourly_data[hour]['emissions'] += record['emissions_kg']
+                hourly_data[hour]['emissions'] += float(record['emissions_kg'])
                 hourly_data[hour]['count'] += 1
-                hourly_data[hour]['intensities'].append(record['carbon_intensity'])
+                hourly_data[hour]['intensities'].append(float(record['carbon_intensity']))
+                hourly_data[hour]['services'].add(service)
                 
-                daily_data[str(date)]['emissions'] += record['emissions_kg']
+                daily_data[str(date)]['emissions'] += float(record['emissions_kg'])
                 daily_data[str(date)]['count'] += 1
                 
-                monthly_data[month]['emissions'] += record['emissions_kg']
+                monthly_data[month]['emissions'] += float(record['emissions_kg'])
                 monthly_data[month]['count'] += 1
+                
+                # Track service time windows
+                service_time_windows[service][hour]['count'] += 1
+                service_time_windows[service][hour]['emissions'] += float(record['emissions_kg'])
+                service_time_windows[service][hour]['intensities'].append(float(record['carbon_intensity']))
+                
             except Exception as e:
-                logger.warning(f"Failed to parse timestamp: {record.get('timestamp')}")
+                logger.warning(f"Failed to parse timestamp: {timestamp_val} - {e}")
                 continue
         
-        # Calculate hourly averages
+        # Calculate hourly averages with evidence
         for hour, data in hourly_data.items():
-            data['avg_intensity'] = sum(data['intensities']) / len(data['intensities']) if data['intensities'] else 0
+            if data['intensities']:
+                data['avg_intensity'] = sum(data['intensities']) / len(data['intensities'])
+                data['min_intensity'] = min(data['intensities'])
+                data['max_intensity'] = max(data['intensities'])
+            else:
+                data['avg_intensity'] = 0
+                data['min_intensity'] = 0
+                data['max_intensity'] = 0
+            
+            data['services'] = list(data['services'])
             del data['intensities']
+        
+        # Calculate service time window evidence
+        service_execution_patterns = {}
+        for service, hours in service_time_windows.items():
+            # Find primary execution window
+            if hours:
+                most_common_hour = max(hours.items(), key=lambda x: x[1]['count'])
+                avg_intensities = {
+                    h: sum(d['intensities']) / len(d['intensities']) if d['intensities'] else 0 
+                    for h, d in hours.items()
+                }
+                
+                service_execution_patterns[service] = {
+                    'primary_hour': most_common_hour[0],
+                    'primary_hour_executions': most_common_hour[1]['count'],
+                    'primary_hour_emissions': most_common_hour[1]['emissions'],
+                    'primary_hour_intensity': avg_intensities[most_common_hour[0]],
+                    'hourly_distribution': {h: d['count'] for h, d in hours.items()},
+                    'hourly_intensities': avg_intensities
+                }
         
         # Find peak and low carbon hours
         hourly_sorted = sorted(hourly_data.items(), key=lambda x: x[1]['avg_intensity'])
@@ -234,6 +339,7 @@ class WorkloadAnalysisAgent:
             'hourly_breakdown': dict(hourly_data),
             'daily_breakdown': dict(daily_data),
             'monthly_breakdown': dict(monthly_data),
+            'service_execution_patterns': service_execution_patterns,
             'lowest_carbon_hours': lowest_carbon_hours,
             'highest_carbon_hours': highest_carbon_hours,
             'highest_emission_days': highest_emission_days,
@@ -247,15 +353,26 @@ class WorkloadAnalysisAgent:
         
         hotspots = []
         for record in sorted_records[:10]:
+            # Handle both timestamp (from API) and record_date (from DB)
+            timestamp_val = record.get('timestamp') or record.get('record_date')
+            if timestamp_val:
+                if isinstance(timestamp_val, str):
+                    timestamp_str = timestamp_val
+                else:
+                    # Convert date/datetime to ISO string
+                    timestamp_str = timestamp_val.isoformat() if hasattr(timestamp_val, 'isoformat') else str(timestamp_val)
+            else:
+                timestamp_str = 'Unknown'
+            
             hotspots.append({
                 'service': record['service'],
                 'region': record['region'],
                 'zone': record['zone'],
-                'timestamp': record['timestamp'],
-                'emissions_kg': record['emissions_kg'],
-                'cost': record['cost'],
-                'carbon_intensity': record['carbon_intensity'],
-                'energy_kwh': record['energy_kwh']
+                'timestamp': timestamp_str,
+                'emissions_kg': float(record['emissions_kg']),
+                'cost': float(record['cost']),
+                'carbon_intensity': float(record['carbon_intensity']),
+                'energy_kwh': float(record['energy_kwh'])
             })
         
         return hotspots
@@ -272,9 +389,9 @@ class WorkloadAnalysisAgent:
         
         for record in records:
             service = record['service']
-            service_usage[service]['total_usage'] += record['usage_amount']
-            service_usage[service]['total_emissions'] += record['emissions_kg']
-            service_usage[service]['total_cost'] += record['cost']
+            service_usage[service]['total_usage'] += float(record['usage_amount'])
+            service_usage[service]['total_emissions'] += float(record['emissions_kg'])
+            service_usage[service]['total_cost'] += float(record['cost'])
             service_usage[service]['count'] += 1
         
         # Calculate efficiency
@@ -315,8 +432,8 @@ class WorkloadAnalysisAgent:
         
         # For each high-emission region, calculate potential savings
         for region, data in region_breakdown.items():
-            current_intensity = data['avg_carbon_intensity']
-            target_intensity = lowest_intensity['avg_carbon_intensity']
+            current_intensity = float(data['avg_carbon_intensity'])
+            target_intensity = float(lowest_intensity['avg_carbon_intensity'])
             
             # Skip if already low carbon
             if current_intensity <= target_intensity * 1.1:  # Within 10% tolerance
@@ -324,7 +441,7 @@ class WorkloadAnalysisAgent:
             
             # Calculate potential reduction
             potential_reduction_pct = ((current_intensity - target_intensity) / current_intensity) * 100
-            potential_savings_kg = (data['total_emissions'] * potential_reduction_pct) / 100
+            potential_savings_kg = (float(data['total_emissions']) * potential_reduction_pct) / 100
             
             # Only include significant opportunities
             if potential_reduction_pct > 10 and potential_savings_kg > 5:
@@ -335,8 +452,8 @@ class WorkloadAnalysisAgent:
                     'suggested_intensity': round(target_intensity, 2),
                     'potential_reduction_pct': round(potential_reduction_pct, 2),
                     'potential_savings_kg': round(potential_savings_kg, 2),
-                    'current_emissions': round(data['total_emissions'], 2),
-                    'current_cost': round(data['total_cost'], 2)
+                    'current_emissions': round(float(data['total_emissions']), 2),
+                    'current_cost': round(float(data['total_cost']), 2)
                 })
         
         # Sort by potential savings
@@ -364,17 +481,28 @@ class WorkloadAnalysisAgent:
         }))
         
         for record in records:
+            # Handle both timestamp (from API) and record_date (from DB)
+            timestamp_val = record.get('timestamp') or record.get('record_date')
+            if not timestamp_val:
+                continue
+                
             try:
-                dt = datetime.fromisoformat(record['timestamp'].replace('Z', '+00:00'))
+                if isinstance(timestamp_val, str):
+                    dt = datetime.fromisoformat(timestamp_val.replace('Z', '+00:00'))
+                else:
+                    # Already a date/datetime object
+                    dt = timestamp_val if isinstance(timestamp_val, datetime) else datetime.combine(timestamp_val, datetime.min.time())
+                
                 hour = dt.hour
                 service = record['service']
                 region = record['region']
                 
                 key = f"{service}_{region}"
-                service_time_data[key][hour]['emissions'] += record['emissions_kg']
+                service_time_data[key][hour]['emissions'] += float(record['emissions_kg'])
                 service_time_data[key][hour]['count'] += 1
-                service_time_data[key][hour]['intensities'].append(record['carbon_intensity'])
-            except Exception:
+                service_time_data[key][hour]['intensities'].append(float(record['carbon_intensity']))
+            except Exception as e:
+                logger.warning(f"Failed to parse timestamp in time opportunities: {timestamp_val} - {e}")
                 continue
         
         # Calculate averages
@@ -385,7 +513,7 @@ class WorkloadAnalysisAgent:
         
         # Find shift opportunities
         best_hour = lowest_hours[0]['hour']
-        best_intensity = lowest_hours[0]['avg_intensity']
+        best_intensity = float(lowest_hours[0]['avg_intensity'])
         
         for key, hours in service_time_data.items():
             service, region = key.split('_', 1)

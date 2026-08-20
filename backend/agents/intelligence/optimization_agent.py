@@ -17,12 +17,21 @@ RULES:
 - NO historical emission recalculation
 - NO AI/LLM
 - Only deterministic opportunity identification
+- Each opportunity is isolated - one failure doesn't crash the engine
 """
 import logging
 import os
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from datetime import datetime, timedelta
 import httpx
+from .numeric_utils import (
+    to_float, 
+    calculate_percentage_change,
+    REGION_INTENSITY_THRESHOLD,
+    TIME_INTENSITY_THRESHOLD,
+    MINIMUM_REDUCTION_KG,
+    MINIMUM_REDUCTION_PCT
+)
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +41,8 @@ class OptimizationAgent:
     
     def __init__(self):
         self.opportunities_found = 0
+        self.opportunities_failed = 0
+        self.errors = []
         self.electricity_maps_key = os.getenv('ELECTRICITY_MAPS_API_KEY')
         self.use_api = bool(
             self.electricity_maps_key and
@@ -52,45 +63,56 @@ class OptimizationAgent:
             analysis_summary: Analysis summary for context
         
         Returns:
-            List of optimization opportunities
+            List of optimization opportunities (errors logged but don't stop processing)
         """
         logger.info("="*60)
         logger.info("[Optimization Agent] Discovering Opportunities")
         logger.info("="*60)
         
         opportunities = []
+        self.errors = []
         
         for pattern in patterns:
-            pattern_type = pattern['pattern_type']
+            pattern_type = pattern.get('pattern_type', 'unknown')
             
-            if pattern_type == 'high_carbon_execution_window':
-                opp = await self._time_shift_opportunity(pattern, analysis_summary)
+            try:
+                opp = None
+                
+                if pattern_type == 'high_carbon_execution_window':
+                    opp = await self._time_shift_opportunity(pattern, analysis_summary)
+                
+                elif pattern_type == 'high_carbon_region_concentration':
+                    opp = await self._region_migration_opportunity(pattern, analysis_summary)
+                
+                elif pattern_type == 'low_cost_high_emission':
+                    opp = self._compute_optimization_opportunity(pattern)
+                
+                elif pattern_type == 'repeated_execution_window':
+                    opp = await self._data_processing_optimization(pattern)
+                
+                elif pattern_type == 'emission_spike':
+                    opp = self._workload_smoothing_opportunity(pattern)
+                
                 if opp:
                     opportunities.append(opp)
-            
-            elif pattern_type == 'high_carbon_region_concentration':
-                opp = await self._region_migration_opportunity(pattern, analysis_summary)
-                if opp:
-                    opportunities.append(opp)
-            
-            elif pattern_type == 'low_cost_high_emission':
-                opp = self._compute_optimization_opportunity(pattern)
-                if opp:
-                    opportunities.append(opp)
-            
-            elif pattern_type == 'repeated_execution_window':
-                opp = await self._data_processing_optimization(pattern)
-                if opp:
-                    opportunities.append(opp)
-            
-            elif pattern_type == 'emission_spike':
-                opp = self._workload_smoothing_opportunity(pattern)
-                if opp:
-                    opportunities.append(opp)
+                    
+            except Exception as e:
+                # Log error but continue processing other opportunities
+                self.opportunities_failed += 1
+                error_info = {
+                    'pattern_type': pattern_type,
+                    'error': str(e),
+                    'error_type': type(e).__name__,
+                    'pattern_evidence': pattern.get('evidence', {})
+                }
+                self.errors.append(error_info)
+                logger.error(f"Failed to create opportunity for pattern {pattern_type}: {e}", exc_info=True)
         
         self.opportunities_found = len(opportunities)
         
         logger.info(f"✓ Discovered {len(opportunities)} optimization opportunities")
+        if self.opportunities_failed > 0:
+            logger.warning(f"✗ Failed to create {self.opportunities_failed} opportunities (see errors)")
         
         return opportunities
     
@@ -175,22 +197,29 @@ class OptimizationAgent:
     ) -> Optional[Dict]:
         """
         Generate region migration opportunity with Electricity Maps comparison
+        Uses error isolation - failures logged but don't crash engine
         """
         evidence = pattern['evidence']
         current_region = evidence['region']
         current_zone = evidence['zone']
-        current_intensity = evidence['carbon_intensity']
+        current_intensity_raw = evidence['carbon_intensity']
+        
+        # Convert to float for calculations
+        current_intensity = to_float(current_intensity_raw)
+        if current_intensity is None or current_intensity <= 0:
+            logger.warning(f"Invalid current intensity for {current_region}: {current_intensity_raw}")
+            return None
         
         # Find lower-carbon alternative regions
         suggested_region = None
         suggested_zone = None
         suggested_intensity = None
         
-        # Predefined clean regions
+        # Predefined clean regions with validated zones
         clean_alternatives = [
-            ('eu-north-1', 'SE', 40),       # Stockholm - very clean
-            ('us-west-2', 'US-NW-PACW', 200),  # Oregon - clean
-            ('ca-central-1', 'CA-ON', 120),    # Montreal - clean
+            ('eu-north-1', 'SE', 40.0),       # Stockholm - very clean
+            ('us-west-2', 'US-NW-PACW', 200.0),  # Oregon - clean
+            ('ca-central-1', 'CA-ON', 120.0),    # Montreal - clean
         ]
         
         # Optionally query Electricity Maps for current intensity comparison
@@ -201,45 +230,67 @@ class OptimizationAgent:
                 
                 try:
                     intensity = await self._get_latest_intensity(zone)
-                    if intensity and intensity < current_intensity * 0.7:  # At least 30% cleaner
+                    if intensity and to_float(intensity) < current_intensity * REGION_INTENSITY_THRESHOLD:
                         suggested_region = region
                         suggested_zone = zone
-                        suggested_intensity = intensity
-                        logger.info(f"  Electricity Maps comparison: {zone} = {intensity} gCO2/kWh (vs {current_intensity})")
+                        suggested_intensity = to_float(intensity)
+                        logger.info(f"  Electricity Maps comparison: {zone} = {suggested_intensity:.1f} gCO2/kWh (vs {current_intensity:.1f})")
                         break
                 except Exception as e:
-                    logger.warning(f"Region comparison query failed: {e}")
+                    # Log but continue with other candidates
+                    error_info = {
+                        'service': evidence.get('service', 'Unknown'),
+                        'current_region': current_region,
+                        'candidate_region': region,
+                        'candidate_zone': zone,
+                        'error': str(e),
+                        'error_type': type(e).__name__
+                    }
+                    self.errors.append(error_info)
+                    logger.warning(f"Region comparison failed for {zone}: {e}")
         
-        # Fallback to static data
+        # Fallback to static data if API didn't find a match
         if not suggested_region:
             for region, zone, intensity in clean_alternatives:
-                if zone != current_zone and intensity < current_intensity * 0.7:
+                intensity_float = to_float(intensity)
+                if zone != current_zone and intensity_float < current_intensity * REGION_INTENSITY_THRESHOLD:
                     suggested_region = region
                     suggested_zone = zone
-                    suggested_intensity = intensity
+                    suggested_intensity = intensity_float
                     break
         
-        if not suggested_region:
+        if not suggested_region or suggested_intensity is None:
+            logger.info(f"No suitable lower-carbon alternative found for {current_region}")
             return None  # No suitable alternative found
         
-        # Calculate potential reduction
-        current_emissions = evidence['emissions_kg']
-        potential_reduction_pct = ((current_intensity - suggested_intensity) / current_intensity) * 100
+        # Calculate potential reduction with float values
+        current_emissions = to_float(evidence.get('emissions_kg', 0))
+        if current_emissions is None or current_emissions <= 0:
+            logger.warning(f"Invalid emissions for {current_region}: {evidence.get('emissions_kg')}")
+            return None
+        
+        potential_reduction_pct = calculate_percentage_change(current_intensity, suggested_intensity)
+        if potential_reduction_pct is None or potential_reduction_pct < MINIMUM_REDUCTION_PCT:
+            return None
+        
         potential_reduction_kg = current_emissions * potential_reduction_pct / 100
+        
+        if potential_reduction_kg < MINIMUM_REDUCTION_KG:
+            return None
         
         opp_evidence = {
             'current_region': {
                 'zone': current_zone,
-                'avg_intensity_gco2': current_intensity,
-                'monthly_cost': float(evidence.get('cost', 0.0))
+                'avg_intensity_gco2': round(current_intensity, 2),
+                'monthly_cost': to_float(evidence.get('cost', 0.0)) or 0.0
             },
             'target_region': {
                 'zone': suggested_zone,
-                'avg_intensity_gco2': suggested_intensity,
-                'monthly_cost': float(evidence.get('cost', 0.0))
+                'avg_intensity_gco2': round(suggested_intensity, 2),
+                'monthly_cost': to_float(evidence.get('cost', 0.0)) or 0.0
             },
             'basis': "Electricity Maps real-time data comparison" if self.use_api else "30-day historical average from Electricity Maps",
-            'workload_pattern': f"High concentration ({evidence.get('concentration_pct', 0.0):.1f}%) of workloads in high-carbon region {current_region}."
+            'workload_pattern': f"High concentration ({to_float(evidence.get('concentration_pct', 0.0)) or 0:.1f}%) of workloads in high-carbon region {current_region}."
         }
         
         return {
@@ -250,17 +301,17 @@ class OptimizationAgent:
             'details': {
                 'current_region': current_region,
                 'current_zone': current_zone,
-                'current_intensity': current_intensity,
+                'current_intensity': round(current_intensity, 2),
                 'suggested_region': suggested_region,
                 'suggested_zone': suggested_zone,
-                'suggested_intensity': suggested_intensity
+                'suggested_intensity': round(suggested_intensity, 2)
             },
             'expected_reduction_pct': round(potential_reduction_pct, 2),
             'expected_reduction_kg': round(potential_reduction_kg, 2),
             'cost_impact': 'Neutral',
-            'reasoning': f"Region {current_region} has high carbon intensity ({current_intensity} gCO2/kWh). Migrating to {suggested_region} ({suggested_intensity} gCO2/kWh) significantly reduces emissions.",
+            'reasoning': f"Region {current_region} has high carbon intensity ({current_intensity:.0f} gCO2/kWh). Migrating to {suggested_region} ({suggested_intensity:.0f} gCO2/kWh) significantly reduces emissions.",
             'evidence': opp_evidence,
-            'root_cause': f"Workloads hosted in high-carbon grid region {current_region} ({current_intensity} gCO2/kWh) instead of lower-carbon alternative {suggested_region} ({suggested_intensity} gCO2/kWh)."
+            'root_cause': f"Workloads hosted in high-carbon grid region {current_region} ({current_intensity:.0f} gCO2/kWh) instead of lower-carbon alternative {suggested_region} ({suggested_intensity:.0f} gCO2/kWh)."
         }
     
     def _compute_optimization_opportunity(self, pattern: Dict) -> Optional[Dict]:
@@ -436,8 +487,11 @@ class OptimizationAgent:
             return None
     
     def get_stats(self) -> Dict:
-        """Return optimization statistics"""
+        """Return optimization statistics with errors"""
         return {
             'opportunities_found': self.opportunities_found,
-            'electricity_maps_enabled': self.use_api
+            'opportunities_failed': self.opportunities_failed,
+            'electricity_maps_enabled': self.use_api,
+            'errors': self.errors
         }
+

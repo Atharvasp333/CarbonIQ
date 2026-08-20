@@ -87,7 +87,7 @@ class AIRecommendationAgent:
             api_key = os.getenv("GEMINI_API_KEY")
             genai.configure(api_key=api_key)
             
-            model = genai.GenerativeModel('gemini-pro')
+            model = genai.GenerativeModel('gemini-3.5-flash')
             response = model.generate_content(prompt)
             
             # Parse Gemini response
