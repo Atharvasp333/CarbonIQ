@@ -109,8 +109,8 @@ python backend/test_agents.py
 1. Start backend: `cd backend && python -m uvicorn main:app --reload`
 2. Go to frontend
 3. Fill in AWS credentials:
-   - Access Key: `AKIA3DMB2ZT7KQQ5FAVF`
-   - Secret Key: `tNYUCog+GDICn1lHlTe85b26+tuBzcKl0wXIVN3F`
+   - Access Key: `PLACEHOLDER_AWS_ACCESS_KEY`
+   - Secret Key: `PLACEHOLDER_AWS_SECRET_KEY`
    - Region: `ap-south-1`
    - Bucket: `carboniq-cur-bucket`
    - File Path: (leave empty for auto-discover)
