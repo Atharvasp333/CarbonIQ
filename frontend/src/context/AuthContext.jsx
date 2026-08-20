@@ -1,5 +1,5 @@
 import { createContext, useEffect, useState } from 'react';
-import { authClient } from '../lib/auth';
+import { authClient } from '../lib/auth.js';
 import { syncUser } from '../api/client';
 
 export const AuthContext = createContext(null);

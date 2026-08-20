@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getJwtToken } from '../lib/auth';
+import { getJwtToken } from '../lib/auth.js';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
