@@ -160,7 +160,7 @@ class LoginRequest(BaseModel):
 def _user_response(user, token: str):
     return {
         "success": True,
-        "token": token,
+        "access_token": token,  # Frontend expects access_token
         "user": {
             "id": user["id"],
             "name": user["name"],
