@@ -8,6 +8,7 @@ import logging
 
 from database import get_pool
 from models.schemas import RecommendationRunResponse
+from routes.auth import get_current_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/intelligence", tags=["intelligence"])
@@ -108,22 +109,25 @@ async def generate_insights():
 
 
 @router.get("/recommendations")
-async def get_recommendations():
+async def get_recommendations(current_user=Depends(get_current_user)):
     """
-    Get latest recommendation run
+    Get latest recommendation run for current user
     
-    Returns the most recent recommendation_run from the database
+    Returns the most recent recommendation_run from the database for the authenticated user
     """
     print("=" * 80)
-    print("GET /api/intelligence/recommendations - Request received")
+    print(f"GET /api/intelligence/recommendations - User ID: {current_user['id']}")
     print("=" * 80)
-    logger.info("GET /api/intelligence/recommendations - Request received")
+    logger.info(f"GET /api/intelligence/recommendations - User {current_user['id']}")
     
     try:
         print("Step 1: Getting database pool...")
         pool = await get_pool()
         print(f"Step 2: Pool acquired: {pool is not None}")
         logger.info("✓ Database pool acquired")
+        
+        user_id = current_user['id']
+        print(f"Step 2.5: User ID = {user_id}")
         
         async with pool.acquire() as conn:
             print("Step 3: Database connection acquired")
@@ -149,8 +153,8 @@ async def get_recommendations():
                     detail="Database tables not initialized. Please run migrations."
                 )
             
-            # Get latest recommendation run
-            print("Step 6: Fetching latest recommendation run...")
+            # Get latest recommendation run for this user
+            print(f"Step 6: Fetching latest recommendation run for user {user_id}...")
             row = await conn.fetchrow("""
                 SELECT 
                     id,
@@ -167,9 +171,10 @@ async def get_recommendations():
                     metadata,
                     status
                 FROM recommendation_runs
+                WHERE user_id = $1
                 ORDER BY generated_at DESC
                 LIMIT 1
-            """)
+            """, user_id)
             
             print(f"Step 7: Row found: {row is not None}")
             
