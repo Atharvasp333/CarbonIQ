@@ -5,9 +5,13 @@ Command-line interface for measuring carbon emissions of computing workloads and
 ## Features
 
 - 🌍 **Carbon Emission Measurement**: Uses CodeCarbon to track energy consumption and emissions
-- 🔄 **Backend Integration**: Sends measurements to CarbonIQ API for analysis
-- 🌱 **Carbon Aware SDK**: Optional integration for identifying greener execution windows
-- 📊 **Measurement History**: Track and compare measurements over time
+- 🔄 **Backend Integration**: Sends measurements to CarbonIQ API for analysis and storage
+- 🌱 **Electricity Maps Integration**: Real-time carbon intensity data for AWS regions
+- 📊 **Measurement History**: Track and compare measurements over time (local + backend)
+- 🎯 **Intelligent Scheduling**: Recommends optimal execution times based on carbon forecasts
+- 📈 **Real-Time Monitoring**: Monitor live carbon intensity for regions
+- 🔬 **Comparison Tool**: Compare measurements to track improvements
+- 📉 **Statistics**: Aggregate stats across all your workloads
 - 🧪 **Sample Workloads**: Test workloads included for quick testing
 
 ## Installation
@@ -54,34 +58,56 @@ CARBON_AWARE_SDK_ENABLED=false
 python carboniq_cli.py test-backend
 ```
 
-### 2. Measure a Command
+### 2. Test Electricity Maps API
+
+```powershell
+python carboniq_cli.py test-electricity-maps
+```
+
+### 3. Measure a Command
 
 ```powershell
 python carboniq_cli.py measure python sample_workloads/simple_task.py --workload-name "Simple Task" --workload-type "test"
 ```
 
-### 3. Measure a Python Script Directly
+### 4. Measure a Python Script Directly
 
 ```powershell
 python carboniq_cli.py measure-script sample_workloads/compute_intensive.py --workload-name "Compute Test"
 ```
 
-### 4. Measure with Carbon Aware SDK
-
-```powershell
-python carboniq_cli.py measure python my_script.py --workload-name "My Script" --check-carbon-aware
-```
-
 ### 5. View Measurement History
 
 ```powershell
-python carboniq_cli.py history --limit 10
+# From backend (recommended)
+python carboniq_cli.py history --source backend
+
+# From local files
+python carboniq_cli.py history --source local
 ```
 
-### 6. Test Carbon Aware SDK
+### 6. View Statistics
 
 ```powershell
-python carboniq_cli.py test-carbon-aware
+python carboniq_cli.py stats
+```
+
+### 7. Monitor Real-Time Carbon Intensity
+
+```powershell
+python carboniq_cli.py monitor --region us-east-1 --interval 10 --duration 60
+```
+
+### 8. Get Schedule Recommendations
+
+```powershell
+python carboniq_cli.py recommend-schedule --duration 30 --regions us-east-1 --regions us-west-2
+```
+
+### 9. Compare Two Measurements
+
+```powershell
+python carboniq_cli.py compare measurements/baseline.json measurements/optimized.json
 ```
 
 ## Command Reference
@@ -111,16 +137,40 @@ Convenience command for measuring Python scripts.
 - `--send-to-backend/--no-send-to-backend`: Send to backend (default: true)
 
 ### `history`
-Show recent measurement history.
+Show recent measurement history from backend or local files.
 
 **Options:**
 - `--limit, -l`: Number of measurements to show (default: 10)
+- `--source, -s`: Source: 'backend' or 'local' (default: backend)
 
-### `test-backend`
-Test connection to CarbonIQ backend.
+### `stats`
+Show aggregate statistics from backend (total emissions, energy, averages, etc.)
 
-### `test-carbon-aware`
-Test Carbon Aware SDK connection.
+### `monitor`
+Monitor real-time carbon intensity for a region.
+
+**Options:**
+- `--region, -r`: AWS region to monitor (default: us-east-1)
+- `--interval, -i`: Update interval in seconds (default: 10)
+- `--duration, -d`: Total monitoring duration in seconds (default: 60)
+
+### `recommend-schedule`
+Get carbon-optimal execution schedule recommendation.
+
+**Arguments:**
+- `--duration, -d`: Expected workload duration in minutes (required)
+- `--deadline`: Deadline in ISO 8601 format (optional)
+- `--regions, -r`: AWS regions to consider (can specify multiple)
+
+### `compare`
+Compare two measurement files side-by-side.
+
+**Arguments:**
+- `BASELINE_FILE`: Path to baseline measurement
+- `COMPARISON_FILE`: Path to comparison measurement
+
+### `test-electricity-maps`
+Test Electricity Maps API connection and get current carbon intensity.
 
 ## Output
 
