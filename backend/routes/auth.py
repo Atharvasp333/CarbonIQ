@@ -8,11 +8,11 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 import httpx
+import bcrypt
 import jwt as pyjwt                          # PyJWT — supports EdDSA
 from fastapi import APIRouter, HTTPException, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
-from passlib.context import CryptContext
 from jose import JWTError, jwt as jose_jwt  # python-jose — for legacy HS256
 
 router = APIRouter()
@@ -22,7 +22,6 @@ logger = logging.getLogger(__name__)
 # Config
 # ---------------------------------------------------------------------------
 
-pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
 bearer_scheme = HTTPBearer(auto_error=False)
 
 NEON_AUTH_URL = os.getenv("NEON_AUTH_URL", "")
@@ -69,11 +68,19 @@ async def _verify_neon_jwt(token: str) -> dict:
 # --- password helpers --------------------------------------------------------
 
 def hash_password(password: str) -> str:
-    return pwd_ctx.hash(password)
+    """Hash a password using bcrypt"""
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
+    return hashed.decode('utf-8')
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_ctx.verify(plain, hashed)
+    """Verify a password against a bcrypt hash"""
+    try:
+        return bcrypt.checkpw(plain.encode('utf-8'), hashed.encode('utf-8'))
+    except Exception as e:
+        logger.error(f"Password verification error: {e}")
+        return False
 
 
 def create_access_token(user_id: int, email: str) -> str:
