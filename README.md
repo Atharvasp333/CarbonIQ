@@ -157,37 +157,50 @@ CODECARBON_OUTPUT_DIR=./cli/measurements
 CODECARBON_LOG_LEVEL=info
 ```
 
-### 3. Backend
+### 3. Install Dependencies
 
 ```bash
+# Backend
 cd backend
 pip install -r requirements.txt
-python -m uvicorn main:app --reload --port 8000
-```
+cd ..
 
-Backend runs at http://localhost:8000
-
-### 4. Frontend
-
-```bash
+# Frontend
 cd frontend
 npm install
+cd ..
 ```
 
-Create `frontend/.env`:
+### 4. Start Everything (Single Command!)
 
-```env
-VITE_API_BASE_URL=http://localhost:8000
-VITE_NEON_AUTH_URL=https://<your-neon-project>.neonauth.<region>.aws.neon.tech/<dbname>/auth
+**Windows (PowerShell):**
+```powershell
+.\start-dev.ps1
 ```
 
-Start frontend:
-
+**Linux/Mac:**
 ```bash
+chmod +x start-dev.sh
+./start-dev.sh
+```
+
+This starts both backend and frontend in one command!
+- 🌐 Frontend: http://localhost:5173
+- ⚡ Backend: http://localhost:8000
+- 📚 API Docs: http://localhost:8000/docs
+
+Press `Ctrl+C` to stop all services.
+
+**Or manually (separate terminals):**
+```bash
+# Terminal 1: Backend
+cd backend
+python -m uvicorn main:app --reload --port 8000
+
+# Terminal 2: Frontend  
+cd frontend
 npm run dev
 ```
-
-Frontend runs at http://localhost:5173
 
 ### 5. CLI Tool (Optional - for Carbon-Aware Workload Measurement)
 
