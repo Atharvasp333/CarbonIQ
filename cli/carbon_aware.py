@@ -1,6 +1,6 @@
 """
-Carbon Aware SDK Client
-Handles communication with Carbon Aware SDK for carbon intensity data.
+Carbon Intensity Client
+Uses Electricity Maps API to get real-time carbon intensity data.
 """
 
 import os
@@ -12,48 +12,77 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+# AWS Region to Electricity Maps Zone Mapping
+REGION_TO_ZONE_MAP = {
+    "us-east-1": "US-MIDA-PJM",      # Virginia
+    "us-east-2": "US-MIDW-MISO",     # Ohio
+    "us-west-1": "US-CAL-CISO",      # California
+    "us-west-2": "US-NW-PACW",       # Oregon
+    "eu-west-1": "IE",               # Ireland
+    "eu-west-2": "GB",               # London
+    "eu-west-3": "FR",               # Paris
+    "eu-central-1": "DE",            # Frankfurt
+    "ap-south-1": "IN-WE",           # Mumbai
+    "ap-northeast-1": "JP-TK",       # Tokyo
+    "ap-southeast-1": "SG",          # Singapore
+    "ap-southeast-2": "AU-NSW",      # Sydney
+}
+
+
 class CarbonAwareClient:
-    """Client for Carbon Aware SDK integration."""
+    """Client for Electricity Maps integration."""
     
     def __init__(self):
-        """Initialize Carbon Aware SDK client."""
-        self.sdk_url = os.getenv("CARBON_AWARE_SDK_URL", "http://localhost:5073")
-        self.enabled = os.getenv("CARBON_AWARE_SDK_ENABLED", "false").lower() == "true"
+        """Initialize Electricity Maps client."""
+        self.api_key = os.getenv("ELECTRICITY_MAPS_API_KEY", "").strip()
+        self.base_url = "https://api.electricitymap.org/v3"
+        self.enabled = bool(self.api_key and self.api_key != "your_electricity_maps_api_key_here")
         self.session = requests.Session()
-        self.session.headers.update({
-            'Content-Type': 'application/json'
-        })
+        
+        if self.api_key:
+            self.session.headers.update({
+                'auth-token': self.api_key
+            })
     
     def is_available(self) -> bool:
         """
-        Check if Carbon Aware SDK is available and configured.
+        Check if Electricity Maps API is available and configured.
         
         Returns:
             True if available, False otherwise
         """
         if not self.enabled:
-            print("[CarbonAware] SDK is disabled in configuration")
+            print("[ElectricityMaps] API key not configured")
             return False
         
         try:
-            # Try a simple health check or current emissions endpoint
+            # Try a simple query to validate API key
             response = self.session.get(
-                f"{self.sdk_url}/emissions/forecasts/current",
-                timeout=5,
-                params={"location": "eastus"}  # Example location
+                f"{self.base_url}/carbon-intensity/latest",
+                params={"zone": "US-CAL-CISO"},
+                timeout=5
             )
             
-            return response.status_code == 200
+            if response.status_code == 200:
+                print("[ElectricityMaps] ✓ API is available")
+                return True
+            elif response.status_code == 401:
+                print("[ElectricityMaps] ✗ Invalid API key")
+                return False
+            else:
+                print(f"[ElectricityMaps] API returned status {response.status_code}")
+                return False
         
-        except requests.exceptions.RequestException:
+        except requests.exceptions.RequestException as e:
+            print(f"[ElectricityMaps] Connection error: {e}")
             return False
     
-    def get_current_intensity(self, location: str = "eastus") -> Optional[Dict]:
+    def get_current_intensity(self, aws_region: str = "us-east-1") -> Optional[Dict]:
         """
-        Get current carbon intensity for a location.
+        Get current carbon intensity for an AWS region.
         
         Args:
-            location: Location identifier (e.g., Azure region name)
+            aws_region: AWS region code (e.g., us-east-1)
         
         Returns:
             Dictionary with current intensity data, or None if not available
@@ -61,36 +90,46 @@ class CarbonAwareClient:
         if not self.enabled:
             return None
         
+        # Map AWS region to Electricity Maps zone
+        zone = REGION_TO_ZONE_MAP.get(aws_region, "US-MIDA-PJM")
+        
         try:
             response = self.session.get(
-                f"{self.sdk_url}/emissions/forecasts/current",
-                params={"location": location},
+                f"{self.base_url}/carbon-intensity/latest",
+                params={"zone": zone},
                 timeout=10
             )
             
             if response.status_code == 200:
                 data = response.json()
-                return self._parse_intensity_response(data)
+                return {
+                    "aws_region": aws_region,
+                    "zone": zone,
+                    "carbon_intensity": data.get("carbonIntensity"),
+                    "datetime": data.get("datetime"),
+                    "fossil_fuel_percentage": data.get("fossilFuelPercentage"),
+                    "renewable_percentage": data.get("renewablePercentage")
+                }
             else:
-                print(f"[CarbonAware] Failed to get current intensity: {response.status_code}")
+                print(f"[ElectricityMaps] Failed to get current intensity: {response.status_code}")
                 return None
         
         except requests.exceptions.RequestException as e:
-            print(f"[CarbonAware] Error getting current intensity: {e}")
+            print(f"[ElectricityMaps] Error getting current intensity: {e}")
             return None
     
     def get_optimal_windows(
         self,
         duration_minutes: int,
-        locations: List[str] = None,
+        regions: List[str] = None,
         deadline: Optional[str] = None
     ) -> Optional[Dict]:
         """
-        Get optimal execution windows with lower carbon intensity.
+        Get optimal execution windows with lower carbon intensity across AWS regions.
         
         Args:
             duration_minutes: Expected workload duration
-            locations: List of location identifiers to consider
+            regions: List of AWS region codes to consider
             deadline: ISO 8601 deadline timestamp
         
         Returns:
@@ -99,100 +138,52 @@ class CarbonAwareClient:
         if not self.enabled:
             return None
         
-        # Default locations if none provided
-        if not locations:
-            locations = ["eastus", "westus", "westeurope"]
-        
-        # Calculate time window
-        start_time = datetime.utcnow()
-        if deadline:
-            try:
-                end_time = datetime.fromisoformat(deadline.replace('Z', '+00:00'))
-            except:
-                # Default to 24 hours if deadline parsing fails
-                end_time = start_time + timedelta(hours=24)
-        else:
-            end_time = start_time + timedelta(hours=24)
+        # Default regions if none provided
+        if not regions:
+            regions = ["us-east-1", "us-west-2", "eu-west-1"]
         
         try:
             results = []
             
-            for location in locations:
+            for aws_region in regions:
+                zone = REGION_TO_ZONE_MAP.get(aws_region, "US-MIDA-PJM")
+                
+                # Get current intensity for this zone
                 response = self.session.get(
-                    f"{self.sdk_url}/emissions/forecasts/batch",
-                    params={
-                        "location": location,
-                        "dataStartAt": start_time.isoformat(),
-                        "dataEndAt": end_time.isoformat(),
-                        "windowSize": duration_minutes
-                    },
-                    timeout=15
+                    f"{self.base_url}/carbon-intensity/latest",
+                    params={"zone": zone},
+                    timeout=10
                 )
                 
                 if response.status_code == 200:
                     data = response.json()
-                    parsed = self._parse_batch_response(data, location)
-                    if parsed:
-                        results.append(parsed)
+                    intensity = data.get("carbonIntensity")
+                    
+                    if intensity:
+                        results.append({
+                            "aws_region": aws_region,
+                            "zone": zone,
+                            "carbon_intensity": intensity,
+                            "datetime": data.get("datetime"),
+                            "fossil_fuel_percentage": data.get("fossilFuelPercentage"),
+                            "renewable_percentage": data.get("renewablePercentage")
+                        })
             
             if results:
-                # Find the optimal window (lowest average intensity)
-                optimal = min(results, key=lambda x: x.get('average_intensity', float('inf')))
+                # Find the optimal region (lowest carbon intensity)
+                optimal = min(results, key=lambda x: x.get('carbon_intensity', float('inf')))
                 
                 return {
-                    "optimal_location": optimal.get('location'),
-                    "optimal_window": optimal.get('window'),
-                    "average_intensity": optimal.get('average_intensity'),
-                    "all_locations": results,
-                    "queried_at": datetime.utcnow().isoformat()
+                    "optimal_region": optimal.get('aws_region'),
+                    "optimal_zone": optimal.get('zone'),
+                    "optimal_intensity": optimal.get('carbon_intensity'),
+                    "all_regions": results,
+                    "queried_at": datetime.utcnow().isoformat(),
+                    "duration_minutes": duration_minutes
                 }
             
             return None
         
         except requests.exceptions.RequestException as e:
-            print(f"[CarbonAware] Error getting optimal windows: {e}")
+            print(f"[ElectricityMaps] Error getting optimal windows: {e}")
             return None
-    
-    def _parse_intensity_response(self, data: any) -> Dict:
-        """Parse Carbon Aware SDK intensity response."""
-        # The exact structure depends on the SDK version and data source
-        # This is a basic parser that should be adapted to actual responses
-        
-        if isinstance(data, list) and len(data) > 0:
-            first = data[0]
-            return {
-                "location": first.get("location", "unknown"),
-                "rating": first.get("rating", 0),
-                "time": first.get("time", ""),
-                "duration": first.get("duration", 0)
-            }
-        elif isinstance(data, dict):
-            return {
-                "location": data.get("location", "unknown"),
-                "rating": data.get("rating", 0),
-                "time": data.get("time", ""),
-                "duration": data.get("duration", 0)
-            }
-        
-        return {}
-    
-    def _parse_batch_response(self, data: any, location: str) -> Optional[Dict]:
-        """Parse Carbon Aware SDK batch forecast response."""
-        if isinstance(data, list) and len(data) > 0:
-            # Calculate average intensity across the window
-            intensities = [item.get("rating", 0) for item in data if "rating" in item]
-            
-            if intensities:
-                return {
-                    "location": location,
-                    "window": {
-                        "start": data[0].get("time", ""),
-                        "end": data[-1].get("time", "")
-                    },
-                    "average_intensity": sum(intensities) / len(intensities),
-                    "min_intensity": min(intensities),
-                    "max_intensity": max(intensities),
-                    "data_points": len(data)
-                }
-        
-        return None

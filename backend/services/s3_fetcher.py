@@ -15,12 +15,21 @@ async def fetch_csv_from_s3(
     region: str,
     bucket_name: str,
     file_key: Optional[str] = None,
+    prefix: str = "",
     verify_only: bool = False,
 ) -> Tuple[str, str]:
     """
     Fetch CSV from S3 bucket using provided credentials.
+    Supports nested folder structures and automatic latest file detection.
 
-    If verify_only=True, only list the bucket (no download) — used to validate credentials.
+    Args:
+        access_key: AWS access key
+        secret_key: AWS secret key
+        region: AWS region
+        bucket_name: S3 bucket name
+        file_key: Specific file path (optional)
+        prefix: Folder prefix to search in (e.g., "carboniq-cur/")
+        verify_only: If True, only verify credentials
 
     Returns:
         Tuple[str, str]: (csv_content, error_message)
@@ -43,10 +52,10 @@ async def fetch_csv_from_s3(
 
         # If no file_key provided, find the latest CSV file
         if not file_key:
-            logger.info(f"No file key provided. Searching for latest CSV in bucket: {bucket_name}")
-            file_key = await _find_latest_csv(s3_client, bucket_name)
+            logger.info(f"No file key provided. Searching for latest CSV in bucket: {bucket_name}, prefix: {prefix}")
+            file_key = await _find_latest_csv(s3_client, bucket_name, prefix)
             if not file_key:
-                return None, "No CSV files found in the bucket"
+                return None, f"No CSV files found in bucket with prefix: {prefix}"
 
         # Fetch the file
         logger.info(f"Fetching file: {file_key} from bucket: {bucket_name}")
@@ -151,28 +160,99 @@ async def fetch_csv_from_s3(
         return None, error_msg
 
 
-async def _find_latest_csv(s3_client, bucket_name: str) -> Optional[str]:
-    """Find the latest CSV file in the bucket (supports .csv, .csv.gz, and .csv.zip)"""
+async def _find_latest_csv(s3_client, bucket_name: str, prefix: str = "") -> Optional[str]:
+    """
+    Find the latest CSV file in the bucket (supports .csv, .csv.gz, and .csv.zip).
+    Handles nested folder structures like carboniq-cur/carboniq-cur/data/BILLING_PERIOD=2026-10/
+    """
     try:
-        response = s3_client.list_objects_v2(Bucket=bucket_name)
+        # List all objects with the prefix (if provided)
+        paginator = s3_client.get_paginator('list_objects_v2')
         
-        if 'Contents' not in response:
-            return None
+        all_csv_files = []
         
-        # Filter CSV files (including gzip and zip)
-        csv_files = [
-            obj for obj in response['Contents']
-            if obj['Key'].lower().endswith(('.csv', '.csv.gz', '.csv.zip'))
-        ]
+        # If prefix is provided, use it; otherwise search entire bucket
+        params = {'Bucket': bucket_name}
+        if prefix:
+            params['Prefix'] = prefix
+            
+        for page in paginator.paginate(**params):
+            if 'Contents' not in page:
+                continue
+                
+            # Filter CSV files (including gzip and zip)
+            csv_files = [
+                obj for obj in page['Contents']
+                if obj['Key'].lower().endswith(('.csv', '.csv.gz', '.csv.zip'))
+            ]
+            all_csv_files.extend(csv_files)
         
-        if not csv_files:
+        if not all_csv_files:
+            logger.warning(f"No CSV files found in bucket: {bucket_name} with prefix: {prefix}")
             return None
         
         # Sort by last modified date and get the latest
-        latest_file = sorted(csv_files, key=lambda x: x['LastModified'], reverse=True)[0]
-        logger.info(f"Found latest CSV: {latest_file['Key']}")
+        latest_file = sorted(all_csv_files, key=lambda x: x['LastModified'], reverse=True)[0]
+        logger.info(f"Found latest CSV: {latest_file['Key']} (modified: {latest_file['LastModified']})")
         return latest_file['Key']
         
     except Exception as e:
         logger.error(f"Error listing bucket contents: {e}")
         return None
+
+
+async def list_available_csvs(
+    access_key: str,
+    secret_key: str,
+    region: str,
+    bucket_name: str,
+    prefix: str = "",
+    max_results: int = 10
+) -> list:
+    """
+    List available CSV files in the S3 bucket.
+    Useful for showing users what files are available.
+    """
+    try:
+        s3_client = boto3.client(
+            's3',
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
+            region_name=region
+        )
+        
+        paginator = s3_client.get_paginator('list_objects_v2')
+        
+        all_csv_files = []
+        
+        params = {'Bucket': bucket_name}
+        if prefix:
+            params['Prefix'] = prefix
+            
+        for page in paginator.paginate(**params):
+            if 'Contents' not in page:
+                continue
+                
+            csv_files = [
+                {
+                    'key': obj['Key'],
+                    'size': obj['Size'],
+                    'last_modified': obj['LastModified'].isoformat(),
+                }
+                for obj in page['Contents']
+                if obj['Key'].lower().endswith(('.csv', '.csv.gz', '.csv.zip'))
+            ]
+            all_csv_files.extend(csv_files)
+        
+        # Sort by last modified and limit results
+        sorted_files = sorted(
+            all_csv_files,
+            key=lambda x: x['last_modified'],
+            reverse=True
+        )[:max_results]
+        
+        return sorted_files
+        
+    except Exception as e:
+        logger.error(f"Error listing CSV files: {e}")
+        return []

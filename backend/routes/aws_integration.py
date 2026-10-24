@@ -16,6 +16,48 @@ class AWSFetchRequest(BaseModel):
     region: str
     bucket_name: str
     file_key: Optional[str] = None
+    prefix: str = "carboniq-cur/"  # Default prefix for nested folders
+
+
+class AWSListRequest(BaseModel):
+    access_key: str
+    secret_key: str
+    region: str
+    bucket_name: str
+    prefix: str = "carboniq-cur/"  # Default prefix for nested folders
+
+
+@router.post("/aws/list-files")
+async def list_aws_files(request: AWSListRequest):
+    """
+    List available CSV files in S3 bucket.
+    Useful for showing users what files are available to fetch.
+    """
+    logger.info(f"Listing files in bucket: {request.bucket_name}, prefix: {request.prefix}")
+    
+    try:
+        from services.s3_fetcher import list_available_csvs
+        
+        files = await list_available_csvs(
+            access_key=request.access_key,
+            secret_key=request.secret_key,
+            region=request.region,
+            bucket_name=request.bucket_name,
+            prefix=request.prefix,
+            max_results=20
+        )
+        
+        return {
+            "success": True,
+            "bucket": request.bucket_name,
+            "prefix": request.prefix,
+            "count": len(files),
+            "files": files
+        }
+        
+    except Exception as e:
+        logger.error(f"Error listing files: {e}")
+        raise HTTPException(status_code=500, detail=f"Error listing files: {str(e)}")
 
 
 @router.post("/aws/fetch")
@@ -35,6 +77,7 @@ async def fetch_aws_data(request: AWSFetchRequest):
         region=request.region,
         bucket_name=request.bucket_name,
         file_key=request.file_key,
+        prefix=request.prefix,
     )
 
     if error:

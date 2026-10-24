@@ -38,8 +38,8 @@ def cli():
 @click.option('--workload-type', '-t', default='general', help='Type of workload (e.g., ml-training, data-processing, batch-job)')
 @click.option('--deadline', '-d', help='Deadline for workload completion (ISO 8601 format)')
 @click.option('--send-to-backend/--no-send-to-backend', default=True, help='Send results to CarbonIQ backend')
-@click.option('--check-carbon-aware/--no-carbon-aware', default=False, help='Query Carbon Aware SDK for greener execution windows')
-def measure(command, workload_name, workload_type, deadline, send_to_backend, check_carbon_aware):
+@click.option('--check-carbon-intensity/--no-carbon-intensity', default=False, help='Check Electricity Maps for current carbon intensity')
+def measure(command, workload_name, workload_type, deadline, send_to_backend, check_carbon_intensity):
     """
     Measure carbon emissions of a workload.
     
@@ -69,22 +69,24 @@ def measure(command, workload_name, workload_type, deadline, send_to_backend, ch
         click.echo("\n✅ Measurement completed!")
         _display_results(results)
         
-        # Step 2: Check Carbon Aware SDK (optional)
+        # Step 2: Check Carbon Intensity (optional)
         carbon_aware_data = None
-        if check_carbon_aware:
-            click.echo("\n🌱 Querying Carbon Aware SDK...")
+        if check_carbon_intensity:
+            click.echo("\n🌱 Querying Electricity Maps for carbon intensity...")
             carbon_client = CarbonAwareClient()
             if carbon_client.is_available():
                 carbon_aware_data = carbon_client.get_optimal_windows(
                     duration_minutes=int(results.get('duration_seconds', 0) / 60),
+                    regions=["us-east-1", "us-west-2", "eu-west-1"],
                     deadline=deadline
                 )
                 if carbon_aware_data:
-                    click.echo("✅ Carbon-aware data retrieved")
+                    click.echo(f"✅ Optimal AWS region: {carbon_aware_data.get('optimal_region')} " + 
+                              f"({carbon_aware_data.get('optimal_intensity')} gCO2/kWh)")
                 else:
-                    click.echo("⚠️  No carbon-aware data available")
+                    click.echo("⚠️  No carbon intensity data available")
             else:
-                click.echo("⚠️  Carbon Aware SDK not available")
+                click.echo("⚠️  Electricity Maps API not available")
         
         # Step 3: Send to backend
         if send_to_backend:
@@ -150,7 +152,7 @@ def measure_script(script_path, workload_name, workload_type, send_to_backend):
                workload_type=workload_type,
                deadline=None,
                send_to_backend=send_to_backend,
-               check_carbon_aware=False)
+               check_carbon_intensity=False)
 
 
 @cli.command()
@@ -196,22 +198,28 @@ def test_backend():
 
 
 @cli.command()
-def test_carbon_aware():
-    """Test Carbon Aware SDK connection."""
-    click.echo("\n🌱 Testing Carbon Aware SDK connection...\n")
+def test_electricity_maps():
+    """Test Electricity Maps API connection."""
+    click.echo("\n🌱 Testing Electricity Maps API connection...\n")
     
     carbon_client = CarbonAwareClient()
     if carbon_client.is_available():
-        click.echo("✅ Carbon Aware SDK is available")
+        click.echo("✅ Electricity Maps API is available")
         
-        # Try to get current data
-        data = carbon_client.get_current_intensity()
+        # Try to get current data for a region
+        click.echo("\nTesting US-East-1 carbon intensity...")
+        data = carbon_client.get_current_intensity("us-east-1")
         if data:
-            click.echo(f"📊 Current carbon intensity data available")
+            click.echo(f"📊 Current carbon intensity:")
+            click.echo(f"   AWS Region: {data.get('aws_region')}")
+            click.echo(f"   Zone: {data.get('zone')}")
+            click.echo(f"   Carbon Intensity: {data.get('carbon_intensity')} gCO2/kWh")
+            click.echo(f"   Renewable %: {data.get('renewable_percentage')}%")
         else:
             click.echo("⚠️  Could not retrieve current intensity data")
     else:
-        click.echo("❌ Carbon Aware SDK is not available or not configured")
+        click.echo("❌ Electricity Maps API is not available or not configured")
+        click.echo("   Check your ELECTRICITY_MAPS_API_KEY in .env")
 
 
 def _display_results(results: dict):
