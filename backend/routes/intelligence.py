@@ -8,6 +8,7 @@ import logging
 
 from database import get_pool
 from models.schemas import RecommendationRunResponse
+from routes.auth import get_current_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/intelligence", tags=["intelligence"])
@@ -108,24 +109,32 @@ async def generate_insights():
 
 
 @router.get("/recommendations")
-async def get_recommendations():
+async def get_recommendations(current_user=Depends(get_current_user)):
     """
-    Get latest recommendation run
+    Get latest recommendation run for current user
     
-    Returns the most recent recommendation_run from the database
+    Returns the most recent recommendation_run from the database for the authenticated user
     """
-    logger.info("=" * 80)
-    logger.info("GET /api/intelligence/recommendations - Request received")
-    logger.info("=" * 80)
+    print("=" * 80)
+    print(f"GET /api/intelligence/recommendations - User ID: {current_user['id']}")
+    print("=" * 80)
+    logger.info(f"GET /api/intelligence/recommendations - User {current_user['id']}")
     
     try:
+        print("Step 1: Getting database pool...")
         pool = await get_pool()
+        print(f"Step 2: Pool acquired: {pool is not None}")
         logger.info("✓ Database pool acquired")
         
+        user_id = current_user['id']
+        print(f"Step 2.5: User ID = {user_id}")
+        
         async with pool.acquire() as conn:
+            print("Step 3: Database connection acquired")
             logger.info("✓ Database connection acquired")
             
             # Check if recommendation_runs table exists
+            print("Step 4: Checking if recommendation_runs table exists...")
             table_exists = await conn.fetchval("""
                 SELECT EXISTS (
                     SELECT FROM information_schema.tables 
@@ -133,16 +142,19 @@ async def get_recommendations():
                 )
             """)
             
+            print(f"Step 5: Table 'recommendation_runs' exists: {table_exists}")
             logger.info(f"✓ Table 'recommendation_runs' exists: {table_exists}")
             
             if not table_exists:
+                print("ERROR: Table 'recommendation_runs' does not exist!")
                 logger.warning("✗ Table 'recommendation_runs' does not exist")
                 raise HTTPException(
                     status_code=404,
                     detail="Database tables not initialized. Please run migrations."
                 )
             
-            # Get latest recommendation run
+            # Get latest recommendation run for this user
+            print(f"Step 6: Fetching latest recommendation run for user {user_id}...")
             row = await conn.fetchrow("""
                 SELECT 
                     id,
@@ -159,11 +171,15 @@ async def get_recommendations():
                     metadata,
                     status
                 FROM recommendation_runs
+                WHERE user_id = $1
                 ORDER BY generated_at DESC
                 LIMIT 1
-            """)
+            """, user_id)
+            
+            print(f"Step 7: Row found: {row is not None}")
             
             if not row:
+                print("No recommendation runs found - returning empty response")
                 logger.info("✗ No recommendation runs found in database")
                 # Return empty response instead of 404
                 response = {
@@ -181,38 +197,57 @@ async def get_recommendations():
                     'status': 'no_data'
                 }
             else:
+                print(f"Step 8: Found recommendation run ID={row['id']}")
                 logger.info(f"✓ Found recommendation run: ID={row['id']}")
                 
                 # Convert row to dict and extract intelligence data
                 rec_data = dict(row)
                 
+                # Parse JSONB fields (they come as dicts from asyncpg, but check just in case)
+                metadata = rec_data['metadata'] if isinstance(rec_data['metadata'], dict) else {}
+                findings = rec_data['findings'] if isinstance(rec_data['findings'], dict) else {}
+                recommendations = rec_data['recommendations'] if isinstance(rec_data['recommendations'], list) else []
+                hotspots = rec_data['hotspots'] if isinstance(rec_data['hotspots'], list) else []
+                region_opps = rec_data['region_opportunities'] if isinstance(rec_data['region_opportunities'], list) else []
+                time_opps = rec_data['time_opportunities'] if isinstance(rec_data['time_opportunities'], list) else []
+                
                 # Return structured response
                 response = {
                     'id': rec_data['id'],
                     'generated_at': rec_data['generated_at'].isoformat() if rec_data['generated_at'] else None,
-                    'recommendations': rec_data['recommendations'] or [],
-                    'patterns': rec_data['metadata'].get('patterns', []) if rec_data['metadata'] else [],
-                    'opportunities': rec_data['metadata'].get('opportunities', []) if rec_data['metadata'] else [],
-                    'summary': rec_data['findings'] or {},
-                    'workload_analysis': rec_data['metadata'].get('workload_analysis', {}) if rec_data['metadata'] else {},
-                    'hotspots': rec_data['hotspots'] or [],
-                    'region_opportunities': rec_data['region_opportunities'] or [],
-                    'time_opportunities': rec_data['time_opportunities'] or [],
+                    'recommendations': recommendations,
+                    'patterns': metadata.get('patterns', []),
+                    'opportunities': metadata.get('opportunities', []),
+                    'summary': findings,
+                    'workload_analysis': metadata.get('workload_analysis', {}),
+                    'hotspots': hotspots,
+                    'region_opportunities': region_opps,
+                    'time_opportunities': time_opps,
                     'confidence_score': rec_data['confidence_score'],
                     'status': rec_data['status']
                 }
             
+            print(f"Step 9: Returning {len(response['recommendations'])} recommendations")
+            print("=" * 80)
             logger.info(f"✓ Returning {len(response['recommendations'])} recommendations")
             logger.info("=" * 80)
             return response
             
-    except HTTPException:
+    except HTTPException as he:
+        print(f"HTTP Exception: {he.status_code} - {he.detail}")
         raise
     except Exception as e:
+        print("=" * 80)
+        print(f"FATAL ERROR in get_recommendations: {type(e).__name__}")
+        print(f"Error message: {str(e)}")
+        import traceback
+        print("Full traceback:")
+        traceback.print_exc()
+        print("=" * 80)
         logger.error("=" * 80)
         logger.error(f"✗ ERROR in get_recommendations: {e}", exc_info=True)
         logger.error("=" * 80)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Intelligence error: {str(e)}")
 
 
 @router.get("/recommendations/history")

@@ -1,6 +1,7 @@
 import { createContext, useEffect, useState } from 'react';
-import { authClient } from '../lib/auth.js';
-import { syncUser } from '../api/client.js';
+import axios from 'axios';
+
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000').replace(/\/$/, '');
 
 export const AuthContext = createContext(null);
 
@@ -9,46 +10,61 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    authClient.getSession().then(({ data }) => {
-      const u = data?.user ?? null;
-      setUser(u);
-      // Sync to our users table silently
-      if (u?.email) syncUser(u.email, u.name).catch(() => {});
+    // Check if user is already logged in
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      axios.get(`${API_BASE}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      .then(res => {
+        setUser(res.data);
+        setLoading(false);
+      })
+      .catch(() => {
+        localStorage.removeItem('auth_token');
+        setLoading(false);
+      });
+    } else {
       setLoading(false);
-    }).catch(() => setLoading(false));
+    }
   }, []);
 
   const login = async (email, password) => {
     try {
-      const result = await authClient.signIn.email({ email, password });
-      if (result.error) return { success: false, error: result.error.message };
-      const { data } = await authClient.getSession();
-      const u = data?.user ?? null;
-      setUser(u);
-      if (u?.email) syncUser(u.email, u.name).catch(() => {});
+      const response = await axios.post(`${API_BASE}/api/auth/login`, {
+        email,
+        password
+      });
+      
+      const { access_token, user: userData } = response.data;
+      localStorage.setItem('auth_token', access_token);
+      setUser(userData);
       return { success: true };
     } catch (err) {
-      return { success: false, error: err.message || 'Login failed' };
+      const message = err.response?.data?.detail || 'Login failed';
+      return { success: false, error: message };
     }
   };
 
   const signup = async ({ name, email, password }) => {
     try {
-      const result = await authClient.signUp.email({ name, email, password });
-      if (result.error) return { success: false, error: result.error.message };
-      const { data } = await authClient.getSession();
-      const u = data?.user ?? null;
-      setUser(u);
-      if (u?.email) syncUser(u.email, u.name || name).catch(() => {});
+      const response = await axios.post(`${API_BASE}/api/auth/signup`, {
+        name,
+        email,
+        password
+      });
+      
+      const { access_token, user: userData } = response.data;
+      localStorage.setItem('auth_token', access_token);
+      setUser(userData);
       return { success: true };
     } catch (err) {
-      return { success: false, error: err.message || 'Signup failed' };
+      const message = err.response?.data?.detail || 'Signup failed';
+      return { success: false, error: message };
     }
   };
 
   const logout = async () => {
-    await authClient.signOut();
-    localStorage.removeItem('neon_jwt');
     localStorage.removeItem('auth_token');
     localStorage.removeItem('awsAnalysisData');
     localStorage.removeItem('hasLoadedData');

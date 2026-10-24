@@ -2,7 +2,7 @@
 Organization Profile API Routes
 Manages organization sustainability profiles and questionnaires
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional
 import logging
 
@@ -12,25 +12,32 @@ from models.schemas import (
     OrganizationProfileResponse
 )
 from database import get_pool
+from routes.auth import get_current_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/profile", tags=["profile"])
 
 
 @router.post("/", response_model=OrganizationProfileResponse)
-async def create_profile(profile: OrganizationProfileCreate):
-    """Create or update organization profile"""
+async def create_profile(profile: OrganizationProfileCreate, current_user=Depends(get_current_user)):
+    """Create or update organization profile for current user"""
+    print("=" * 80)
+    print(f"POST /api/profile - User ID: {current_user['id']}")
+    print("=" * 80)
+    
     try:
         pool = await get_pool()
+        user_id = current_user['id']
         
         async with pool.acquire() as conn:
-            # Check if profile already exists
+            # Check if profile already exists for this user
             existing = await conn.fetchrow("""
-                SELECT id FROM organization_profile LIMIT 1
-            """)
+                SELECT id FROM organization_profile WHERE user_id = $1
+            """, user_id)
             
             if existing:
                 # Update existing profile
+                print(f"Updating existing profile ID: {existing['id']}")
                 row = await conn.fetchrow("""
                     UPDATE organization_profile
                     SET organization_name = $1,
@@ -40,7 +47,7 @@ async def create_profile(profile: OrganizationProfileCreate):
                         migration_flexibility = $5,
                         optimization_priority = $6,
                         updated_at = NOW()
-                    WHERE id = $7
+                    WHERE user_id = $7
                     RETURNING *
                 """,
                     profile.organization_name,
@@ -49,17 +56,19 @@ async def create_profile(profile: OrganizationProfileCreate):
                     profile.latency_sensitivity,
                     profile.migration_flexibility,
                     profile.optimization_priority,
-                    existing['id']
+                    user_id
                 )
             else:
                 # Create new profile
+                print(f"Creating new profile for user {user_id}")
                 row = await conn.fetchrow("""
                     INSERT INTO organization_profile
-                        (organization_name, primary_user_region, workload_type,
+                        (user_id, organization_name, primary_user_region, workload_type,
                          latency_sensitivity, migration_flexibility, optimization_priority)
-                    VALUES ($1, $2, $3, $4, $5, $6)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7)
                     RETURNING *
                 """,
+                    user_id,
                     profile.organization_name,
                     profile.primary_user_region,
                     profile.workload_type,
@@ -68,49 +77,66 @@ async def create_profile(profile: OrganizationProfileCreate):
                     profile.optimization_priority
                 )
         
+        print(f"✓ Profile saved successfully")
+        print("=" * 80)
         return dict(row)
         
     except Exception as e:
+        print(f"ERROR: {e}")
         logger.error(f"Failed to create/update profile: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/", response_model=Optional[OrganizationProfileResponse])
-async def get_profile():
-    """Get current organization profile"""
+async def get_profile(current_user=Depends(get_current_user)):
+    """Get current user's organization profile"""
+    print(f"GET /api/profile - User ID: {current_user['id']}")
+    
     try:
         pool = await get_pool()
+        user_id = current_user['id']
         
         async with pool.acquire() as conn:
             row = await conn.fetchrow("""
                 SELECT * FROM organization_profile
+                WHERE user_id = $1
                 ORDER BY created_at DESC
                 LIMIT 1
-            """)
+            """, user_id)
         
-        return dict(row) if row else None
+        if row:
+            print(f"✓ Found profile for user {user_id}")
+            return dict(row)
+        else:
+            print(f"✗ No profile found for user {user_id}")
+            return None
         
     except Exception as e:
+        print(f"ERROR: {e}")
         logger.error(f"Failed to fetch profile: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.patch("/", response_model=OrganizationProfileResponse)
-async def update_profile(updates: OrganizationProfileUpdate):
-    """Partially update organization profile"""
+async def update_profile(updates: OrganizationProfileUpdate, current_user=Depends(get_current_user)):
+    """Partially update organization profile for current user"""
+    print(f"PATCH /api/profile - User ID: {current_user['id']}")
+    
     try:
         pool = await get_pool()
+        user_id = current_user['id']
         
         async with pool.acquire() as conn:
-            # Get current profile
+            # Get current profile for this user
             current = await conn.fetchrow("""
                 SELECT * FROM organization_profile
+                WHERE user_id = $1
                 ORDER BY created_at DESC
                 LIMIT 1
-            """)
+            """, user_id)
             
             if not current:
-                raise HTTPException(status_code=404, detail="No profile found")
+                raise HTTPException(status_code=404, detail="No profile found for this user")
             
             # Build update query
             update_fields = []
@@ -172,19 +198,25 @@ async def update_profile(updates: OrganizationProfileUpdate):
 
 
 @router.delete("/")
-async def delete_profile():
-    """Delete organization profile"""
+async def delete_profile(current_user=Depends(get_current_user)):
+    """Delete current user's organization profile"""
+    print(f"DELETE /api/profile - User ID: {current_user['id']}")
+    
     try:
         pool = await get_pool()
+        user_id = current_user['id']
         
         async with pool.acquire() as conn:
-            await conn.execute("""
+            result = await conn.execute("""
                 DELETE FROM organization_profile
-            """)
+                WHERE user_id = $1
+            """, user_id)
         
+        print(f"✓ Deleted profile for user {user_id}")
         return {"message": "Profile deleted successfully"}
         
     except Exception as e:
+        print(f"ERROR: {e}")
         logger.error(f"Failed to delete profile: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 

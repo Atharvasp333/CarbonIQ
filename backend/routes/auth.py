@@ -8,11 +8,11 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 import httpx
+import bcrypt
 import jwt as pyjwt                          # PyJWT — supports EdDSA
 from fastapi import APIRouter, HTTPException, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
-from passlib.context import CryptContext
 from jose import JWTError, jwt as jose_jwt  # python-jose — for legacy HS256
 
 router = APIRouter()
@@ -22,7 +22,6 @@ logger = logging.getLogger(__name__)
 # Config
 # ---------------------------------------------------------------------------
 
-pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
 bearer_scheme = HTTPBearer(auto_error=False)
 
 NEON_AUTH_URL = os.getenv("NEON_AUTH_URL", "")
@@ -69,11 +68,19 @@ async def _verify_neon_jwt(token: str) -> dict:
 # --- password helpers --------------------------------------------------------
 
 def hash_password(password: str) -> str:
-    return pwd_ctx.hash(password)
+    """Hash a password using bcrypt"""
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
+    return hashed.decode('utf-8')
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_ctx.verify(plain, hashed)
+    """Verify a password against a bcrypt hash"""
+    try:
+        return bcrypt.checkpw(plain.encode('utf-8'), hashed.encode('utf-8'))
+    except Exception as e:
+        logger.error(f"Password verification error: {e}")
+        return False
 
 
 def create_access_token(user_id: int, email: str) -> str:
@@ -160,7 +167,7 @@ class LoginRequest(BaseModel):
 def _user_response(user, token: str):
     return {
         "success": True,
-        "token": token,
+        "access_token": token,  # Frontend expects access_token
         "user": {
             "id": user["id"],
             "name": user["name"],
@@ -174,54 +181,131 @@ def _user_response(user, token: str):
 
 @router.post("/auth/signup")
 async def signup(req: SignupRequest):
+    print("=" * 80)
+    print(f"SIGNUP ATTEMPT: email={req.email}, name={req.name}")
+    print("=" * 80)
+    
     if len(req.password) < 6:
+        print("ERROR: Password too short")
         raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    
     try:
+        print("Step 1: Getting database pool...")
         from database import get_pool
         pool = await get_pool()
+        print(f"Step 2: Pool acquired: {pool is not None}")
+        
         async with pool.acquire() as conn:
+            print(f"Step 3: Checking if email exists: {req.email.lower()}")
             existing = await conn.fetchrow(
                 "SELECT id FROM users WHERE email = $1", req.email.lower()
             )
+            print(f"Step 4: Existing user found: {existing is not None}")
+            
             if existing:
+                print("ERROR: Email already registered")
                 raise HTTPException(status_code=409, detail="Email already registered")
 
+            print("Step 5: Hashing password...")
             hashed = hash_password(req.password)
+            print(f"Step 6: Password hashed successfully (length={len(hashed)})")
+            
+            print("Step 7: Inserting user into database...")
             user = await conn.fetchrow(
                 """INSERT INTO users (name, email, password)
                    VALUES ($1, $2, $3)
                    RETURNING id, name, email, created_at""",
                 req.name, req.email.lower(), hashed,
             )
+            print(f"Step 8: User created with ID: {user['id']}")
+        
+        print("Step 9: Creating JWT token...")
         token = create_access_token(user["id"], user["email"])
+        print("Step 10: Token created successfully")
+        print("=" * 80)
+        print("SIGNUP SUCCESS")
+        print("=" * 80)
         return _user_response(user, token)
-    except HTTPException:
+    except HTTPException as he:
+        print(f"HTTP EXCEPTION in signup: {he.status_code} - {he.detail}")
         raise
     except Exception as e:
+        print("=" * 80)
+        print(f"FATAL ERROR in signup: {type(e).__name__}")
+        print(f"Error message: {str(e)}")
+        import traceback
+        print("Full traceback:")
+        traceback.print_exc()
+        print("=" * 80)
         logger.error(f"Signup error: {e}")
-        raise HTTPException(status_code=500, detail="Signup failed")
+        raise HTTPException(status_code=500, detail=f"Signup failed: {str(e)}")
 
 
 @router.post("/auth/login")
 async def login(req: LoginRequest):
+    print("=" * 80)
+    print(f"LOGIN ATTEMPT: email={req.email}")
+    print("=" * 80)
+    
     try:
+        print("Step 1: Getting database pool...")
         from database import get_pool
         pool = await get_pool()
+        print(f"Step 2: Pool acquired: {pool is not None}")
+        
         async with pool.acquire() as conn:
+            print(f"Step 3: Fetching user with email: {req.email.lower()}")
             user = await conn.fetchrow(
                 "SELECT id, name, email, password, created_at FROM users WHERE email = $1",
                 req.email.lower(),
             )
-        if not user or not verify_password(req.password, user["password"]):
+            print(f"Step 4: User found: {user is not None}")
+            
+        if not user:
+            print("ERROR: User not found")
             raise HTTPException(status_code=401, detail="Invalid email or password")
+        
+        # Handle different password formats
+        stored_password = user["password"]
+        print(f"Step 5: Stored password format: {stored_password[:20]}..." if len(stored_password) > 20 else f"Step 5: Stored password: {stored_password}")
+        
+        # If password is "neon_auth_managed", create new hash
+        if stored_password == "neon_auth_managed":
+            print("Step 6: Password is neon_auth_managed, creating new hash...")
+            hashed = hash_password(req.password)
+            async with pool.acquire() as conn:
+                await conn.execute(
+                    "UPDATE users SET password = $1 WHERE id = $2",
+                    hashed, user["id"]
+                )
+            print("Step 7: Password updated successfully")
+        else:
+            print("Step 6: Verifying password hash...")
+            if not verify_password(req.password, stored_password):
+                print("ERROR: Password verification failed")
+                raise HTTPException(status_code=401, detail="Invalid email or password")
+            print("Step 7: Password verified successfully")
 
+        print("Step 8: Creating JWT token...")
         token = create_access_token(user["id"], user["email"])
+        print("Step 9: Token created successfully")
+        print("=" * 80)
+        print("LOGIN SUCCESS")
+        print("=" * 80)
         return _user_response(user, token)
-    except HTTPException:
+    except HTTPException as he:
+        print(f"HTTP EXCEPTION in login: {he.status_code} - {he.detail}")
         raise
     except Exception as e:
+        print("=" * 80)
+        print(f"FATAL ERROR in login: {type(e).__name__}")
+        print(f"Error message: {str(e)}")
+        import traceback
+        print("Full traceback:")
+        traceback.print_exc()
+        print("=" * 80)
         logger.error(f"Login error: {e}")
-        raise HTTPException(status_code=500, detail="Login failed")
+        raise HTTPException(status_code=500, detail=f"Login failed: {str(e)}")
 
 
 @router.get("/auth/me")

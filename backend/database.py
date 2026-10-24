@@ -20,15 +20,23 @@ _pool: Optional[any] = None
 
 
 async def get_pool():
+    print("get_pool() called")
     if not ASYNCPG_AVAILABLE:
+        print("ERROR: asyncpg not available!")
         return None  # Return None instead of raising error
     global _pool
     if _pool is None:
+        print("Creating new database pool...")
         url = os.getenv("DATABASE_URL")
         if not url:
+            print("ERROR: DATABASE_URL not set!")
             raise RuntimeError("DATABASE_URL not set in environment")
+        print(f"DATABASE_URL found: {url[:50]}...")  # Print first 50 chars
         _pool = await asyncpg.create_pool(url, min_size=1, max_size=5)
+        print("✓ NeonDB connection pool created successfully")
         logger.info("NeonDB connection pool created")
+    else:
+        print("Using existing database pool")
     return _pool
 
 
