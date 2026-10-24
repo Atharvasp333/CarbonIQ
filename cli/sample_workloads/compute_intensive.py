@@ -59,9 +59,10 @@ def main():
     # Task 2: Fibonacci
     print("\n2. Computing large Fibonacci number...")
     start = time.time()
-    fib_40 = fibonacci(50000)
+    fib_val = fibonacci(10000)  # Reduced from 50000 to avoid string conversion limits
     elapsed = time.time() - start
-    print(f"   Fib(50000) has {len(str(fib_40))} digits")
+    digit_count = len(str(fib_val)) if fib_val < 10**4300 else "many (>4300)"
+    print(f"   Fib(10000) has {digit_count} digits")
     print(f"   Time taken: {elapsed:.2f}s")
     
     # Task 3: Prime factorization
