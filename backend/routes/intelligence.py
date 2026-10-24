@@ -114,18 +114,23 @@ async def get_recommendations():
     
     Returns the most recent recommendation_run from the database
     """
-    logger.info("=" * 80)
+    print("=" * 80)
+    print("GET /api/intelligence/recommendations - Request received")
+    print("=" * 80)
     logger.info("GET /api/intelligence/recommendations - Request received")
-    logger.info("=" * 80)
     
     try:
+        print("Step 1: Getting database pool...")
         pool = await get_pool()
+        print(f"Step 2: Pool acquired: {pool is not None}")
         logger.info("✓ Database pool acquired")
         
         async with pool.acquire() as conn:
+            print("Step 3: Database connection acquired")
             logger.info("✓ Database connection acquired")
             
             # Check if recommendation_runs table exists
+            print("Step 4: Checking if recommendation_runs table exists...")
             table_exists = await conn.fetchval("""
                 SELECT EXISTS (
                     SELECT FROM information_schema.tables 
@@ -133,9 +138,11 @@ async def get_recommendations():
                 )
             """)
             
+            print(f"Step 5: Table 'recommendation_runs' exists: {table_exists}")
             logger.info(f"✓ Table 'recommendation_runs' exists: {table_exists}")
             
             if not table_exists:
+                print("ERROR: Table 'recommendation_runs' does not exist!")
                 logger.warning("✗ Table 'recommendation_runs' does not exist")
                 raise HTTPException(
                     status_code=404,
@@ -143,6 +150,7 @@ async def get_recommendations():
                 )
             
             # Get latest recommendation run
+            print("Step 6: Fetching latest recommendation run...")
             row = await conn.fetchrow("""
                 SELECT 
                     id,
@@ -163,7 +171,10 @@ async def get_recommendations():
                 LIMIT 1
             """)
             
+            print(f"Step 7: Row found: {row is not None}")
+            
             if not row:
+                print("No recommendation runs found - returning empty response")
                 logger.info("✗ No recommendation runs found in database")
                 # Return empty response instead of 404
                 response = {
@@ -181,6 +192,7 @@ async def get_recommendations():
                     'status': 'no_data'
                 }
             else:
+                print(f"Step 8: Found recommendation run ID={row['id']}")
                 logger.info(f"✓ Found recommendation run: ID={row['id']}")
                 
                 # Convert row to dict and extract intelligence data
@@ -202,17 +214,27 @@ async def get_recommendations():
                     'status': rec_data['status']
                 }
             
+            print(f"Step 9: Returning {len(response['recommendations'])} recommendations")
+            print("=" * 80)
             logger.info(f"✓ Returning {len(response['recommendations'])} recommendations")
             logger.info("=" * 80)
             return response
             
-    except HTTPException:
+    except HTTPException as he:
+        print(f"HTTP Exception: {he.status_code} - {he.detail}")
         raise
     except Exception as e:
+        print("=" * 80)
+        print(f"FATAL ERROR in get_recommendations: {type(e).__name__}")
+        print(f"Error message: {str(e)}")
+        import traceback
+        print("Full traceback:")
+        traceback.print_exc()
+        print("=" * 80)
         logger.error("=" * 80)
         logger.error(f"✗ ERROR in get_recommendations: {e}", exc_info=True)
         logger.error("=" * 80)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Intelligence error: {str(e)}")
 
 
 @router.get("/recommendations/history")
