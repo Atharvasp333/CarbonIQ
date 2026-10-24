@@ -256,6 +256,47 @@ users
 
 ---
 
+### 9. **workload_measurements**
+Local & CI/CD terminal workload emissions measurements (USER-AWARE)
+```sql
+id                  SERIAL PRIMARY KEY
+user_id             INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE
+workload_name       TEXT NOT NULL
+workload_type       TEXT DEFAULT 'general'
+duration_seconds    NUMERIC(12,6)
+emissions_gco2e     NUMERIC(12,6)
+energy_kwh          NUMERIC(16,8)
+cpu_energy_kwh      NUMERIC(16,8)
+ram_energy_kwh      NUMERIC(16,8)
+carbon_intensity    NUMERIC(10,4)
+country_name        TEXT
+region              TEXT
+measured_at         TIMESTAMPTZ DEFAULT NOW()
+metadata            JSONB
+created_at          TIMESTAMPTZ DEFAULT NOW()
+```
+**Indexes:**
+- `idx_workload_measurements_user` on (user_id)
+- `idx_workload_measurements_type` on (workload_type)
+- `idx_workload_measurements_date` on (measured_at)
+
+### 10. **api_keys**
+Personalized authentication tokens for CLI and Python SDK developers (USER-AWARE)
+```sql
+id              SERIAL PRIMARY KEY
+user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE
+key_hash        TEXT NOT NULL UNIQUE       -- SHA-256 hash of raw key
+key_prefix      TEXT NOT NULL              -- ciq_live_abc1... (displayed on UI)
+name            TEXT NOT NULL DEFAULT 'Default CLI Key'
+created_at      TIMESTAMPTZ DEFAULT NOW()
+last_used_at    TIMESTAMPTZ
+```
+**Indexes:**
+- `idx_api_keys_hash` on (key_hash)
+- `idx_api_keys_user` on (user_id)
+
+---
+
 ## Migration History
 
 ### Migration 001: Add User Ownership (2026-06-20)
@@ -263,6 +304,11 @@ users
 - Created `analysis_summary`, `recommendation_runs`, `user_insights`, `audit_log` tables
 - Added indexes for efficient user-based queries
 - Maintained backward compatibility with existing data
+
+### Migration 002: Add Workload Measurements & API Key Auth (2026-10-24)
+- Created `workload_measurements` table for tracking real-time code execution and micro-benchmarks
+- Created `api_keys` table with SHA-256 hashing for CLI / SDK user authentication and data isolation
+- Added full multi-tenant isolation ensuring developers only view their own terminal workloads
 
 ---
 

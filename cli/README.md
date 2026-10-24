@@ -1,255 +1,167 @@
-# CarbonIQ CLI
+# CarbonIQ CLI & Python SDK
 
-Command-line interface for measuring carbon emissions of computing workloads and integrating with the CarbonIQ backend.
+Command-line interface and Python SDK for measuring carbon emissions of computing workloads, optimizing code sustainability, and syncing live with the CarbonIQ platform.
 
-## Features
+## 🚀 Key Capabilities
 
-- 🌍 **Carbon Emission Measurement**: Uses CodeCarbon to track energy consumption and emissions
-- 🔄 **Backend Integration**: Sends measurements to CarbonIQ API for analysis and storage
-- 🌱 **Electricity Maps Integration**: Real-time carbon intensity data for AWS regions
-- 📊 **Measurement History**: Track and compare measurements over time (local + backend)
-- 🎯 **Intelligent Scheduling**: Recommends optimal execution times based on carbon forecasts
-- 📈 **Real-Time Monitoring**: Monitor live carbon intensity for regions
-- 🔬 **Comparison Tool**: Compare measurements to track improvements
-- 📉 **Statistics**: Aggregate stats across all your workloads
-- 🧪 **Sample Workloads**: Test workloads included for quick testing
+- 🌍 **Hardware Emission Tracking**: Uses CodeCarbon to measure physical CPU, RAM, and GPU energy consumption & CO2e emissions.
+- 🔑 **Personalized Multi-Tenant Sync**: Connects securely to the CarbonIQ backend via API Keys (`ciq_live_...`) to isolate and log each developer's workload history on their dashboard.
+- 🌿 **Sustainable Code Optimizer**: AST-based static analyzer (`audit`) and automated green code refactorer (`optimize`) to detect and eliminate energy anti-patterns.
+- 🌱 **Electricity Maps & Grid Awareness**: Live grid carbon intensity queries and intelligent execution deferral to cleaner energy hours.
+- 📦 **Python Library (`carboniq`)**: Import directly in your codebase with `@carboniq.track` and `@carboniq.defer_until_green`.
+- 📊 **Real-Time Terminal Monitoring**: Live intensity tracking and side-by-side benchmark comparison.
 
-## Installation
+---
 
-1. **Install Python dependencies**:
-   ```powershell
-   cd cli
-   pip install -r requirements.txt
+## 📦 Installation & Setup
+
+### 1. Install the `carboniq` Package
+
+From the root of the CarbonIQ repository:
+```bash
+pip install -e .
+```
+*(Or in the CLI directory: `pip install -r requirements.txt`)*
+
+Once installed, the `carboniq` command is globally available in your terminal!
+
+### 2. Configure Your API Key
+
+1. Log into your CarbonIQ Web Dashboard (`https://carboniq-capstone.vercel.app`).
+2. Go to the **CLI & Workloads** tab in the sidebar.
+3. Click **Generate API Key** and copy your token (`ciq_live_...`).
+4. Run in your terminal:
+   ```bash
+   carboniq config set-key ciq_live_your_copied_key_here
+   ```
+5. Verify your authenticated connection:
+   ```bash
+   carboniq whoami
    ```
 
-2. **Configure environment variables**:
-   ```powershell
-   copy .env.example .env
-   # Edit .env with your configuration
-   ```
+---
 
-3. **Verify installation**:
-   ```powershell
-   python carboniq_cli.py --help
-   ```
+## 💻 Python Library (`carboniq`) Usage
 
-## Configuration
+You can import `carboniq` directly into your data pipelines, machine learning scripts, or backend services:
 
-Edit `cli/.env` with your settings:
+### 1. Function Tracking Decorator
+```python
+import carboniq
 
-```env
-# Backend API URL (make sure backend is running)
-CARBONIQ_API_URL=http://localhost:8000/api
-
-# CodeCarbon settings
-CODECARBON_TRACKING_MODE=machine
-CODECARBON_OUTPUT_DIR=./measurements
-
-# Carbon Aware SDK (optional)
-CARBON_AWARE_SDK_URL=http://localhost:5073/emissions/forecasts/current
-CARBON_AWARE_SDK_ENABLED=false
+@carboniq.track(workload_name="train_classifier", workload_type="ml-training")
+def train_model():
+    # Automatically records CPU/RAM kWh and emissions gCO2e
+    # and posts the benchmark to your CarbonIQ dashboard!
+    ...
 ```
 
-## Usage
+### 2. Context Manager
+```python
+import carboniq
 
-### 1. Test Backend Connection
-
-```powershell
-python carboniq_cli.py test-backend
+with carboniq.track(workload_name="batch_data_etl", workload_type="data-processing"):
+    process_large_dataset()
 ```
 
-### 2. Test Electricity Maps API
+### 3. Grid-Aware Execution Deferral
+```python
+import carboniq
 
-```powershell
-python carboniq_cli.py test-electricity-maps
+# Runs only when the electric grid carbon intensity is below 250 gCO2/kWh
+@carboniq.defer_until_green(region="us-east-1", max_intensity=250)
+def compute_heavy_simulation():
+    ...
 ```
 
-### 3. Measure a Command
+---
 
-```powershell
-python carboniq_cli.py measure python sample_workloads/simple_task.py --workload-name "Simple Task" --workload-type "test"
+## 🛠️ CLI Commands Reference
+
+### 1. Code Optimization & Auditing (Sustainable Code Engine)
+
+#### Audit a Python Script for Carbon Inefficiencies
+```bash
+carboniq audit path/to/script.py
+```
+* Analyzes AST for $O(N^2)$ nested loops, memory bloating list comprehensions, un-memoized recursion, and inefficient allocations.
+* Outputs efficiency score (0-100), carbon letter grade (**A to F**), and estimated % energy savings.
+
+#### Refactor & Generate Sustainable Code
+```bash
+# Preview green optimized code in terminal
+carboniq optimize path/to/script.py
+
+# Write to a new optimized file
+carboniq optimize path/to/script.py --output green_script.py
+
+# Update the file in-place
+carboniq optimize path/to/script.py --in-place
 ```
 
-### 4. Measure a Python Script Directly
+---
 
-```powershell
-python carboniq_cli.py measure-script sample_workloads/compute_intensive.py --workload-name "Compute Test"
+### 2. Workload Measurement & Benchmarking
+
+#### Measure Any Terminal Command
+```bash
+carboniq measure python my_task.py --workload-name "Model Benchmark" --workload-type "ml"
 ```
 
-### 5. View Measurement History
-
-```powershell
-# From backend (recommended)
-python carboniq_cli.py history --source backend
-
-# From local files
-python carboniq_cli.py history --source local
+#### Measure a Python Script Directly
+```bash
+carboniq measure-script path/to/workload.py --workload-name "ETL Run"
 ```
 
-### 6. View Statistics
+---
 
-```powershell
-python carboniq_cli.py stats
+### 3. Real-Time Monitoring & Green Scheduling
+
+#### Live Grid Carbon Intensity Monitor
+```bash
+carboniq monitor --region us-east-1 --interval 5 --duration 60
 ```
 
-### 7. Monitor Real-Time Carbon Intensity
-
-```powershell
-python carboniq_cli.py monitor --region us-east-1 --interval 10 --duration 60
+#### Green Region & Schedule Recommendation
+```bash
+carboniq recommend-schedule --duration 30 --regions us-east-1 --regions us-west-2 --regions eu-west-1
 ```
 
-### 8. Get Schedule Recommendations
-
-```powershell
-python carboniq_cli.py recommend-schedule --duration 30 --regions us-east-1 --regions us-west-2
+#### Compare Two Measurement Benchmarks
+```bash
+carboniq compare measurements/baseline.json measurements/optimized.json
 ```
 
-### 9. Compare Two Measurements
+#### View User Measurement History
+```bash
+# Fetch from cloud backend (personalized to your user)
+carboniq history --source backend --limit 10
 
-```powershell
-python carboniq_cli.py compare measurements/baseline.json measurements/optimized.json
+# Fetch local measurement files
+carboniq history --source local
 ```
 
-## Command Reference
-
-### `measure`
-Measure carbon emissions of any command.
-
-**Arguments:**
-- `COMMAND`: Command to execute (e.g., `python script.py`)
-
-**Options:**
-- `--workload-name, -n`: Name for this workload (required)
-- `--workload-type, -t`: Type of workload (default: "general")
-- `--deadline, -d`: Deadline for workload (ISO 8601 format)
-- `--send-to-backend/--no-send-to-backend`: Send to backend (default: true)
-- `--check-carbon-aware/--no-carbon-aware`: Query Carbon Aware SDK (default: false)
-
-### `measure-script`
-Convenience command for measuring Python scripts.
-
-**Arguments:**
-- `SCRIPT_PATH`: Path to Python script
-
-**Options:**
-- `--workload-name, -n`: Name for this workload (defaults to script name)
-- `--workload-type, -t`: Type of workload (default: "script")
-- `--send-to-backend/--no-send-to-backend`: Send to backend (default: true)
-
-### `history`
-Show recent measurement history from backend or local files.
-
-**Options:**
-- `--limit, -l`: Number of measurements to show (default: 10)
-- `--source, -s`: Source: 'backend' or 'local' (default: backend)
-
-### `stats`
-Show aggregate statistics from backend (total emissions, energy, averages, etc.)
-
-### `monitor`
-Monitor real-time carbon intensity for a region.
-
-**Options:**
-- `--region, -r`: AWS region to monitor (default: us-east-1)
-- `--interval, -i`: Update interval in seconds (default: 10)
-- `--duration, -d`: Total monitoring duration in seconds (default: 60)
-
-### `recommend-schedule`
-Get carbon-optimal execution schedule recommendation.
-
-**Arguments:**
-- `--duration, -d`: Expected workload duration in minutes (required)
-- `--deadline`: Deadline in ISO 8601 format (optional)
-- `--regions, -r`: AWS regions to consider (can specify multiple)
-
-### `compare`
-Compare two measurement files side-by-side.
-
-**Arguments:**
-- `BASELINE_FILE`: Path to baseline measurement
-- `COMPARISON_FILE`: Path to comparison measurement
-
-### `test-electricity-maps`
-Test Electricity Maps API connection and get current carbon intensity.
-
-## Output
-
-Measurements are saved in two locations:
-
-1. **Local JSON files**: `./measurements/<workload_name>_<timestamp>.json`
-2. **Backend database**: Sent to CarbonIQ API (if enabled)
-
-### Measurement Data Structure
-
-```json
-{
-  "workload_name": "My Workload",
-  "workload_type": "ml-training",
-  "measurement": {
-    "duration_seconds": 45.23,
-    "emissions_gco2e": 12.45,
-    "energy_kwh": 0.0234,
-    "cpu_energy": 0.0200,
-    "ram_energy": 0.0034,
-    "country_name": "United States",
-    "carbon_intensity": 532.0
-  },
-  "carbon_aware_data": null,
-  "deadline": null,
-  "measured_at": "2026-10-24T14:30:00Z"
-}
+#### View Aggregated User Statistics
+```bash
+carboniq stats
 ```
 
-## Example Workflow
+---
 
-### Complete Test Flow
+### 4. Configuration & Health
 
-```powershell
-# 1. Start the backend (in another terminal)
-cd backend
-python -m uvicorn main:app --reload
+```bash
+# Show active configuration
+carboniq config show
 
-# 2. Test backend connection
-python carboniq_cli.py test-backend
+# Set API Key
+carboniq config set-key ciq_live_...
 
-# 3. Run a simple measurement
-python carboniq_cli.py measure-script sample_workloads/simple_task.py --workload-name "Simple Test"
+# Set Backend API URL (defaults to production Render backend)
+carboniq config set-url https://carboniq-backend-duel.onrender.com/api
 
-# 4. Run a compute-intensive workload
-python carboniq_cli.py measure-script sample_workloads/compute_intensive.py --workload-name "Compute Intensive Test" --workload-type "compute"
-
-# 5. View history
-python carboniq_cli.py history
+# Test connection and view logged-in identity
+carboniq whoami
+carboniq test-backend
+carboniq test-electricity-maps
 ```
-
-## Troubleshooting
-
-### Backend not reachable
-- Ensure the backend is running: `cd backend && python -m uvicorn main:app --reload`
-- Check `CARBONIQ_API_URL` in `.env`
-- Test with: `python carboniq_cli.py test-backend`
-
-### CodeCarbon not tracking
-- Check Python version (3.8+ required)
-- Ensure CodeCarbon is installed: `pip install codecarbon`
-- Check `CODECARBON_OUTPUT_DIR` permissions
-
-### Carbon Aware SDK not available
-- Carbon Aware SDK is optional
-- Set `CARBON_AWARE_SDK_ENABLED=true` in `.env` if you have it running
-- Download from: https://github.com/Green-Software-Foundation/carbon-aware-sdk
-
-## Next Steps
-
-1. **Integrate with AWS**: Add AWS workload measurement
-2. **Recommendation Engine**: Implement full constraint-based recommendation system
-3. **Database Persistence**: Replace in-memory storage with PostgreSQL
-4. **Scheduling**: Add automated workload scheduling based on carbon intensity
-5. **Multi-region Support**: Expand to support more cloud providers
-
-## Support
-
-For issues or questions:
-- Check the main project README
-- Review backend logs
-- Check CodeCarbon documentation: https://mlco2.github.io/codecarbon/

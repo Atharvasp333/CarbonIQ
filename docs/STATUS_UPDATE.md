@@ -81,27 +81,54 @@ Integrated using `asyncpg` for non-blocking FastAPI queries. All tables are full
 *   `analysis_summary`: Precomputed dashboard views stored in JSONB to ensure sub-second dashboard loading.
 *   `recommendation_runs`: Caches AI recommendations, confidence scores, and findings.
 *   `user_insights`: Aggregated trends, month-on-month targets, and alerts.
-*   `audit_log`: Logs user actions, request IPs, and updates.
+*   `workload_measurements`: Logs real-time terminal code executions, hardware CPU/RAM energy, and emissions.
+*   `api_keys`: Secure SHA-256 hashed API key management for authenticating CLI runs and Python SDK executions.
 
 ---
 
-## 🔗 4. External Integrations
+## ⚡ 4. Carbon-Aware CLI & Python SDK (`carboniq`)
+
+A complete client-side toolchain and Python package allowing developers to measure, optimize, and generate sustainable software:
+
+1. **Python Package (`carboniq`)**:
+   * Installed via `pip install -e .` (or from GitHub).
+   * `@carboniq.track` decorator & context manager with CodeCarbon integration.
+   * `@carboniq.defer_until_green` for grid-aware execution scheduling based on live regional carbon intensity.
+2. **Sustainable Code Generator & AST Auditor**:
+   * `carboniq audit <file.py>`: AST static code analyzer detecting $O(N^2)$ loops, uncached recursion, and memory bloating, scoring code from A (Eco-Optimal) to F.
+   * `carboniq optimize <file.py>`: Automated refactorer generating green, energy-efficient Python code.
+3. **Personalized Terminal Sync**:
+   * CLI connects with the deployed backend using `X-API-Key: ciq_live_...`.
+   * Realtime dashboard reflection on the **CLI & Workloads** tab in the web application.
+
+---
+
+## 🔗 5. External Integrations
 *   **AWS S3 Integration (`services/s3_fetcher.py`)**:
     *   Queries AWS buckets using `boto3`.
     *   Supports automatic extraction and decompressive reading of gzip files (`.csv.gz`).
     *   Implements auto-discovery to automatically locate the newest CUR file in the specified bucket.
-*   **Electricity Maps API (`services/electricity_maps.py`)**: Historical & real-time carbon intensity rates per grid zone.
+*   **Electricity Maps API (`services/electricity_maps.py` & `cli/carbon_aware.py`)**: Historical & real-time carbon intensity rates per grid zone.
 *   **Google Gemini AI (`services/gemini.py`)**: Used for the conversational chatbot and the generation of tailored, context-aware optimization advice.
 
 ---
 
-## 📝 5. Gaps & Remaining Features (To-Do List)
+## 📝 6. Progress Tracker & Remaining Roadmap
 
-To complete the project, the following features from the to-do roadmap should be addressed next:
+### ✅ Completed
+- [x] Full authentication system with bcrypt & multi-tenant user isolation.
+- [x] Multi-agent accounting engine for AWS CUR reports.
+- [x] Cloud emission dashboards (Home, Insights, Reports, Services).
+- [x] AI Chatbot with Google Gemini.
+- [x] CarbonIQ CLI with CodeCarbon hardware measurement.
+- [x] API Key generation and management UI (`CLI & Workloads` tab).
+- [x] Python Library (`carboniq`) with function decorators & context managers.
+- [x] Sustainable AST Code Optimizer & green code generator (`audit` & `optimize`).
+- [x] End-to-end integration test suite (30/30 assertions passing).
 
-1.  **Dashboard Export (PDF Reports)**: Implement generating downloadable PDF files summarizing carbon footprint reports.
-2.  **Physical Feasibility Validation**: Ensure the optimization logic flags complexity for regional migrations (e.g., warning users that DynamoDB or API Gateways cannot be trivially moved across regions compared to EC2 instances).
-3.  **Efficiency Streaks & Gamification**: Store login logs and track continuous green improvements to award carbon-reduction "streaks" to users.
-4.  **Role-Based Access Control**: Differentiate permissions between standard users and organization administrators.
-5.  **Dark Mode Toggle**: Implement a theme context to switch between light and dark UI variants.
-6.  **Redundant Routes Cleanup**: Standardize and refactor route files (like `routes/multi_agent_analysis.py` vs `routes/aws_integration.py`) to reduce duplication.
+### ⏳ Remaining Backlog Items
+1. **PyPI Publishing**: Publish `carboniq` to PyPI so any developer can run `pip install carboniq`.
+2. **VS Code Extension / IDE Marketplace Plugin**: Wrap `carboniq audit` and `carboniq optimize` into a VS Code extension for inline green code recommendations.
+3. **Downloadable PDF Reports**: Export executive sustainability summaries as formatted PDF downloads.
+4. **Multi-Cloud CUR Ingestion**: Extend ingestion pipelines beyond AWS to support Azure & Google Cloud Platform (GCP).
+5. **Team Carbon Budgets**: Set organizational monthly gCO2e thresholds with automated alerting.

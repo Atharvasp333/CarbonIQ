@@ -13,11 +13,12 @@ Upload your AWS Cost & Usage Report (CUR) or connect your S3 bucket directly —
 4. A 6-agent pipeline processes the data: ingestion → region mapping → carbon intensity → emission calculation → analytics → optimization
 5. Dashboard shows emissions by service, region, and time — with AI-powered recommendations
 
-### CLI Tool  
-1. Measure real-time carbon emissions of any Python workload using CodeCarbon
-2. Check current carbon intensity across AWS regions using Electricity Maps API
-3. Get carbon-aware recommendations (lowest-carbon region for execution)
-4. Upload measurement results to backend for analysis
+### Python SDK & CLI Tool
+1. **Package Installation**: Install globally via `pip install -e .`
+2. **Personalized Authentication**: Connect terminal runs to your account using API Keys (`carboniq config set-key ciq_live_...`)
+3. **Function Tracking Decorators**: Wrap functions with `@carboniq.track` to measure hardware CPU/RAM kWh & emissions
+4. **Sustainable Code Engine**: Run `carboniq audit` and `carboniq optimize` to eliminate energy anti-patterns and generate green Python code
+5. **Real-Time Grid Monitoring**: Live carbon intensity tracking (`carboniq monitor`) and off-peak scheduling recommendations (`carboniq recommend-schedule`)
 
 ---
 
@@ -25,14 +26,15 @@ Upload your AWS Cost & Usage Report (CUR) or connect your S3 bucket directly —
 
 | Layer | Stack |
 |---|---|
-| Backend | Python 3.12 · FastAPI 0.137 · asyncpg · Pydantic v2 |
-| Database | NeonDB (PostgreSQL) via asyncpg |
-| Auth | Neon Auth (Better Auth) · JWT sessions · bcrypt passwords |
-| AI / ML | Google Gemini 2.5-flash · 6-agent orchestration pipeline |
+| Backend | Python 3.12+ · FastAPI · asyncpg · Pydantic v2 · bcrypt |
+| Database | NeonDB (PostgreSQL) via asyncpg connection pooling |
+| Auth | Multi-tenant JWT sessions + SHA-256 API Key authorization |
+| Python SDK | `carboniq` (CodeCarbon + AST Analyzer + Grid Client) |
+| CLI Tool | Click 8 · CodeCarbon · Requests |
+| AI / ML | Google Gemini 2.5-flash · AST Sustainable Codegen Engine · 6-Agent accounting pipeline |
 | Carbon Data | Electricity Maps API · Climatiq API |
 | AWS | boto3 · S3 CUR fetching (csv + csv.gz) |
-| Frontend | React 19 · Vite 6 · Tailwind CSS · Recharts 3 · React Router 7 |
-| Auth UI | @neondatabase/auth-ui · NeonAuthUIProvider |
+| Frontend | React 19 · Vite 6 · Tailwind CSS · Recharts · React Router 7 |
 
 ---
 
@@ -41,72 +43,37 @@ Upload your AWS Cost & Usage Report (CUR) or connect your S3 bucket directly —
 ```
 CarbonIQ/
 ├── backend/
-│   ├── main.py                  # FastAPI app, all routers registered
-│   ├── database.py              # NeonDB pool, table init, analysis persistence
-│   ├── requirements.txt
-│   ├── .env.example
-│   ├── agents/
-│   │   ├── orchestrator.py      # Coordinates all 6 agents
-│   │   ├── ingestion_agent.py   # Agent 1: CSV parse & compress (5000→200 rows)
-│   │   ├── region_mapping_agent.py  # Agent 2: AWS region → Electricity Maps zone
-│   │   ├── carbon_intensity_agent.py # Agent 3: Fetch gCO₂/kWh per zone+hour
-│   │   ├── emission_calculation_agent.py # Agent 4: usage × factor × intensity
-│   │   ├── analytics_agent.py   # Agent 5: Aggregate metrics + time-series
-│   │   └── optimization_agent.py # Agent 6: Region migration, time-shift, idle
+│   ├── main.py                  # FastAPI app with registered routers
+│   ├── database.py              # NeonDB pool, table init, migrations
 │   ├── routes/
-│   │   ├── auth.py              # POST /auth/signup, /auth/login, GET /auth/me
-│   │   ├── aws_integration.py   # POST /aws/fetch, /aws/demo
-│   │   ├── aws_credentials.py   # POST /aws/credentials, GET /aws/credentials, DELETE
-│   │   ├── multi_agent_analysis.py # POST /multi-agent/analyze, /analyze-demo
-│   │   ├── service_analytics.py
-│   │   ├── time_based_analysis.py
-│   │   ├── emissions.py
-│   │   ├── insights.py
-│   │   ├── whatif.py
-│   │   └── chat.py
-│   └── services/
-│       ├── s3_fetcher.py        # boto3 S3 fetch, gzip support, auto-discovery
-│       ├── aws_analyzer.py      # Legacy CSV parser
-│       ├── gemini.py            # Gemini AI insights
-│       ├── electricity_maps.py  # Carbon intensity API wrapper
-│       └── service_analyzer.py  # Service drill-down analytics
-├── cli/                          # 🆕 Carbon-Aware CLI Tool
-│   ├── carboniq_cli.py          # Main CLI entry point
-│   ├── carbon_aware.py          # Electricity Maps API client
-│   ├── codecarbon_wrapper.py    # CodeCarbon integration
-│   ├── backend_client.py        # Backend API client
-│   ├── requirements.txt
-│   ├── setup.ps1               # Windows setup script
-│   ├── test_cli.ps1            # CLI test script
-│   └── sample_workloads/       # Example Python scripts to measure
-│       ├── simple_task.py
-│       └── compute_intensive.py
+│   │   ├── auth.py              # Auth routes (signup, login, me)
+│   │   ├── api_keys.py          # API key generation & validation
+│   │   ├── cli_measurements.py  # User-specific CLI measurement ingestion & stats
+│   │   ├── intelligence.py      # Recommendations & AI insights
+│   │   ├── aws_integration.py   # S3 CUR fetching
+│   │   └── ...
+│   └── agents/                  # Multi-agent accounting engine
+├── carboniq/                    # 📦 Python SDK & Sustainable Codegen Engine
+│   ├── __init__.py              # Exports track, defer_until_green, audit_code, optimize_code
+│   ├── tracker.py               # CodeCarbon decorator & context manager
+│   ├── grid.py                  # Carbon-aware execution & intensity checks
+│   └── optimizer.py             # AST static carbon auditor & code refactorer
+├── cli/                         # 🖥️ CarbonIQ CLI Tool
+│   ├── carboniq_cli.py          # Click CLI entry point
+│   ├── config_manager.py        # Persistent ~/.carboniq/config.json manager
+│   ├── backend_client.py        # Authenticated backend client
+│   └── carbon_aware.py          # Electricity Maps API client
 ├── frontend/
-│   ├── src/
-│   │   ├── lib/auth.js          # Neon authClient init
-│   │   ├── context/AuthContext.jsx  # Auth state via Neon authClient
-│   │   ├── api/client.js        # Axios + JWT interceptors
-│   │   ├── pages/
-│   │   │   ├── auth/Login.jsx
-│   │   │   ├── auth/Signup.jsx
-│   │   │   └── main/
-│   │   │       ├── Home.jsx     # Upload + AWS connect banner
-│   │   │       ├── Reports.jsx  # Charts, trends, time-series
-│   │   │       ├── Services.jsx # Service grid
-│   │   │       ├── ServiceDetail.jsx
-│   │   │       ├── Profile.jsx
-│   │   │       └── Settings.jsx
-│   │   └── components/
-│   │       ├── AWSConnectBanner.jsx  # Inline AWS setup prompt on dashboard
-│   │       ├── AWSIntegration.jsx    # S3 credentials form
-│   │       ├── Dashboard.jsx
-│   │       ├── MultiAgentDashboard.jsx
-│   │       ├── AIInsightsPanel.jsx
-│   │       ├── WhatIfSimulator.jsx
-│   │       ├── ChatBot/
-│   │       └── ... (charts, tables, metrics)
-│   └── package.json
-├── .env                         # 🆕 Single environment file (all configs)
+│   └── src/
+│       ├── pages/main/
+│       │   ├── CLIWorkloads.jsx # 🆕 API Keys & Realtime Measurement Logs
+│       │   ├── Home.jsx         # Upload + AWS connect dashboard
+│       │   ├── Insights.jsx     # AI recommendations & What-If simulator
+│       │   └── ...
+├── tests/
+│   └── test_e2e_user_flow.py    # 🧪 Automated E2E integration test suite (30/30 tests)
+├── setup.py                     # Python package installer (pip install -e .)
+├── .env                         # Unified environment configuration
 └── README.md
 ```
 
