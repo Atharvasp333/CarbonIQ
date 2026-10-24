@@ -21,7 +21,8 @@ except ImportError as e:
 from routes import (
     emissions, insights, whatif, chat, regional_test,
     electricity_test, aws_integration, aws_credentials, time_based_analysis,
-    multi_agent_analysis, service_analytics, auth, profile, intelligence, cli_measurements
+    multi_agent_analysis, service_analytics, auth, profile, intelligence, cli_measurements,
+    api_keys
 )
 
 
@@ -67,6 +68,7 @@ app.include_router(auth.router, prefix="/api")
 app.include_router(profile.router)
 app.include_router(intelligence.router)
 app.include_router(cli_measurements.router)
+app.include_router(api_keys.router)
 
 # Log all registered routes for debugging
 logger = logging.getLogger(__name__)

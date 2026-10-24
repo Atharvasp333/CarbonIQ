@@ -10,6 +10,7 @@ import logging
 
 from database import get_pool
 from routes.auth import get_current_user
+from routes.api_keys import get_current_user_or_api_key
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/cli", tags=["cli"])
@@ -37,23 +38,25 @@ class WorkloadMeasurementCreate(BaseModel):
 
 
 @router.post("/measurements")
-async def create_measurement(data: WorkloadMeasurementCreate):
+async def create_measurement(
+    data: WorkloadMeasurementCreate,
+    current_user: Optional[dict] = Depends(get_current_user_or_api_key)
+):
     """
-    Store a CLI workload measurement
+    Store a CLI workload measurement.
+    Personalized to user if API key or JWT token is provided.
+    Falls back to user_id=1 for legacy / unauthenticated CLI runs.
+    """
+    user_id = current_user['id'] if current_user else 1
+    user_label = f"User #{user_id} ({current_user.get('email', 'anonymous')})" if current_user else "Default CLI User (ID: 1)"
     
-    PUBLIC endpoint - no authentication required for CLI tools
-    TODO: Add API key authentication in production
-    """
     print("=" * 80)
-    print(f"POST /api/cli/measurements (PUBLIC)")
+    print(f"POST /api/cli/measurements - {user_label}")
     print(f"Workload: {data.workload_name} ({data.workload_type})")
     print("=" * 80)
     
     try:
         pool = await get_pool()
-        # For now, use a default "CLI user" (user_id=1) or create measurements without user
-        # In production, this should use API key authentication
-        user_id = 1  # Default to first user for CLI measurements
         
         # Parse measured_at timestamp
         measured_at = None
@@ -94,12 +97,13 @@ async def create_measurement(data: WorkloadMeasurementCreate):
                 metadata
             )
         
-        print(f"✓ Measurement saved with ID: {measurement_id}")
+        print(f"✓ Measurement saved with ID: {measurement_id} for user_id={user_id}")
         print("=" * 80)
         
         return {
             "success": True,
             "measurement_id": measurement_id,
+            "user_id": user_id,
             "message": "Measurement stored successfully"
         }
         
@@ -113,22 +117,19 @@ async def create_measurement(data: WorkloadMeasurementCreate):
 
 @router.get("/measurements/history")
 async def get_measurement_history(
-    limit: int = 20,
-    workload_type: Optional[str] = None
+    limit: int = 50,
+    workload_type: Optional[str] = None,
+    current_user: Optional[dict] = Depends(get_current_user_or_api_key)
 ):
     """
-    Get measurement history
-    
-    PUBLIC endpoint - returns all measurements (user_id=1 for CLI)
-    Query params:
-    - limit: Number of measurements to return (default: 20)
-    - workload_type: Filter by workload type (optional)
+    Get measurement history.
+    Returns measurements for authenticated user, or user_id=1 as default.
     """
-    print(f"GET /api/cli/measurements/history (PUBLIC) - limit={limit}")
+    user_id = current_user['id'] if current_user else 1
+    print(f"GET /api/cli/measurements/history - user_id={user_id}, limit={limit}")
     
     try:
         pool = await get_pool()
-        user_id = 1  # CLI measurements default user
         
         async with pool.acquire() as conn:
             if workload_type:
@@ -169,8 +170,6 @@ async def get_measurement_history(
                 'created_at': row['created_at'].isoformat() if row['created_at'] else None
             })
         
-        print(f"✓ Returning {len(measurements)} measurements")
-        
         return {
             'measurements': measurements,
             'total': len(measurements),
@@ -184,17 +183,17 @@ async def get_measurement_history(
 
 
 @router.get("/measurements/stats")
-async def get_measurement_stats():
+async def get_measurement_stats(
+    current_user: Optional[dict] = Depends(get_current_user_or_api_key)
+):
     """
-    Get aggregate statistics for measurements
-    
-    PUBLIC endpoint - returns stats for user_id=1 (CLI measurements)
+    Get aggregate statistics for measurements for current user.
     """
-    print(f"GET /api/cli/measurements/stats (PUBLIC)")
+    user_id = current_user['id'] if current_user else 1
+    print(f"GET /api/cli/measurements/stats - user_id={user_id}")
     
     try:
         pool = await get_pool()
-        user_id = 1  # CLI measurements default user
         
         async with pool.acquire() as conn:
             stats = await conn.fetchrow("""
@@ -229,11 +228,12 @@ async def get_measurement_stats():
             })
         
         return {
-            'total_measurements': stats['total_measurements'],
-            'total_emissions_gco2e': float(stats['total_emissions']) if stats['total_emissions'] else 0,
-            'total_energy_kwh': float(stats['total_energy']) if stats['total_energy'] else 0,
-            'avg_emissions_gco2e': float(stats['avg_emissions']) if stats['avg_emissions'] else 0,
-            'avg_duration_seconds': float(stats['avg_duration']) if stats['avg_duration'] else 0,
+            'user_id': user_id,
+            'total_measurements': stats['total_measurements'] if stats else 0,
+            'total_emissions_gco2e': float(stats['total_emissions']) if stats and stats['total_emissions'] else 0,
+            'total_energy_kwh': float(stats['total_energy']) if stats and stats['total_energy'] else 0,
+            'avg_emissions_gco2e': float(stats['avg_emissions']) if stats and stats['avg_emissions'] else 0,
+            'avg_duration_seconds': float(stats['avg_duration']) if stats and stats['avg_duration'] else 0,
             'workload_types': types
         }
         

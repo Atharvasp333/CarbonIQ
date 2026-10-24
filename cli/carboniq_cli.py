@@ -15,12 +15,17 @@ from typing import Optional
 from codecarbon_wrapper import CodeCarbonMeasurement
 from backend_client import BackendClient
 from carbon_aware import CarbonAwareClient
+from config_manager import get_api_key, get_api_url, save_config_value, get_config
 
 # Load environment variables
 load_dotenv()
 
+# Add workspace root to sys.path
+sys.path.insert(0, str(Path(__file__).parent.parent.resolve()))
+from carboniq.optimizer import audit_code, optimize_code
+
 # Configuration
-API_URL = os.getenv("CARBONIQ_API_URL", "http://localhost:8000/api")
+API_URL = get_api_url()
 OUTPUT_DIR = Path(os.getenv("CODECARBON_OUTPUT_DIR", "./measurements"))
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -491,6 +496,156 @@ def test_electricity_maps():
     else:
         click.echo("❌ Electricity Maps API is not available or not configured")
         click.echo("   Check your ELECTRICITY_MAPS_API_KEY in .env")
+
+
+@cli.command()
+@click.argument("filepath", type=click.Path(exists=True))
+def audit(filepath):
+    """Analyze Python code for carbon/energy anti-patterns (AST static audit)."""
+    click.echo(f"\n🔍 CarbonIQ Code Audit: {filepath}")
+    click.echo("=" * 60)
+    
+    with open(filepath, 'r', encoding='utf-8') as f:
+        content = f.read()
+        
+    result = audit_code(content)
+    if not result.get("valid_syntax"):
+        click.echo(f"❌ Syntax Error: {result.get('error')}")
+        return
+        
+    click.echo(f"🌿 Carbon Efficiency Rating: {result.get('carbon_grade')}")
+    click.echo(f"📊 Efficiency Score:         {result.get('carbon_score')}/100")
+    click.echo(f"⚡ Est. Energy Reduction:    {result.get('potential_energy_reduction_pct')}%")
+    click.echo(f"⚠️  Anti-Patterns Detected:   {result.get('total_issues')}\n")
+    
+    issues = result.get("issues", [])
+    if issues:
+        click.echo("Detailed Findings:")
+        for idx, issue in enumerate(issues, 1):
+            sev_icon = "🔴" if issue['severity'] == 'HIGH' else "🟡"
+            click.echo(f"  {idx}. {sev_icon} [Line {issue['line']}] {issue['description']}")
+            click.echo(f"     💡 Fix: {issue['recommendation']}")
+            click.echo(f"     ⚡ Potential Savings: ~{issue['estimated_savings_pct']}%\n")
+    else:
+        click.echo("🎉 Excellent! No major carbon anti-patterns detected.")
+    click.echo("=" * 60 + "\n")
+
+
+@cli.command()
+@click.argument("filepath", type=click.Path(exists=True))
+@click.option("--output", "-o", help="Output path for green optimized code (defaults to stdout or preview)")
+@click.option("--in-place", is_flag=True, help="Overwrite existing file with optimized code")
+def optimize(filepath, output, in_place):
+    """Refactor code to generate sustainable, energy-efficient Python code."""
+    click.echo(f"\n🌱 CarbonIQ Sustainable Code Generator: {filepath}")
+    
+    with open(filepath, 'r', encoding='utf-8') as f:
+        content = f.read()
+        
+    result = optimize_code(content)
+    opt_code = result.get("optimized_code", content)
+    improvements = result.get("improvements_applied", [])
+    
+    click.echo(f"Original Grade: {result.get('original_grade')}")
+    click.echo(f"Est. Energy Reduction: {result.get('estimated_energy_reduction_pct')}%\n")
+    
+    if improvements:
+        click.echo("Applied Sustainable Improvements:")
+        for imp in improvements:
+            click.echo(f"  ✓ {imp}")
+    else:
+        click.echo("Code is already well optimized!")
+        
+    if in_place:
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(opt_code)
+        click.echo(f"\n✅ Updated {filepath} in-place with green optimizations.")
+    elif output:
+        with open(output, 'w', encoding='utf-8') as f:
+            f.write(opt_code)
+        click.echo(f"\n✅ Wrote optimized code to {output}")
+    else:
+        click.echo("\n--- Optimized Code Preview ---")
+        click.echo(opt_code)
+        click.echo("------------------------------\n")
+
+
+@cli.group()
+def config():
+    """Manage CarbonIQ CLI configuration (API keys, backend URL)."""
+    pass
+
+
+@config.command("show")
+def config_show():
+    """Display current CLI configuration."""
+    cfg = get_config()
+    key = get_api_key()
+    url = get_api_url()
+    
+    click.echo("\n⚙️  CarbonIQ Configuration")
+    click.echo("=" * 50)
+    click.echo(f"Backend URL: {url}")
+    if key:
+        masked_key = f"{key[:10]}...{key[-4:]}" if len(key) > 14 else "***"
+        click.echo(f"API Key:     {masked_key} (active)")
+    else:
+        click.echo("API Key:     Not set (running as default user)")
+    click.echo("=" * 50 + "\n")
+
+
+@config.command("set-key")
+@click.argument("api_key")
+def config_set_key(api_key: str):
+    """Set the API key to authenticate CLI runs with your user account."""
+    api_key = api_key.strip()
+    if not api_key.startswith("ciq_live_"):
+        click.echo("⚠️  Warning: API keys usually start with 'ciq_live_'")
+    save_config_value("api_key", api_key)
+    click.echo(f"✅ API Key configured successfully!")
+    click.echo("Run 'carboniq whoami' to verify your connection.")
+
+
+@config.command("set-url")
+@click.argument("api_url")
+def config_set_url(api_url: str):
+    """Set the backend API URL (e.g., https://carboniq-backend-duel.onrender.com/api)."""
+    api_url = api_url.strip().rstrip('/')
+    save_config_value("api_url", api_url)
+    click.echo(f"✅ Backend URL set to: {api_url}")
+
+
+@cli.command()
+def whoami():
+    """Check CLI authentication and connection status with CarbonIQ backend."""
+    url = get_api_url()
+    key = get_api_key()
+    
+    click.echo(f"\n🔍 Checking CarbonIQ connection...")
+    click.echo(f"Target Backend: {url}")
+    
+    client = BackendClient(url, api_key=key)
+    
+    if not client.health_check():
+        click.echo("❌ Could not connect to backend server. Make sure it is online.")
+        return
+        
+    try:
+        import requests
+        headers = {"X-API-Key": key} if key else {}
+        resp = requests.get(f"{url}/cli/measurements/stats", headers=headers, timeout=10)
+        if resp.status_code == 200:
+            data = resp.json()
+            user_id = data.get("user_id")
+            click.echo("\n✅ Authenticated successfully!")
+            click.echo(f"👤 Connected User ID: {user_id}")
+            click.echo(f"📊 Total Measurements Logged: {data.get('total_measurements', 0)}")
+            click.echo(f"⚡ Total Energy: {data.get('total_energy_kwh', 0):.6f} kWh")
+            click.echo(f"🌱 Total Emissions: {data.get('total_emissions_gco2e', 0):.2f} gCO2e")
+        else:
+            click.echo(f"⚠️  Backend responded with status {resp.status_code}: {resp.text}")
+    except Exception as e:
+        click.echo(f"❌ Error communicating with backend: {e}")
 
 
 def _display_results(results: dict):

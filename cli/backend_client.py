@@ -6,24 +6,30 @@ Handles communication with the CarbonIQ FastAPI backend.
 import requests
 from typing import Dict, Optional
 import json
+from config_manager import get_api_key
 
 
 class BackendClient:
     """Client for communicating with CarbonIQ backend API."""
     
-    def __init__(self, base_url: str):
+    def __init__(self, base_url: str, api_key: Optional[str] = None):
         """
         Initialize backend client.
         
         Args:
             base_url: Base URL of the CarbonIQ API (e.g., http://localhost:8000/api)
+            api_key: Optional API key for authenticating as a specific user
         """
         self.base_url = base_url.rstrip('/')
+        self.api_key = api_key or get_api_key()
         self.session = requests.Session()
-        self.session.headers.update({
+        headers = {
             'Content-Type': 'application/json',
             'User-Agent': 'CarbonIQ-CLI/0.1.0'
-        })
+        }
+        if self.api_key:
+            headers['X-API-Key'] = self.api_key
+        self.session.headers.update(headers)
     
     def health_check(self) -> bool:
         """

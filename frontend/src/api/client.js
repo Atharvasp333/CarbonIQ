@@ -169,3 +169,30 @@ export const getRecommendationHistory = async () => {
   const response = await api.get('/api/intelligence/recommendations/history');
   return response.data;
 };
+
+// --- CLI & API Keys -------------------------------------------------------------
+
+export const listApiKeys = async () => {
+  const response = await api.get('/api/user/api-keys');
+  return response.data;
+};
+
+export const createApiKey = async (name = 'CLI Key') => {
+  const response = await api.post('/api/user/api-keys', { name });
+  return response.data;
+};
+
+export const revokeApiKey = async (keyId) => {
+  const response = await api.delete(`/api/user/api-keys/${keyId}`);
+  return response.data;
+};
+
+export const getCliStats = async () => {
+  const response = await api.get('/api/cli/measurements/stats');
+  return response.data;
+};
+
+export const getCliHistory = async (limit = 50) => {
+  const response = await api.get(`/api/cli/measurements/history?limit=${limit}`);
+  return response.data;
+};

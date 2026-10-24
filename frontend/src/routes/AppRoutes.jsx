@@ -11,6 +11,7 @@ import ServiceDetail from '../pages/main/ServiceDetail';
 import Profile from '../pages/main/Profile';
 import Settings from '../pages/main/Settings';
 import Insights from '../pages/main/Insights';
+import CLIWorkloads from '../pages/main/CLIWorkloads';
 import NotFound from '../pages/NotFound';
 
 export default function AppRoutes() {
@@ -36,6 +37,7 @@ export default function AppRoutes() {
         <Route path="/services" element={<Services />} />
         <Route path="/service/:serviceName" element={<ServiceDetail />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/cli" element={<CLIWorkloads />} />
         <Route path="/settings" element={<Settings />} />
       </Route>
 
