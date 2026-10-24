@@ -21,6 +21,14 @@ class CURIngestionAgent:
         'lineItem/UsageAmount',
         'lineItem/UnblendedCost'
     }
+    
+    # Alternative column names (underscore format)
+    REQUIRED_COLUMNS_ALT = {
+        'line_item_product_code',
+        'line_item_usage_start_date',
+        'line_item_usage_amount',
+        'line_item_unblended_cost'
+    }
 
     def __init__(self):
         self.validation_errors = []
@@ -29,6 +37,7 @@ class CURIngestionAgent:
         self.original_rows = 0
         self.compressed_rows = 0
         self.columns_removed = 0
+        self.column_format = 'slash'  # 'slash' or 'underscore'
 
     def process_csv(self, csv_content: str, max_rows: int = None, compress: bool = True) -> List[Dict]:
         """
@@ -95,50 +104,85 @@ class CURIngestionAgent:
             return []
 
     def _validate_columns(self, columns: List[str]) -> bool:
-        """Check minimum required columns exist"""
-        missing = self.REQUIRED_COLUMNS - set(columns)
-        if missing:
-            err = f"Missing required columns: {missing}"
-            logger.error(err)
-            self.validation_errors.append({'row': 0, 'error': err})
-            return False
-        return True
+        """Check minimum required columns exist - supports both formats"""
+        columns_set = set(columns)
+        
+        # Check slash format first
+        missing_slash = self.REQUIRED_COLUMNS - columns_set
+        if not missing_slash:
+            self.column_format = 'slash'
+            logger.info("Detected slash format columns (product/ProductName)")
+            return True
+        
+        # Check underscore format
+        missing_underscore = self.REQUIRED_COLUMNS_ALT - columns_set
+        if not missing_underscore:
+            self.column_format = 'underscore'
+            logger.info("Detected underscore format columns (line_item_product_code)")
+            return True
+        
+        # Neither format works
+        err = f"Missing required columns. Tried slash format (missing: {missing_slash}) and underscore format (missing: {missing_underscore})"
+        logger.error(err)
+        self.validation_errors.append({'row': 0, 'error': err})
+        return False
 
     def _normalize_row(self, row: Dict) -> Optional[Dict]:
         """Convert a CUR row to normalized schema, returns None to skip"""
 
+        # Get values based on column format
+        if self.column_format == 'slash':
+            line_item_type = row.get('lineItem/LineItemType', '')
+            usage_amount = self._parse_float(row.get('lineItem/UsageAmount', '0'))
+            cost = self._parse_float(row.get('lineItem/UnblendedCost', '0'))
+            product_name = row.get('product/ProductName', '').strip()
+            region = self._normalize_region(row.get('product/region', '') or row.get('product/regionCode', ''))
+            start_time = self._parse_timestamp(row.get('lineItem/UsageStartDate', ''))
+            end_time = self._parse_timestamp(row.get('lineItem/UsageEndDate', ''))
+            location = row.get('product/location', '')
+            product_family = row.get('product/productFamily', '')
+            usage_type = row.get('lineItem/UsageType', '')
+            operation = row.get('lineItem/Operation', '')
+            resource_id = row.get('lineItem/ResourceId', '')
+        else:  # underscore format
+            line_item_type = row.get('line_item_line_item_type', '')
+            usage_amount = self._parse_float(row.get('line_item_usage_amount', '0'))
+            cost = self._parse_float(row.get('line_item_unblended_cost', '0'))
+            product_name = row.get('line_item_product_code', '').strip()
+            region = self._normalize_region(row.get('product_region', '') or row.get('product_region_code', ''))
+            start_time = self._parse_timestamp(row.get('line_item_usage_start_date', ''))
+            end_time = self._parse_timestamp(row.get('line_item_usage_end_date', ''))
+            location = row.get('product_location', '')
+            product_family = row.get('product_product_family', '')
+            usage_type = row.get('line_item_usage_type', '')
+            operation = row.get('line_item_operation', '')
+            resource_id = row.get('line_item_resource_id', '')
+
         # Skip non-usage rows
-        line_item_type = row.get('lineItem/LineItemType', '')
         if line_item_type in ('Tax', 'Credit', 'Refund', 'Fee'):
             return None
-
-        usage_amount = self._parse_float(row.get('lineItem/UsageAmount', '0'))
-        cost = self._parse_float(row.get('lineItem/UnblendedCost', '0'))
 
         # Must have actual usage
         if usage_amount <= 0:
             return None
 
-        product_name = row.get('product/ProductName', '').strip()
         if not product_name:
             return None
 
         service = self._extract_service_name(product_name)
-        region = self._normalize_region(row.get('product/region', '') or row.get('product/regionCode', ''))
-        start_time = self._parse_timestamp(row.get('lineItem/UsageStartDate', ''))
 
         return {
             'service': service,
             'region': region,
-            'location': row.get('product/location', ''),
-            'product_family': row.get('product/productFamily', ''),
-            'usage_type': row.get('lineItem/UsageType', ''),
-            'operation': row.get('lineItem/Operation', ''),
+            'location': location,
+            'product_family': product_family,
+            'usage_type': usage_type,
+            'operation': operation,
             'usage_amount': usage_amount,
             'cost': cost,
             'start_time': start_time,
-            'end_time': self._parse_timestamp(row.get('lineItem/UsageEndDate', '')),
-            'resource_id': row.get('lineItem/ResourceId', '')
+            'end_time': end_time,
+            'resource_id': resource_id
         }
 
     def _extract_service_name(self, product_name: str) -> str:
