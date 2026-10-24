@@ -114,21 +114,31 @@ async function auditDocument(doc, showToast = false) {
     const config = vscode.workspace.getConfiguration('carboniq');
     const pythonPath = config.get('pythonPath', 'python');
     const filePath = doc.fileName;
+    const fileContent = doc.getText();
 
-    const pythonCode = `
+    const pythonScript = `
 import json, sys
 try:
     import carboniq
-    with open(r'''${filePath}''', 'r', encoding='utf-8') as f:
-        res = carboniq.audit_code(f.read())
+    code = sys.stdin.read()
+    res = carboniq.audit_code(code)
     print(json.dumps(res))
 except Exception as e:
     print(json.dumps({'error': str(e)}))
 `;
 
-    exec(`${pythonPath} -c "${pythonCode.replace(/\n/g, ' ')}"`, (err, stdout) => {
-        if (err) {
-            if (showToast) vscode.window.showErrorMessage(`Audit failed: ${err.message}`);
+    const { spawn } = require('child_process');
+    const child = spawn(pythonPath, ['-c', pythonScript]);
+
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout.on('data', (d) => { stdout += d; });
+    child.stderr.on('data', (d) => { stderr += d; });
+
+    child.on('close', (code) => {
+        if (code !== 0 && !stdout) {
+            if (showToast) vscode.window.showErrorMessage(`CarbonIQ Audit failed: ${stderr || 'Unknown error'}`);
             return;
         }
 
@@ -179,6 +189,9 @@ except Exception as e:
             console.error('Failed to parse audit result:', parseErr);
         }
     });
+
+    child.stdin.write(fileContent);
+    child.stdin.end();
 }
 
 /**
@@ -189,21 +202,31 @@ async function optimizeDocument(doc) {
     const config = vscode.workspace.getConfiguration('carboniq');
     const pythonPath = config.get('pythonPath', 'python');
     const filePath = doc.fileName;
+    const fileContent = doc.getText();
 
-    const pythonCode = `
+    const pythonScript = `
 import json, sys
 try:
     import carboniq
-    with open(r'''${filePath}''', 'r', encoding='utf-8') as f:
-        res = carboniq.optimize_code(f.read())
+    code = sys.stdin.read()
+    res = carboniq.optimize_code(code)
     print(json.dumps(res))
 except Exception as e:
     print(json.dumps({'error': str(e)}))
 `;
 
-    exec(`${pythonPath} -c "${pythonCode.replace(/\n/g, ' ')}"`, async (err, stdout) => {
-        if (err) {
-            vscode.window.showErrorMessage(`Optimization failed: ${err.message}`);
+    const { spawn } = require('child_process');
+    const child = spawn(pythonPath, ['-c', pythonScript]);
+
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout.on('data', (d) => { stdout += d; });
+    child.stderr.on('data', (d) => { stderr += d; });
+
+    child.on('close', async (code) => {
+        if (code !== 0 && !stdout) {
+            vscode.window.showErrorMessage(`CarbonIQ Optimization failed: ${stderr || 'Unknown error'}`);
             return;
         }
 
@@ -249,6 +272,9 @@ except Exception as e:
             vscode.window.showErrorMessage(`Error applying green optimizations: ${e.message}`);
         }
     });
+
+    child.stdin.write(fileContent);
+    child.stdin.end();
 }
 
 function deactivate() {
