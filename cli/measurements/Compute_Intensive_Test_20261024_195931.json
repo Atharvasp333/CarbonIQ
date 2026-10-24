@@ -1,0 +1,28 @@
+{
+  "workload_name": "Compute Intensive Test",
+  "workload_type": "script",
+  "measurement": {
+    "workload_name": "Compute Intensive Test",
+    "workload_type": "script",
+    "duration_seconds": 2.69,
+    "emissions_gco2e": 0.0123,
+    "emissions_kgco2e": 1.2e-05,
+    "exit_code": 0,
+    "tracking_mode": "machine",
+    "project_name": "carboniq_Compute_Intensive_Test",
+    "energy_kwh": 1.7253026110913445e-05,
+    "cpu_energy": 9.7918725e-06,
+    "ram_energy": 7.461153610913445e-06,
+    "gpu_energy": 0.0,
+    "country_name": "India",
+    "country_iso_code": "IND",
+    "region": "maharashtra",
+    "carbon_intensity": 0.0,
+    "cpu_power": 14.064877600181074,
+    "ram_power": 10.0,
+    "gpu_power": 0.0
+  },
+  "carbon_aware_data": null,
+  "deadline": null,
+  "measured_at": "2026-10-24T14:29:31.227744"
+}

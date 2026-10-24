@@ -243,6 +243,33 @@ async def init_db():
             CREATE INDEX IF NOT EXISTS idx_user_insights_period ON user_insights(period_start, period_end);
         """)
 
+        # Workload Measurements Table (for CLI measurements)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS workload_measurements (
+                id                  SERIAL PRIMARY KEY,
+                user_id             INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                workload_name       TEXT NOT NULL,
+                workload_type       TEXT,
+                duration_seconds    NUMERIC(12,6),
+                emissions_gco2e     NUMERIC(12,6),
+                energy_kwh          NUMERIC(16,8),
+                cpu_energy_kwh      NUMERIC(16,8),
+                ram_energy_kwh      NUMERIC(16,8),
+                carbon_intensity    NUMERIC(10,4),
+                country_name        TEXT,
+                region              TEXT,
+                measured_at         TIMESTAMPTZ DEFAULT NOW(),
+                metadata            JSONB,
+                created_at          TIMESTAMPTZ DEFAULT NOW()
+            );
+        """)
+
+        await conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_workload_measurements_user ON workload_measurements(user_id);
+            CREATE INDEX IF NOT EXISTS idx_workload_measurements_type ON workload_measurements(workload_type);
+            CREATE INDEX IF NOT EXISTS idx_workload_measurements_date ON workload_measurements(measured_at);
+        """)
+
         # Audit Log Table
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS audit_log (

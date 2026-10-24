@@ -1,0 +1,28 @@
+{
+  "workload_name": "Test Milestone 3",
+  "workload_type": "script",
+  "measurement": {
+    "workload_name": "Test Milestone 3",
+    "workload_type": "script",
+    "duration_seconds": 2.28,
+    "emissions_gco2e": 0.0103,
+    "emissions_kgco2e": 1e-05,
+    "exit_code": 0,
+    "tracking_mode": "machine",
+    "project_name": "carboniq_Test_Milestone_3",
+    "energy_kwh": 1.4502131110439965e-05,
+    "cpu_energy": 8.173762777000001e-06,
+    "ram_energy": 6.328368333439963e-06,
+    "gpu_energy": 0.0,
+    "country_name": "India",
+    "country_iso_code": "IND",
+    "region": "maharashtra",
+    "carbon_intensity": 0.0,
+    "cpu_power": 15.817332925174076,
+    "ram_power": 10.0,
+    "gpu_power": 0.0
+  },
+  "carbon_aware_data": null,
+  "deadline": null,
+  "measured_at": "2026-10-24T14:23:51.686339"
+}
