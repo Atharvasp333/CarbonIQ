@@ -7,12 +7,13 @@ import functools
 import logging
 from typing import Optional, Callable, Any
 from pathlib import Path
+from contextlib import ContextDecorator
 
 logger = logging.getLogger("carboniq.tracker")
 
 
-class TrackContext:
-    """Context manager for tracking energy and emissions of a code block."""
+class TrackContext(ContextDecorator):
+    """Context manager and decorator for tracking energy and emissions of a code block."""
 
     def __init__(
         self,
@@ -54,8 +55,15 @@ class TrackContext:
 
         if self.tracker:
             try:
-                emissions_kg = self.tracker.stop() or 0.0
-                energy_kwh = getattr(self.tracker, "_total_energy", 0.0) or 0.0
+                em = self.tracker.stop()
+                emissions_kg = float(em) if em is not None else 0.0
+                raw_energy = getattr(self.tracker, "_total_energy", 0.0)
+                if hasattr(raw_energy, "kWh"):
+                    energy_kwh = float(raw_energy.kWh)
+                elif hasattr(raw_energy, "kwh"):
+                    energy_kwh = float(raw_energy.kwh)
+                else:
+                    energy_kwh = float(raw_energy or 0.0)
             except Exception as e:
                 logger.debug(f"CodeCarbon stop fallback: {e}")
 
@@ -126,12 +134,20 @@ class TrackContext:
             print(f"  • Notice: Saved locally (offline)\n")
 
 
-def track(workload_name: Optional[str] = None, workload_type: str = "general", auto_send: bool = True):
+def track(
+    workload_name: Optional[Any] = None,
+    workload_type: str = "general",
+    auto_send: bool = True
+):
     """
     Decorator & context manager to track carbon emissions of a function or code block.
 
     Usage as Decorator:
-        @carboniq.track(workload_name="train_model")
+        @carboniq.track
+        def simple():
+            ...
+
+        @carboniq.track(workload_name="train_model", workload_type="ml-training")
         def train():
             ...
 
@@ -139,21 +155,18 @@ def track(workload_name: Optional[str] = None, workload_type: str = "general", a
         with carboniq.track(workload_name="data_processing"):
             process()
     """
-    def decorator(func: Callable) -> Callable:
-        name = workload_name or func.__name__
-
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs) -> Any:
-            with TrackContext(workload_name=name, workload_type=workload_type, auto_send=auto_send):
-                return func(*args, **kwargs)
-        return wrapper
-
+    # Case 1: @carboniq.track (without parentheses)
     if callable(workload_name):
         func = workload_name
-        name = func.__name__
-        workload_name = None
-        return decorator(func)
+        ctx = TrackContext(
+            workload_name=func.__name__,
+            workload_type=workload_type,
+            auto_send=auto_send
+        )
+        return ctx(func)
 
+    # Case 2: @carboniq.track(...) or with carboniq.track(...)
+    # Since TrackContext inherits from ContextDecorator, it works as both!
     return TrackContext(
         workload_name=workload_name or "workload",
         workload_type=workload_type,
