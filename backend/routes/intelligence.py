@@ -198,18 +198,26 @@ async def get_recommendations():
                 # Convert row to dict and extract intelligence data
                 rec_data = dict(row)
                 
+                # Parse JSONB fields (they come as dicts from asyncpg, but check just in case)
+                metadata = rec_data['metadata'] if isinstance(rec_data['metadata'], dict) else {}
+                findings = rec_data['findings'] if isinstance(rec_data['findings'], dict) else {}
+                recommendations = rec_data['recommendations'] if isinstance(rec_data['recommendations'], list) else []
+                hotspots = rec_data['hotspots'] if isinstance(rec_data['hotspots'], list) else []
+                region_opps = rec_data['region_opportunities'] if isinstance(rec_data['region_opportunities'], list) else []
+                time_opps = rec_data['time_opportunities'] if isinstance(rec_data['time_opportunities'], list) else []
+                
                 # Return structured response
                 response = {
                     'id': rec_data['id'],
                     'generated_at': rec_data['generated_at'].isoformat() if rec_data['generated_at'] else None,
-                    'recommendations': rec_data['recommendations'] or [],
-                    'patterns': rec_data['metadata'].get('patterns', []) if rec_data['metadata'] else [],
-                    'opportunities': rec_data['metadata'].get('opportunities', []) if rec_data['metadata'] else [],
-                    'summary': rec_data['findings'] or {},
-                    'workload_analysis': rec_data['metadata'].get('workload_analysis', {}) if rec_data['metadata'] else {},
-                    'hotspots': rec_data['hotspots'] or [],
-                    'region_opportunities': rec_data['region_opportunities'] or [],
-                    'time_opportunities': rec_data['time_opportunities'] or [],
+                    'recommendations': recommendations,
+                    'patterns': metadata.get('patterns', []),
+                    'opportunities': metadata.get('opportunities', []),
+                    'summary': findings,
+                    'workload_analysis': metadata.get('workload_analysis', {}),
+                    'hotspots': hotspots,
+                    'region_opportunities': region_opps,
+                    'time_opportunities': time_opps,
                     'confidence_score': rec_data['confidence_score'],
                     'status': rec_data['status']
                 }
