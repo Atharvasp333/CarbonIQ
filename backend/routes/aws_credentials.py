@@ -83,6 +83,16 @@ async def save_creds(req: AWSCredsRequest):
 
     from database import get_pool
     pool = await get_pool()
+    
+    if pool is None:
+        # Database unavailable - credentials can't be saved
+        logger.warning(f"Cannot save AWS creds for {req.email}: database unavailable")
+        return {
+            "success": False,
+            "error": "Database unavailable - credentials cannot be persisted",
+            "db_unavailable": True
+        }
+    
     now = datetime.now(timezone.utc)
 
     async with pool.acquire() as conn:
@@ -127,6 +137,13 @@ async def get_creds(req: AWSCredsEmailRequest):
 
     from database import get_pool
     pool = await get_pool()
+    
+    if pool is None:
+        # Database unavailable - no saved credentials
+        return {
+            "connected": False,
+            "db_unavailable": True
+        }
 
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
@@ -171,6 +188,10 @@ async def delete_creds(req: AWSCredsEmailRequest):
 
     from database import get_pool
     pool = await get_pool()
+    
+    if pool is None:
+        # Database unavailable - nothing to delete
+        return {"success": True, "deleted": False, "db_unavailable": True}
 
     async with pool.acquire() as conn:
         result = await conn.execute(

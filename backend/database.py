@@ -4,15 +4,24 @@ Uses asyncpg for async operations compatible with FastAPI.
 """
 import os
 import logging
-import asyncpg
 from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-_pool: Optional[asyncpg.Pool] = None
+try:
+    import asyncpg
+    ASYNCPG_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"asyncpg unavailable (DB features disabled): {e}")
+    ASYNCPG_AVAILABLE = False
+    asyncpg = None  # type: ignore
+
+_pool: Optional[any] = None
 
 
-async def get_pool() -> asyncpg.Pool:
+async def get_pool():
+    if not ASYNCPG_AVAILABLE:
+        return None  # Return None instead of raising error
     global _pool
     if _pool is None:
         url = os.getenv("DATABASE_URL")
@@ -21,6 +30,11 @@ async def get_pool() -> asyncpg.Pool:
         _pool = await asyncpg.create_pool(url, min_size=1, max_size=5)
         logger.info("NeonDB connection pool created")
     return _pool
+
+
+def db_available() -> bool:
+    """Check if database is available"""
+    return ASYNCPG_AVAILABLE
 
 
 async def close_pool():

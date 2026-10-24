@@ -1,0 +1,28 @@
+{
+  "workload_name": "Test Run",
+  "workload_type": "script",
+  "measurement": {
+    "workload_name": "Test Run",
+    "workload_type": "script",
+    "duration_seconds": 2.08,
+    "emissions_gco2e": 0.0088,
+    "emissions_kgco2e": 9e-06,
+    "exit_code": 0,
+    "tracking_mode": "machine",
+    "project_name": "carboniq_Test_Run",
+    "energy_kwh": 1.2325448054716646e-05,
+    "cpu_energy": 6.543656388e-06,
+    "ram_energy": 5.781791666716648e-06,
+    "gpu_energy": 0.0,
+    "country_name": "India",
+    "country_iso_code": "IND",
+    "region": "maharashtra",
+    "carbon_intensity": 0.0,
+    "cpu_power": 13.220201133351885,
+    "ram_power": 10.0,
+    "gpu_power": 0.0
+  },
+  "carbon_aware_data": null,
+  "deadline": null,
+  "measured_at": "2026-10-24T08:49:39.922262"
+}

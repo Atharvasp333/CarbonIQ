@@ -1,5 +1,8 @@
 import boto3
 import logging
+import gzip
+import zipfile
+import io
 from botocore.exceptions import ClientError, NoCredentialsError, PartialCredentialsError
 from typing import Optional, Tuple
 
@@ -50,13 +53,67 @@ async def fetch_csv_from_s3(
         response = s3_client.get_object(Bucket=bucket_name, Key=file_key)
         content_bytes = response['Body'].read()
 
-        # Handle gzip compressed files
-        if file_key.lower().endswith('.gz'):
-            import gzip
-            content_bytes = gzip.decompress(content_bytes)
+        # Handle compressed files
+        file_key_lower = file_key.lower()
+        
+        if file_key_lower.endswith('.csv.zip'):
+            # Handle ZIP compressed files
+            try:
+                logger.info(f"Extracting CSV from ZIP archive: {file_key}")
+                with zipfile.ZipFile(io.BytesIO(content_bytes)) as zip_file:
+                    # Get list of files in the archive
+                    file_list = zip_file.namelist()
+                    
+                    if not file_list:
+                        return None, "ZIP archive is empty"
+                    
+                    # Find the first CSV file in the archive
+                    csv_file = None
+                    for filename in file_list:
+                        if filename.lower().endswith('.csv'):
+                            csv_file = filename
+                            break
+                    
+                    if not csv_file:
+                        return None, "No CSV file found in ZIP archive"
+                    
+                    logger.info(f"Extracting CSV file: {csv_file}")
+                    content_bytes = zip_file.read(csv_file)
+                    
+                    if len(content_bytes) == 0:
+                        return None, f"CSV file '{csv_file}' is empty"
+                        
+            except zipfile.BadZipFile:
+                error_msg = f"Invalid ZIP file: {file_key}"
+                logger.error(error_msg)
+                return None, error_msg
+            except Exception as e:
+                error_msg = f"Error extracting ZIP file: {str(e)}"
+                logger.error(error_msg)
+                return None, error_msg
+                
+        elif file_key_lower.endswith('.gz'):
+            # Handle gzip compressed files
+            try:
+                logger.info(f"Decompressing gzip file: {file_key}")
+                content_bytes = gzip.decompress(content_bytes)
+            except Exception as e:
+                error_msg = f"Error decompressing gzip file: {str(e)}"
+                logger.error(error_msg)
+                return None, error_msg
 
-        csv_content = content_bytes.decode('utf-8')
-        logger.info(f"Successfully fetched {len(csv_content)} bytes from S3")
+        # Decode to UTF-8
+        try:
+            csv_content = content_bytes.decode('utf-8')
+        except UnicodeDecodeError as e:
+            error_msg = f"Error decoding CSV content: {str(e)}"
+            logger.error(error_msg)
+            return None, error_msg
+            
+        if not csv_content.strip():
+            return None, "CSV content is empty"
+            
+        logger.info(f"Successfully fetched and processed {len(csv_content)} bytes from S3")
         return csv_content, None
         
     except NoCredentialsError:
@@ -95,17 +152,17 @@ async def fetch_csv_from_s3(
 
 
 async def _find_latest_csv(s3_client, bucket_name: str) -> Optional[str]:
-    """Find the latest CSV file in the bucket"""
+    """Find the latest CSV file in the bucket (supports .csv, .csv.gz, and .csv.zip)"""
     try:
         response = s3_client.list_objects_v2(Bucket=bucket_name)
         
         if 'Contents' not in response:
             return None
         
-        # Filter CSV files (including gzip)
+        # Filter CSV files (including gzip and zip)
         csv_files = [
             obj for obj in response['Contents']
-            if obj['Key'].lower().endswith('.csv') or obj['Key'].lower().endswith('.csv.gz')
+            if obj['Key'].lower().endswith(('.csv', '.csv.gz', '.csv.zip'))
         ]
         
         if not csv_files:

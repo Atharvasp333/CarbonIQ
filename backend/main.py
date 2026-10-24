@@ -1,4 +1,5 @@
 import os
+import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -6,15 +7,22 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from database import init_db, close_pool
+logging.basicConfig(level=logging.INFO)
+
+try:
+    from database import init_db, close_pool
+    DB_AVAILABLE = True
+except ImportError as e:
+    logging.warning(f"Database module unavailable: {e}")
+    DB_AVAILABLE = False
+    async def init_db(): pass
+    async def close_pool(): pass
+
 from routes import (
     emissions, insights, whatif, chat, regional_test,
     electricity_test, aws_integration, aws_credentials, time_based_analysis,
-    multi_agent_analysis, service_analytics, auth, profile, intelligence
+    multi_agent_analysis, service_analytics, auth, profile, intelligence, cli_measurements
 )
-
-import logging
-logging.basicConfig(level=logging.INFO)
 
 
 @asynccontextmanager
@@ -53,6 +61,7 @@ app.include_router(service_analytics.router, prefix="/api")
 app.include_router(auth.router, prefix="/api")
 app.include_router(profile.router)
 app.include_router(intelligence.router)
+app.include_router(cli_measurements.router, prefix="/api")
 
 # Log all registered routes for debugging
 logger = logging.getLogger(__name__)
