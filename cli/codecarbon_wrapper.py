@@ -7,7 +7,7 @@ import os
 import subprocess
 import time
 from pathlib import Path
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Tuple, Any
 from codecarbon import EmissionsTracker, OfflineEmissionsTracker
 from dotenv import load_dotenv
 
@@ -22,7 +22,7 @@ class CodeCarbonMeasurement:
         workload_name: str,
         workload_type: str = "general",
         output_dir: Path = Path("./measurements"),
-        tracking_mode: str = None
+        tracking_mode: Optional[str] = None
     ):
         """
         Initialize CodeCarbon measurement wrapper.
@@ -120,7 +120,7 @@ class CodeCarbonMeasurement:
         # Parse and return results
         return self._parse_results(emissions_data, duration, exit_code)
     
-    def measure_function(self, func, *args, **kwargs) -> Optional[Dict]:
+    def measure_function(self, func, *args, **kwargs) -> Tuple[Any, Optional[Dict]]:
         """
         Measure emissions for a Python function.
         

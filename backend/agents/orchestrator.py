@@ -13,7 +13,7 @@ OPTIMIZATIONS APPLIED:
 - Progress tracking and detailed logging
 """
 import logging
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 # Import from new locations for backward compatibility
 from .accounting.csv_agent import CURIngestionAgent
@@ -58,7 +58,7 @@ class CarbonIQOrchestrator:
         csv_content: str, 
         max_rows: int = 1000,
         debug_skip_api: bool = False,
-        org_profile: dict = None,
+        org_profile: Optional[dict] = None,
         use_intelligence: bool = True,
         use_gemini: bool = False
     ) -> Dict:

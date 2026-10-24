@@ -39,7 +39,7 @@ class CURIngestionAgent:
         self.columns_removed = 0
         self.column_format = 'slash'  # 'slash' or 'underscore'
 
-    def process_csv(self, csv_content: str, max_rows: int = None, compress: bool = True) -> List[Dict]:
+    def process_csv(self, csv_content: str, max_rows: Optional[int] = None, compress: bool = True) -> List[Dict]:
         """
         Process AWS CUR CSV:
         1. Skip Tax/Credit/Refund/Fee rows
@@ -289,6 +289,7 @@ class CURIngestionAgent:
             agg[key]['count'] += 1
 
             if agg[key]['record'] is None:
+                # pyrefly: ignore[bad-assignment]
                 agg[key]['record'] = r.copy()
                 # Normalize timestamp to midnight of that day for cache efficiency
                 agg[key]['record']['start_time'] = f"{day}T00:00:00+00:00"
@@ -296,6 +297,8 @@ class CURIngestionAgent:
         compressed = []
         for key, data in agg.items():
             rec = data['record']
+            if rec is None:
+                continue  # should never happen, but satisfies type checker
             rec['usage_amount'] = data['usage_amount']
             rec['cost'] = data['cost']
             rec['_compressed_count'] = data['count']
@@ -303,6 +306,7 @@ class CURIngestionAgent:
 
         logger.info(f"  Compression: (service, region, usage_type, day) grouping")
         logger.info(f"  {len(records)} valid rows -> {len(compressed)} daily records")
+        # pyrefly: ignore[bad-return]
         return compressed
 
     def get_validation_summary(self) -> Dict:

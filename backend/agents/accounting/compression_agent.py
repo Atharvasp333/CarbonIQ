@@ -9,7 +9,7 @@ TWO-LEVEL COMPRESSION STRATEGY:
 Example: 5000 hourly rows → 200 daily rows → 3 unique zone/day combos → 3 API calls
 """
 import logging
-from typing import List, Dict
+from typing import List, Dict, Optional, cast
 from collections import defaultdict
 
 logger = logging.getLogger(__name__)
@@ -36,16 +36,19 @@ class CompressionAgent:
         self.original_count = len(records)
         
         if not records:
-            return []
+            return cast(List[Dict], [])
         
         logger.info(f"[Compression Agent] Compressing {len(records)} records...")
         
-        agg = defaultdict(lambda: {
-            'usage_amount': 0.0,
-            'cost': 0.0,
-            'count': 0,
-            'record': None
-        })
+        def _empty_bucket() -> Dict[str, object]:
+            return {
+                'usage_amount': 0.0,
+                'cost': 0.0,
+                'count': 0,
+                'record': cast(Optional[Dict], None)
+            }
+
+        agg: defaultdict[tuple, Dict[str, object]] = defaultdict(_empty_bucket)
         
         for r in records:
             # Extract just the date part for daily grouping
@@ -67,9 +70,11 @@ class CompressionAgent:
                 # Normalize timestamp to midnight of that day for cache efficiency
                 agg[key]['record']['start_time'] = f"{day}T00:00:00+00:00"
         
-        compressed = []
+        compressed: List[Dict] = []
         for key, data in agg.items():
             rec = data['record']
+            if rec is None:
+                continue  # should never happen, but satisfies type checker
             rec['usage_amount'] = data['usage_amount']
             rec['cost'] = data['cost']
             rec['_compressed_count'] = data['count']

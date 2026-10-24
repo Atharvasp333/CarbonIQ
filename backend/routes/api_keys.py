@@ -42,6 +42,8 @@ async def get_user_from_api_key(x_api_key: Optional[str] = Header(None, alias="X
     
     key_hash = hash_api_key(x_api_key)
     pool = await get_pool()
+    if pool is None:
+        return None
     
     try:
         async with pool.acquire() as conn:
@@ -113,6 +115,8 @@ async def get_current_user_or_api_key(
                 
         if email:
             pool = await get_pool()
+            if pool is None:
+                return None
             async with pool.acquire() as conn:
                 user = await conn.fetchrow("SELECT id, name, email FROM users WHERE email = $1", email)
                 if user:
@@ -130,6 +134,8 @@ async def list_user_api_keys(current_user = Depends(get_current_user)):
     """List all API keys for the current authenticated dashboard user"""
     user_id = current_user['id']
     pool = await get_pool()
+    if pool is None:
+        raise HTTPException(status_code=500, detail="Database pool not available")
     
     try:
         async with pool.acquire() as conn:
@@ -165,6 +171,8 @@ async def create_api_key(req: CreateApiKeyRequest, current_user = Depends(get_cu
     user_id = current_user['id']
     raw_key, prefix, key_hash = generate_new_key(req.name or "CLI Key")
     pool = await get_pool()
+    if pool is None:
+        raise HTTPException(status_code=500, detail="Database pool not available")
     
     try:
         async with pool.acquire() as conn:
@@ -180,6 +188,7 @@ async def create_api_key(req: CreateApiKeyRequest, current_user = Depends(get_cu
             "name": req.name or "CLI Key",
             "api_key": raw_key,
             "prefix": prefix,
+            "key_prefix": prefix,
             "message": "Store this key safely! You won't be able to view the full key again."
         }
     except Exception as e:
@@ -192,6 +201,8 @@ async def revoke_api_key(key_id: int, current_user = Depends(get_current_user)):
     """Revoke/Delete an API key for the authenticated user"""
     user_id = current_user['id']
     pool = await get_pool()
+    if pool is None:
+        raise HTTPException(status_code=500, detail="Database pool not available")
     
     try:
         async with pool.acquire() as conn:

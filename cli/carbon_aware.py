@@ -121,7 +121,7 @@ class CarbonAwareClient:
     def get_optimal_windows(
         self,
         duration_minutes: int,
-        regions: List[str] = None,
+        regions: Optional[List[str]] = None,
         deadline: Optional[str] = None
     ) -> Optional[Dict]:
         """
@@ -171,7 +171,7 @@ class CarbonAwareClient:
             
             if results:
                 # Find the optimal region (lowest carbon intensity)
-                optimal = min(results, key=lambda x: x.get('carbon_intensity', float('inf')))
+                optimal = min(results, key=lambda x: float(x.get('carbon_intensity', float('inf'))))
                 
                 return {
                     "optimal_region": optimal.get('aws_region'),

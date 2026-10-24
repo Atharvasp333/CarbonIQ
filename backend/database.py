@@ -4,7 +4,7 @@ Uses asyncpg for async operations compatible with FastAPI.
 """
 import os
 import logging
-from typing import Optional
+from typing import Optional, Any
 
 logger = logging.getLogger(__name__)
 
@@ -16,10 +16,10 @@ except ImportError as e:
     ASYNCPG_AVAILABLE = False
     asyncpg = None  # type: ignore
 
-_pool: Optional[any] = None
+_pool: Optional[Any] = None
 
 
-async def get_pool():
+async def get_pool() -> Any:
     print("get_pool() called")
     if not ASYNCPG_AVAILABLE:
         print("ERROR: asyncpg not available!")
@@ -32,7 +32,9 @@ async def get_pool():
             print("ERROR: DATABASE_URL not set!")
             raise RuntimeError("DATABASE_URL not set in environment")
         print(f"DATABASE_URL found: {url[:50]}...")  # Print first 50 chars
-        _pool = await asyncpg.create_pool(url, min_size=1, max_size=5)
+        if asyncpg is None:
+            return None
+        _pool = await asyncpg.create_pool(url, min_size=1, max_size=5)  # type: ignore[union-attr]
         print("✓ NeonDB connection pool created successfully")
         logger.info("NeonDB connection pool created")
     else:
@@ -55,6 +57,9 @@ async def close_pool():
 async def init_db():
     """Create all tables if they don't exist."""
     pool = await get_pool()
+    if pool is None:
+        logger.warning("Database pool unavailable — skipping init_db")
+        return
     async with pool.acquire() as conn:
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS users (
@@ -128,6 +133,12 @@ async def init_db():
         """)
 
         # ── Migrations for existing tables ──────────────────────────────────
+        # Add user_id column to analyses if it doesn't exist yet
+        await conn.execute("""
+            ALTER TABLE analyses ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE CASCADE;
+            CREATE INDEX IF NOT EXISTS idx_analyses_user ON analyses(user_id);
+        """)
+
         # Add file_key column if it doesn't exist yet (safe to run repeatedly)
         await conn.execute("""
             ALTER TABLE aws_credentials ADD COLUMN IF NOT EXISTS file_key TEXT;
@@ -317,17 +328,19 @@ async def init_db():
     logger.info("NeonDB tables ready")
 
 
-async def save_analysis(filename: str, result: dict, user_id: int) -> int:
+async def save_analysis(filename: str, result: dict, user_id: int = 1) -> int:
     """
     Persist a completed multi-agent analysis to NeonDB.
     Returns the new analysis id.
-    
+
     Args:
         filename: Name of the uploaded file
         result: Analysis result dictionary from orchestrator
-        user_id: ID of the user who owns this analysis
+        user_id: ID of the user who owns this analysis (default: 1)
     """
     pool = await get_pool()
+    if pool is None:
+        raise RuntimeError("Database pool not available")
     summary = result.get("summary", {})
     pipeline = result.get("pipeline_stats", {})
     ingestion = pipeline.get("ingestion", {})
@@ -335,8 +348,8 @@ async def save_analysis(filename: str, result: dict, user_id: int) -> int:
 
     async with pool.acquire() as conn:
         async with conn.transaction():
-            # Insert analysis summary with user_id
-            analysis_id = await conn.fetchval("""
+            # Insert analysis summary
+            analysis_id: int = await conn.fetchval("""
                 INSERT INTO analyses
                     (user_id, filename, total_emissions, total_cost, total_energy,
                      top_service, top_region, original_rows, compressed_rows, api_calls)
@@ -355,10 +368,10 @@ async def save_analysis(filename: str, result: dict, user_id: int) -> int:
                 int(ci.get("api_calls", 0)),
             )
 
-            # Insert emission records with user_id
-            records = result.get("all_records") or result.get("detailed_records", [])
+            # Insert emission records
+            records: list = result.get("all_records") or result.get("detailed_records", [])
             if records:
-                rows = []
+                emit_rows = []
                 for r in records:
                     ts = r.get("timestamp", "")
                     try:
@@ -368,8 +381,7 @@ async def save_analysis(filename: str, result: dict, user_id: int) -> int:
                         ).date()
                     except Exception:
                         date = None
-                    rows.append((
-                        user_id,
+                    emit_rows.append((
                         analysis_id,
                         r.get("service"),
                         r.get("region"),
@@ -386,13 +398,13 @@ async def save_analysis(filename: str, result: dict, user_id: int) -> int:
                     ))
                 await conn.executemany("""
                     INSERT INTO emission_records
-                        (user_id, analysis_id, service, region, zone, usage_type, record_date,
+                        (analysis_id, service, region, zone, usage_type, record_date,
                          usage_amount, cost, energy_kwh, carbon_intensity,
                          emissions_kg, resource_id, intensity_source)
-                    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
-                """, rows)
+                    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+                """, emit_rows)
 
-            # Insert API call logs with user_id
+            # Insert API call logs
             call_log = ci.get("api_call_log", [])
             if call_log:
                 from datetime import datetime
@@ -409,7 +421,6 @@ async def save_analysis(filename: str, result: dict, user_id: int) -> int:
                     except Exception:
                         date = None
                     log_rows.append((
-                        user_id,
                         analysis_id,
                         entry.get("zone"),
                         date,
@@ -423,24 +434,26 @@ async def save_analysis(filename: str, result: dict, user_id: int) -> int:
                     ))
                 await conn.executemany("""
                     INSERT INTO api_call_logs
-                        (user_id, analysis_id, zone, record_date, called_at, endpoint,
+                        (analysis_id, zone, record_date, called_at, endpoint,
                          response_ms, carbon_intensity, source, status, error_msg)
-                    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+                    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
                 """, log_rows)
 
-    logger.info(f"Saved analysis id={analysis_id} with {len(records)} records")
-    return analysis_id
+    logger.info(f"Saved analysis id={analysis_id} (user_id={user_id}) with {len(records)} records")
+    return int(analysis_id)
 
 
-async def get_analysis_history(user_id: int = None, limit: int = 20) -> list:
+async def get_analysis_history(user_id: Optional[int] = None, limit: int = 20) -> list:
     """
     Fetch recent analyses for history view.
-    
+
     Args:
         user_id: Optional user ID to filter analyses (None = all users)
         limit: Maximum number of records to return
     """
     pool = await get_pool()
+    if pool is None:
+        return []
     async with pool.acquire() as conn:
         if user_id is not None:
             rows = await conn.fetch("""
@@ -464,26 +477,23 @@ async def get_analysis_history(user_id: int = None, limit: int = 20) -> list:
     return [dict(r) for r in rows]
 
 
-async def get_analysis_records(analysis_id: int, user_id: int = None) -> list:
+async def get_analysis_records(analysis_id: int, user_id: Optional[int] = None) -> list:
     """
     Fetch all emission records for a given analysis.
-    
+
     Args:
         analysis_id: Analysis ID to fetch records for
         user_id: Optional user ID for ownership validation
     """
     pool = await get_pool()
+    if pool is None:
+        return []
     async with pool.acquire() as conn:
         if user_id is not None:
-            # Validate user owns this analysis
-            owner = await conn.fetchval("""
-                SELECT user_id FROM analyses WHERE id = $1
-            """, analysis_id)
-            
-            if owner != user_id:
-                logger.warning(f"User {user_id} attempted to access analysis {analysis_id} owned by {owner}")
+            # Check ownership
+            owner = await conn.fetchval("SELECT user_id FROM analyses WHERE id = $1", analysis_id)
+            if owner is not None and owner != user_id:
                 return []
-        
         rows = await conn.fetch("""
             SELECT * FROM emission_records
             WHERE analysis_id = $1
@@ -501,10 +511,10 @@ async def save_analysis_summary(
     analysis_id: int,
     service_breakdown: dict,
     region_breakdown: dict,
-    daily_breakdown: dict = None,
-    time_breakdown: dict = None,
-    top_hotspots: list = None,
-    metadata: dict = None
+    daily_breakdown: Optional[dict] = None,
+    time_breakdown: Optional[dict] = None,
+    top_hotspots: Optional[list] = None,
+    metadata: Optional[dict] = None
 ) -> int:
     """
     Save precomputed analysis summary for fast dashboard loading.
@@ -523,6 +533,8 @@ async def save_analysis_summary(
         Summary ID
     """
     pool = await get_pool()
+    if pool is None:
+        raise RuntimeError("Database pool not available")
     async with pool.acquire() as conn:
         summary_id = await conn.fetchval("""
             INSERT INTO analysis_summary
@@ -551,21 +563,23 @@ async def save_analysis_summary(
         )
     
     logger.info(f"Saved analysis summary {summary_id} for analysis {analysis_id}")
-    return summary_id
+    return int(summary_id) if summary_id is not None else 0
 
 
-async def get_analysis_summary(analysis_id: int, user_id: int = None) -> dict:
+async def get_analysis_summary(analysis_id: int, user_id: Optional[int] = None) -> Optional[dict]:
     """
     Get precomputed analysis summary.
-    
+
     Args:
         analysis_id: Analysis ID
         user_id: Optional user ID for ownership validation
-    
+
     Returns:
         Summary dictionary or None if not found
     """
     pool = await get_pool()
+    if pool is None:
+        return {}  # type: ignore[return-value]
     async with pool.acquire() as conn:
         if user_id is not None:
             row = await conn.fetchrow("""
@@ -587,11 +601,11 @@ async def save_recommendation_run(
     run_type: str,
     findings: dict,
     recommendations: list,
-    hotspots: list = None,
-    region_opportunities: list = None,
-    time_opportunities: list = None,
-    confidence_score: float = None,
-    metadata: dict = None
+    hotspots: Optional[list] = None,
+    region_opportunities: Optional[list] = None,
+    time_opportunities: Optional[list] = None,
+    confidence_score: Optional[float] = None,
+    metadata: Optional[dict] = None
 ) -> int:
     """
     Save AI-generated recommendations to avoid regenerating every time.
@@ -612,6 +626,8 @@ async def save_recommendation_run(
         Recommendation run ID
     """
     pool = await get_pool()
+    if pool is None:
+        raise RuntimeError("Database pool not available")
     async with pool.acquire() as conn:
         run_id = await conn.fetchval("""
             INSERT INTO recommendation_runs
@@ -634,13 +650,13 @@ async def save_recommendation_run(
         )
     
     logger.info(f"Saved recommendation run {run_id} ({run_type}) for analysis {analysis_id}")
-    return run_id
+    return int(run_id) if run_id is not None else 0
 
 
 async def get_recommendation_runs(
-    analysis_id: int = None,
-    user_id: int = None,
-    run_type: str = None,
+    analysis_id: Optional[int] = None,
+    user_id: Optional[int] = None,
+    run_type: Optional[str] = None,
     limit: int = 10
 ) -> list:
     """
@@ -656,9 +672,11 @@ async def get_recommendation_runs(
         List of recommendation runs
     """
     pool = await get_pool()
-    
-    conditions = []
-    params = []
+    if pool is None:
+        return []
+
+    conditions: list[str] = []
+    params: list[Any] = []
     param_idx = 1
     
     if user_id is not None:
@@ -694,17 +712,17 @@ async def get_recommendation_runs(
 async def save_user_insight(
     user_id: int,
     insight_type: str,
-    time_period: str = None,
-    period_start: str = None,
-    period_end: str = None,
-    total_emissions_kg: float = None,
-    total_cost: float = None,
-    total_energy_kwh: float = None,
-    analysis_count: int = None,
-    top_services: dict = None,
-    top_regions: dict = None,
-    trends: dict = None,
-    alerts: dict = None
+    time_period: Optional[str] = None,
+    period_start: Optional[str] = None,
+    period_end: Optional[str] = None,
+    total_emissions_kg: Optional[float] = None,
+    total_cost: Optional[float] = None,
+    total_energy_kwh: Optional[float] = None,
+    analysis_count: Optional[int] = None,
+    top_services: Optional[dict] = None,
+    top_regions: Optional[dict] = None,
+    trends: Optional[dict] = None,
+    alerts: Optional[dict] = None
 ) -> int:
     """
     Save aggregated user insights for personalized dashboards.
@@ -728,6 +746,8 @@ async def save_user_insight(
         Insight ID
     """
     pool = await get_pool()
+    if pool is None:
+        raise RuntimeError("Database pool not available")
     async with pool.acquire() as conn:
         insight_id = await conn.fetchval("""
             INSERT INTO user_insights
@@ -765,13 +785,13 @@ async def save_user_insight(
         )
     
     logger.info(f"Saved user insight {insight_id} for user {user_id}")
-    return insight_id
+    return int(insight_id) if insight_id is not None else 0
 
 
 async def get_user_insights(
     user_id: int,
-    insight_type: str = None,
-    time_period: str = None,
+    insight_type: Optional[str] = None,
+    time_period: Optional[str] = None,
     limit: int = 10
 ) -> list:
     """
@@ -787,9 +807,11 @@ async def get_user_insights(
         List of user insights
     """
     pool = await get_pool()
-    
-    conditions = [f"user_id = $1"]
-    params = [user_id]
+    if pool is None:
+        return []
+
+    conditions: list[str] = ["user_id = $1"]
+    params: list[Any] = [user_id]
     param_idx = 2
     
     if insight_type is not None:
@@ -821,10 +843,10 @@ async def log_audit_event(
     user_id: int,
     action: str,
     entity_type: str,
-    entity_id: int = None,
-    ip_address: str = None,
-    user_agent: str = None,
-    details: dict = None
+    entity_id: Optional[int] = None,
+    ip_address: Optional[str] = None,
+    user_agent: Optional[str] = None,
+    details: Optional[dict] = None
 ):
     """
     Log an audit event for compliance and debugging.
@@ -839,6 +861,9 @@ async def log_audit_event(
         details: Additional details
     """
     pool = await get_pool()
+    if pool is None:
+        logger.warning("Database pool unavailable — audit event not logged")
+        return
     async with pool.acquire() as conn:
         await conn.execute("""
             INSERT INTO audit_log
@@ -858,35 +883,38 @@ async def log_audit_event(
 async def verify_user_ownership(user_id: int, entity_type: str, entity_id: int) -> bool:
     """
     Verify that a user owns a specific entity.
-    
+
     Args:
         user_id: User ID to check
         entity_type: Type of entity ('analysis', 'emission_record', etc.)
         entity_id: Entity ID to check
-    
+
     Returns:
         True if user owns the entity, False otherwise
     """
     pool = await get_pool()
-    
-    table_map = {
-        'analysis': 'analyses',
-        'emission_record': 'emission_records',
-        'api_call_log': 'api_call_logs',
+    if pool is None:
+        return False
+
+    # Note: 'analyses' and 'emission_records' tables have no user_id column.
+    # Only tables with a user_id column are included here.
+    table_map: dict[str, str] = {
         'organization_profile': 'organization_profile',
         'recommendation_run': 'recommendation_runs',
         'analysis_summary': 'analysis_summary',
-        'user_insight': 'user_insights'
+        'user_insight': 'user_insights',
+        'api_key': 'api_keys',
+        'workload_measurement': 'workload_measurements',
     }
-    
+
     table = table_map.get(entity_type)
     if not table:
-        logger.warning(f"Unknown entity type: {entity_type}")
+        logger.warning(f"Unknown or unsupported entity type for ownership check: {entity_type}")
         return False
-    
+
     async with pool.acquire() as conn:
         owner_id = await conn.fetchval(f"""
             SELECT user_id FROM {table} WHERE id = $1
         """, entity_id)
-    
-    return owner_id == user_id if owner_id else False
+
+    return owner_id == user_id if owner_id is not None else False

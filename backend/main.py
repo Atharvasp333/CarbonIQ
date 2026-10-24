@@ -93,9 +93,10 @@ async def health_check():
         try:
             from database import get_pool
             pool = await get_pool()
-            async with pool.acquire() as conn:
-                await conn.fetchval("SELECT 1")
-            db_ok = True
+            if pool is not None:
+                async with pool.acquire() as conn:
+                    await conn.fetchval("SELECT 1")
+                db_ok = True
         except Exception:
             db_ok = False
 

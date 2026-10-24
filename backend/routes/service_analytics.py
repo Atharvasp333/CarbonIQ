@@ -1,8 +1,7 @@
-"""
-Service-Level Analytics API Routes
-"""
-from fastapi import APIRouter, HTTPException
+from typing import Optional
+from fastapi import APIRouter, HTTPException, Depends
 import logging
+from routes.api_keys import get_current_user_or_api_key
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -115,11 +114,12 @@ async def list_available_services():
 
 
 @router.get("/history")
-async def get_analysis_history():
+async def get_analysis_history(current_user: Optional[dict] = Depends(get_current_user_or_api_key)):
     """Return list of past analyses from NeonDB."""
     try:
         from database import get_analysis_history
-        rows = await get_analysis_history(limit=50)
+        user_id = current_user.get('id') if current_user else None
+        rows = await get_analysis_history(user_id=user_id, limit=50)
         # Convert datetime objects for JSON serialisation
         for r in rows:
             for k, v in r.items():
@@ -132,11 +132,15 @@ async def get_analysis_history():
 
 
 @router.get("/history/{analysis_id}/records")
-async def get_historical_records(analysis_id: int):
+async def get_historical_records(
+    analysis_id: int,
+    current_user: Optional[dict] = Depends(get_current_user_or_api_key)
+):
     """Return emission records for a specific past analysis."""
     try:
         from database import get_analysis_records
-        rows = await get_analysis_records(analysis_id)
+        user_id = current_user.get('id') if current_user else None
+        rows = await get_analysis_records(analysis_id, user_id=user_id)
         for r in rows:
             for k, v in r.items():
                 if hasattr(v, 'isoformat'):

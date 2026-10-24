@@ -27,8 +27,10 @@ async def create_profile(profile: OrganizationProfileCreate, current_user=Depend
     
     try:
         pool = await get_pool()
+        if pool is None:
+            raise HTTPException(status_code=503, detail="Database pool not available")
         user_id = current_user['id']
-        
+
         async with pool.acquire() as conn:
             # Check if profile already exists for this user
             existing = await conn.fetchrow("""
@@ -94,8 +96,10 @@ async def get_profile(current_user=Depends(get_current_user)):
     
     try:
         pool = await get_pool()
+        if pool is None:
+            raise HTTPException(status_code=503, detail="Database pool not available")
         user_id = current_user['id']
-        
+
         async with pool.acquire() as conn:
             row = await conn.fetchrow("""
                 SELECT * FROM organization_profile
@@ -124,8 +128,10 @@ async def update_profile(updates: OrganizationProfileUpdate, current_user=Depend
     
     try:
         pool = await get_pool()
+        if pool is None:
+            raise HTTPException(status_code=503, detail="Database pool not available")
         user_id = current_user['id']
-        
+
         async with pool.acquire() as conn:
             # Get current profile for this user
             current = await conn.fetchrow("""
@@ -204,8 +210,10 @@ async def delete_profile(current_user=Depends(get_current_user)):
     
     try:
         pool = await get_pool()
+        if pool is None:
+            raise HTTPException(status_code=503, detail="Database pool not available")
         user_id = current_user['id']
-        
+
         async with pool.acquire() as conn:
             result = await conn.execute("""
                 DELETE FROM organization_profile

@@ -306,15 +306,15 @@ def monitor(region, interval, duration):
         while (time.time() - start_time) < duration:
             data = carbon_client.get_current_intensity(region)
             
-            if data:
-                intensity = data.get('carbon_intensity')
-                renewable = data.get('renewable_percentage')
+            if data and data.get('carbon_intensity') is not None:
+                intensity = float(data['carbon_intensity'])
+                renewable = float(data.get('renewable_percentage') or 0.0)
                 timestamp = datetime.now().strftime('%H:%M:%S')
                 
                 # Track min/max
-                if lowest is None or intensity < lowest['intensity']:
+                if lowest is None or intensity < float(lowest['intensity']):
                     lowest = {'intensity': intensity, 'time': timestamp}
-                if highest is None or intensity > highest['intensity']:
+                if highest is None or intensity > float(highest['intensity']):
                     highest = {'intensity': intensity, 'time': timestamp}
                 
                 readings.append(intensity)
@@ -334,7 +334,7 @@ def monitor(region, interval, duration):
             time.sleep(interval)
         
         # Summary
-        if readings:
+        if readings and lowest and highest:
             avg_intensity = sum(readings) / len(readings)
             click.echo("\n" + "="*60)
             click.echo("MONITORING SUMMARY")

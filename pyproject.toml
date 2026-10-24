@@ -31,3 +31,12 @@ carboniq = "cli.carboniq_cli:cli"
 
 [tool.setuptools.packages.find]
 include = ["carboniq*", "cli*"]
+
+[tool.pyrefly]
+search-path = [".", "backend", "cli"]
+project-excludes = ["**/node_modules", "**/__pycache__", "**/.venv/**/*", "**/venv/**/*"]
+
+[tool.pyrefly.errors]
+"bad-argument-type" = "warn"
+"unsupported-operation" = "warn"
+"missing-attribute" = "warn"

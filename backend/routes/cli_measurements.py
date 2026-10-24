@@ -57,6 +57,8 @@ async def create_measurement(
     
     try:
         pool = await get_pool()
+        if pool is None:
+            raise HTTPException(status_code=500, detail="Database pool not available")
         
         # Parse measured_at timestamp
         measured_at = None
@@ -130,6 +132,8 @@ async def get_measurement_history(
     
     try:
         pool = await get_pool()
+        if pool is None:
+            raise HTTPException(status_code=500, detail="Database pool not available")
         
         async with pool.acquire() as conn:
             if workload_type:
@@ -194,6 +198,8 @@ async def get_measurement_stats(
     
     try:
         pool = await get_pool()
+        if pool is None:
+            raise HTTPException(status_code=500, detail="Database pool not available")
         
         async with pool.acquire() as conn:
             stats = await conn.fetchrow("""

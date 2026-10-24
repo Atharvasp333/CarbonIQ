@@ -36,6 +36,13 @@ async def generate_insights():
     
     try:
         pool = await get_pool()
+        if pool is None:
+            return {
+                'success': False,
+                'message': 'Database pool not available',
+                'analysis_id': None,
+                'profile_configured': False
+            }
         logger.info("✓ Database pool acquired")
         
         async with pool.acquire() as conn:
@@ -123,6 +130,8 @@ async def get_recommendations(current_user=Depends(get_current_user)):
     try:
         print("Step 1: Getting database pool...")
         pool = await get_pool()
+        if pool is None:
+            raise HTTPException(status_code=500, detail="Database pool not available")
         print(f"Step 2: Pool acquired: {pool is not None}")
         logger.info("✓ Database pool acquired")
         
@@ -227,9 +236,10 @@ async def get_recommendations(current_user=Depends(get_current_user)):
                     'status': rec_data['status']
                 }
             
-            print(f"Step 9: Returning {len(response['recommendations'])} recommendations")
+            rec_list = response.get('recommendations') or []
+            print(f"Step 9: Returning {len(rec_list)} recommendations")
             print("=" * 80)
-            logger.info(f"✓ Returning {len(response['recommendations'])} recommendations")
+            logger.info(f"✓ Returning {len(rec_list)} recommendations")
             logger.info("=" * 80)
             return response
             
@@ -259,6 +269,8 @@ async def get_recommendation_history():
     """
     try:
         pool = await get_pool()
+        if pool is None:
+            raise HTTPException(status_code=500, detail="Database pool not available")
         
         async with pool.acquire() as conn:
             rows = await conn.fetch("""
@@ -302,7 +314,9 @@ async def get_recommendation_by_id(recommendation_id: int):
     """
     try:
         pool = await get_pool()
-        
+        if pool is None:
+            raise HTTPException(status_code=500, detail="Database pool not available")
+
         async with pool.acquire() as conn:
             row = await conn.fetchrow("""
                 SELECT 

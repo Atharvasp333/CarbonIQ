@@ -9,6 +9,7 @@ import asyncpg
 import logging
 from pathlib import Path
 from datetime import datetime
+from typing import Optional
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -97,7 +98,7 @@ async def apply_migration(conn: asyncpg.Connection, migration_file: Path) -> boo
         return False
 
 
-async def run_migrations(database_url: str = None, dry_run: bool = False):
+async def run_migrations(database_url: Optional[str] = None, dry_run: bool = False):
     """Run all pending migrations."""
     if database_url is None:
         database_url = os.getenv("DATABASE_URL")
@@ -166,7 +167,7 @@ async def run_migrations(database_url: str = None, dry_run: bool = False):
         await conn.close()
 
 
-async def list_migrations(database_url: str = None):
+async def list_migrations(database_url: Optional[str] = None):
     """List all migrations and their status."""
     if database_url is None:
         database_url = os.getenv("DATABASE_URL")
@@ -206,7 +207,7 @@ async def list_migrations(database_url: str = None):
         await conn.close()
 
 
-async def rollback_migration(database_url: str = None, version: str = None):
+async def rollback_migration(database_url: Optional[str] = None, version: Optional[str] = None):
     """Mark a migration as rolled back (manual rollback required)."""
     if database_url is None:
         database_url = os.getenv("DATABASE_URL")

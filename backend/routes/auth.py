@@ -129,6 +129,8 @@ async def get_current_user(
 
     from database import get_pool
     pool = await get_pool()
+    if pool is None:
+        raise HTTPException(status_code=503, detail="Database unavailable")
     async with pool.acquire() as conn:
         user = await conn.fetchrow(
             "SELECT id, name, email, created_at FROM users WHERE email = $1", email
@@ -194,7 +196,9 @@ async def signup(req: SignupRequest):
         from database import get_pool
         pool = await get_pool()
         print(f"Step 2: Pool acquired: {pool is not None}")
-        
+        if pool is None:
+            raise HTTPException(status_code=503, detail="Database unavailable")
+
         async with pool.acquire() as conn:
             print(f"Step 3: Checking if email exists: {req.email.lower()}")
             existing = await conn.fetchrow(
@@ -252,7 +256,9 @@ async def login(req: LoginRequest):
         from database import get_pool
         pool = await get_pool()
         print(f"Step 2: Pool acquired: {pool is not None}")
-        
+        if pool is None:
+            raise HTTPException(status_code=503, detail="Database unavailable")
+
         async with pool.acquire() as conn:
             print(f"Step 3: Fetching user with email: {req.email.lower()}")
             user = await conn.fetchrow(
