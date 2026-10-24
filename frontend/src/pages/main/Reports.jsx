@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Download, Calendar, Filter, TrendingUp, DollarSign, Zap } from 'lucide-react';
+import { Download, Calendar, Filter, TrendingUp, DollarSign, Zap, FileText } from 'lucide-react';
 import { BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../hooks/useAuth';
+import { generateSustainabilityPDF } from '../../lib/pdfExport';
 
 const COLORS = ['#10B981', '#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444', '#EC4899', '#6366F1', '#14B8A6'];
 
 export default function Reports() {
+  const { user } = useAuth();
   const [analysisData, setAnalysisData] = useState(null);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [serviceFilter, setServiceFilter] = useState('all');
@@ -31,8 +34,21 @@ export default function Reports() {
   };
 
   const handleExportPDF = () => {
-    toast.success('PDF export started');
-    // TODO: Implement PDF export
+    if (!analysisData || !analysisData.summary) {
+      toast.error('No analysis data available to export');
+      return;
+    }
+    try {
+      toast.loading('Generating executive PDF report...', { id: 'pdf-toast' });
+      generateSustainabilityPDF(analysisData, {
+        name: user?.name,
+        organization: user?.organization
+      });
+      toast.success('PDF report ready for download/print', { id: 'pdf-toast' });
+    } catch (err) {
+      console.error('PDF export error:', err);
+      toast.error('Failed to generate PDF report', { id: 'pdf-toast' });
+    }
   };
 
   const handleExportCSV = () => {
