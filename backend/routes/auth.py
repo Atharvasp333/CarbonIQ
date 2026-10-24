@@ -212,7 +212,23 @@ async def login(req: LoginRequest):
                 "SELECT id, name, email, password, created_at FROM users WHERE email = $1",
                 req.email.lower(),
             )
-        if not user or not verify_password(req.password, user["password"]):
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+        
+        # Handle different password formats
+        stored_password = user["password"]
+        
+        # If password is "neon_auth_managed", create new hash
+        if stored_password == "neon_auth_managed":
+            # User was created via Neon Auth, set new password
+            hashed = hash_password(req.password)
+            async with pool.acquire() as conn:
+                await conn.execute(
+                    "UPDATE users SET password = $1 WHERE id = $2",
+                    hashed, user["id"]
+                )
+            # Password updated, login successful
+        elif not verify_password(req.password, stored_password):
             raise HTTPException(status_code=401, detail="Invalid email or password")
 
         token = create_access_token(user["id"], user["email"])
