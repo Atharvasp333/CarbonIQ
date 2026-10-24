@@ -12,10 +12,16 @@ from pathlib import Path
 from dotenv import load_dotenv
 from typing import Optional
 
-from codecarbon_wrapper import CodeCarbonMeasurement
-from backend_client import BackendClient
-from carbon_aware import CarbonAwareClient
-from config_manager import get_api_key, get_api_url, save_config_value, get_config
+try:
+    from cli.codecarbon_wrapper import CodeCarbonMeasurement
+    from cli.backend_client import BackendClient
+    from cli.carbon_aware import CarbonAwareClient
+    from cli.config_manager import get_api_key, get_api_url, save_config_value, get_config
+except ImportError:
+    from codecarbon_wrapper import CodeCarbonMeasurement
+    from backend_client import BackendClient
+    from carbon_aware import CarbonAwareClient
+    from config_manager import get_api_key, get_api_url, save_config_value, get_config
 
 # Load environment variables
 load_dotenv()

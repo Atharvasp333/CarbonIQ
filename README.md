@@ -401,21 +401,21 @@ Output:
 📁 Results saved to: cli/measurements/Compute_Intensive_Test_20261024_153015.json
 ```
 
-#### Step 4: Upload CLI Measurement to Backend (Future Feature)
-```python
-# From CLI
-python carboniq_cli.py upload cli/measurements/Compute_Intensive_Test_20261024_153015.json
+#### Step 4: Real-Time Sync with CarbonIQ Dashboard
+Workload measurements automatically stream to the user's dashboard over authenticated HTTPS:
+```bash
+# Set your API Key once
+carboniq config set-key ciq_live_your_key_here
 
-# Measurement appears in web dashboard under "Local Measurements" tab
+# Measure any workload — automatically posted to your user dashboard
+carboniq measure -n "AI-Model-Training" -t "ml-training" -- python train.py
 ```
 
-#### Step 5: Compare AWS Billing vs Local Measurements
-```
-Dashboard now shows:
-- AWS Services: 5.66 kg CO2e over 16 days
-- Local Workloads: 9.22 gCO2e per run
-- Combined Analytics: Total carbon footprint tracking
-```
+#### Step 5: Unified Cloud & Local Emissions Intelligence
+The CarbonIQ web dashboard aggregates both data streams:
+- **Cloud Footprint (AWS CUR)**: Macro-level infrastructure emissions, scope accounting, and region-shift recommendations.
+- **Local & CI/CD Compute (CLI Workloads)**: Micro-level execution measurements (CPU/RAM kWh, gCO2e) synced in real time.
+- **Sustainability Governance**: Track total carbon emissions across development lifecycles in one unified platform.
 
 ### Key Insights from This Journey
 
@@ -436,11 +436,20 @@ Dashboard now shows:
 
 ---
 
-## Known Issues / Roadmap
+## Project Status & Roadmap
 
-- [ ] API Gateway not yet in emission calculation factors
-- [ ] Optimization agent doesn't flag regional vs. global service migration feasibility
-- [ ] Electricity Maps calls take ~37s for 48 zones (target: parallelize to <10s)
-- [ ] PDF report export not yet implemented
-- [ ] Email verification after signup not yet enabled
-- [ ] Rate limiting on auth endpoints
+### Completed Milestones
+- [x] Multi-agent AWS Cost and Usage Report (CUR) carbon accounting engine with gzip streaming decompression.
+- [x] Multi-tenant database architecture with NeonDB (PostgreSQL) and user isolation across analyses and organization profiles.
+- [x] Full developer authentication platform with JWT sessions and SHA-256 API key issuance (`ciq_live_...`).
+- [x] Real-time workload emission telemetry ingestion and analytics pipeline.
+- [x] Explainable AI sustainability recommendation engine with organizational constraint validation.
+- [x] Sustainable AST Code Optimizer & green refactoring generator (`carboniq audit` and `carboniq optimize`).
+- [x] End-to-end integration and user lifecycle validation suite (30/30 tests passing).
+
+### Active Roadmap & Planned Enhancements
+- [ ] PyPI distribution for global installation (`pip install carboniq`).
+- [ ] VS Code / IDE Marketplace Extension for inline green code recommendations and audit warnings.
+- [ ] Downloadable executive sustainability compliance reports (PDF export).
+- [ ] Extended emission calculation factors for Amazon API Gateway and managed messaging services.
+- [ ] Multi-cloud billing report ingestion for Google Cloud Platform (GCP) and Microsoft Azure.

@@ -15,26 +15,34 @@ Command-line interface and Python SDK for measuring carbon emissions of computin
 
 ## 📦 Installation & Setup
 
-### 1. Install the `carboniq` Package
+### 1. Installation
 
+#### Standard Editable Installation (Development)
 From the root of the CarbonIQ repository:
 ```bash
 pip install -e .
 ```
-*(Or in the CLI directory: `pip install -r requirements.txt`)*
 
-Once installed, the `carboniq` command is globally available in your terminal!
+#### Windows Environment Setup Note
+When running Python on Windows without standard script directories in the system `PATH`, ensure the user Scripts directory is added:
+```powershell
+$scriptsPath = "$env:LOCALAPPDATA\Python\pythoncore-3.15-64\Scripts"
+if ($env:PATH -notlike "*$scriptsPath*") {
+    [Environment]::SetEnvironmentVariable("PATH", "$env:PATH;$scriptsPath", [EnvironmentVariableTarget]::User)
+    $env:PATH += ";$scriptsPath"
+}
+```
+*Alternatively, the CLI can always be executed via module syntax: `python -m cli.carboniq_cli <command>`.*
 
-### 2. Configure Your API Key
-
-1. Log into your CarbonIQ Web Dashboard (`https://carboniq-capstone.vercel.app`).
-2. Go to the **CLI & Workloads** tab in the sidebar.
+### 2. Configure Developer Authentication
+1. Authenticate to the CarbonIQ Web Dashboard (`https://carboniq-capstone.vercel.app`).
+2. Navigate to the **CLI & Workloads** tab in the sidebar.
 3. Click **Generate API Key** and copy your token (`ciq_live_...`).
-4. Run in your terminal:
+4. Execute in your terminal:
    ```bash
-   carboniq config set-key ciq_live_your_copied_key_here
+   carboniq config set-key ciq_live_your_token_here
    ```
-5. Verify your authenticated connection:
+5. Confirm connection and telemetry identity:
    ```bash
    carboniq whoami
    ```

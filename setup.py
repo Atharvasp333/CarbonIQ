@@ -1,3 +1,4 @@
+# pyrefly: ignore[missing-import]
 from setuptools import setup, find_packages
 
 setup(

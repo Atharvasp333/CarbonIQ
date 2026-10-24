@@ -5,8 +5,10 @@ Handles communication with the CarbonIQ FastAPI backend.
 
 import requests
 from typing import Dict, Optional
-import json
-from config_manager import get_api_key
+try:
+    from cli.config_manager import get_api_key
+except ImportError:
+    from config_manager import get_api_key
 
 
 class BackendClient:

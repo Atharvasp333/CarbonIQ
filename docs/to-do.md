@@ -19,43 +19,44 @@ This document maintains an accurate, up-to-date record of completed milestones, 
 
 ## ✅ COMPLETED MILESTONES
 
-### 1. Authentication & User Multi-Tenancy
-- [x] Fixed password hashing using direct `bcrypt` implementation (Python 3.12+ compatible).
-- [x] Multi-tenant user isolation on all routes (analyses, profile, recommendations, CLI measurements).
-- [x] JWT verification with fallback support for Neon Auth and HS256 tokens.
-- [x] Organization profile settings linked to user account.
+### 1. Authentication & Multi-Tenant User Isolation
+- [x] Implemented secure password hashing via `bcrypt` (Python 3.12+ compatible).
+- [x] Multi-tenant data isolation across all domains (`analyses`, `organization_profile`, `recommendations`, `workload_measurements`).
+- [x] Hybrid JWT verification supporting Neon Auth Ed25519 (EdDSA via JWKS) and legacy HS256 tokens.
+- [x] Organization profile schema and questionnaire integration linked strictly to authenticated user identity.
+- [x] Direct user association in `analyses` table via foreign key `user_id` and automatic schema migration.
 
 ### 2. Multi-Agent Cloud Carbon Accounting Engine
-- [x] CUR Ingestion Agent (`csv_agent.py` and `compression_agent.py`) with gzip auto-decompression.
-- [x] Region Mapping Agent (`region_mapping_agent.py`) mapping cloud zones to Electricity Maps grids.
-- [x] Emission Calculation Agent (`emission_calculation_agent.py`) with power factors across EC2, S3, RDS, Lambda.
-- [x] AWS S3 auto-sync discovery for new billing reports.
+- [x] CUR Ingestion Agent (`csv_agent.py` & `compression_agent.py`) with memory-efficient streaming gzip decompression.
+- [x] Regional Mapping Agent (`region_mapping_agent.py`) correlating cloud zones with Electricity Maps bidding zones.
+- [x] Emission Calculation Agent (`emission_calculation_agent.py`) utilizing power factors for EC2, S3, RDS, and Lambda.
+- [x] AWS S3 integration with automated credential encryption and billing report discovery.
 
-### 3. Sustainability Intelligence & Chatbot
-- [x] Intelligence engine (`backend/routes/intelligence.py`) generating tailored green recommendations.
-- [x] What-If Scenario Simulator for region migration and instance downsizing projections.
-- [x] Google Gemini AI Chatbot with sustainability guardrails.
+### 3. Explainable Sustainability Intelligence
+- [x] Multi-stage recommendation orchestrator delivering domain-specific decarbonization strategies.
+- [x] Interactive What-If Scenario Simulator for regional migration and instance downsizing projections.
+- [x] Contextual conversational AI assistant with sustainability domain guardrails.
 
-### 4. Carbon-Aware CLI & Monitoring
-- [x] CodeCarbon hardware tracking (CPU, RAM, GPU energy in kWh & gCO2e).
-- [x] `carboniq monitor` command for real-time terminal grid intensity monitoring.
-- [x] `carboniq recommend-schedule` for green window region forecasting.
-- [x] `carboniq compare` command for side-by-side benchmark comparison.
-- [x] `carboniq stats` and `carboniq history` with cloud backend sync.
+### 4. Carbon-Aware Workload Telemetry & CLI
+- [x] Physical hardware telemetry via CodeCarbon (CPU, RAM, GPU energy in kWh & emissions in gCO2e).
+- [x] Real-time terminal grid intensity monitoring (`carboniq monitor`).
+- [x] Forecasting engine for carbon-optimal execution windows (`carboniq recommend-schedule`).
+- [x] Differential benchmarking utility (`carboniq compare`).
+- [x] Live cloud sync for workload execution metrics (`carboniq stats` and `carboniq history`).
 
-### 5. Developer Platform: API Keys & Web Dashboard Integration
-- [x] Database migration: created `api_keys` and `workload_measurements` tables.
-- [x] API key endpoints: `POST`, `GET`, `DELETE` at `/api/user/api-keys`.
-- [x] Frontend page: **CLI & Workloads** tab added to dashboard with API key generation, active keys list, live KPI cards, and realtime measurement logs table.
-- [x] CLI commands: `carboniq config set-key`, `carboniq config set-url`, and `carboniq whoami`.
+### 5. Developer Platform & API Key Infrastructure
+- [x] NeonDB schema migrations for `api_keys` and `workload_measurements`.
+- [x] Cryptographic SHA-256 token hashing and verification lifecycle (`POST`, `GET`, `DELETE` at `/api/user/api-keys`).
+- [x] Frontend management console: **CLI & Workloads** tab with token generator, KPI cards, and live telemetry log.
+- [x] Developer CLI commands: `carboniq config set-key`, `carboniq config set-url`, and `carboniq whoami`.
 
-### 6. Python Library & Sustainable Code Generation
-- [x] Python package structure ([setup.py](file:///c:/Users/Admin/OneDrive/Documents/GitHub/CarbonIQ/setup.py) and `carboniq/`).
-- [x] `@carboniq.track` decorator & context manager with automatic dashboard upload.
-- [x] `@carboniq.defer_until_green` execution deferral based on grid intensity.
+### 6. Sustainable Code Generation & AST Optimization
+- [x] Modular Python library architecture (`carboniq/` and `pyproject.toml`).
+- [x] `@carboniq.track` decorator and context manager with automatic telemetry transmission.
+- [x] `@carboniq.defer_until_green` intelligent execution deferral governed by grid intensity thresholds.
 - [x] `carboniq audit <file.py>`: AST static code analyzer detecting energy anti-patterns and scoring code A-F.
-- [x] `carboniq optimize <file.py>`: Automated green code refactoring (vectorization hints, `@lru_cache`, memory generators).
-- [x] Full automated integration test suite ([tests/test_e2e_user_flow.py](file:///c:/Users/Admin/OneDrive/Documents/GitHub/CarbonIQ/tests/test_e2e_user_flow.py)) passing with 30/30 assertions (100% success).
+- [x] `carboniq optimize <file.py>`: Automated green code refactoring engine.
+- [x] Comprehensive automated test coverage: `tests/test_e2e_user_flow.py` (30/30 assertions passing) and `tests/test_e2e_user_journey.py` (all lifecycle stages verified).
 
 ---
 
