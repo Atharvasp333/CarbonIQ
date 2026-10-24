@@ -1,0 +1,95 @@
+{
+  "name": "carboniq-vscode",
+  "displayName": "CarbonIQ - Sustainable Code & Carbon Optimizer",
+  "description": "Analyze and generate sustainable, low-carbon Python code directly in VS Code.",
+  "version": "0.1.0",
+  "publisher": "carboniq",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Linters",
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "sustainability",
+    "green software",
+    "carbon footprint",
+    "codecarbon",
+    "energy optimization"
+  ],
+  "activationEvents": [
+    "onLanguage:python",
+    "onCommand:carboniq.auditFile",
+    "onCommand:carboniq.optimizeFile",
+    "onCommand:carboniq.checkGrid",
+    "onCommand:carboniq.trackWorkload"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "carboniq.auditFile",
+        "title": "CarbonIQ: Audit Current File for Carbon Efficiency",
+        "icon": "$(leaf)"
+      },
+      {
+        "command": "carboniq.optimizeFile",
+        "title": "CarbonIQ: Generate Sustainable Green Code (Refactor)",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "carboniq.checkGrid",
+        "title": "CarbonIQ: Check Live Electric Grid Carbon Intensity",
+        "icon": "$(zap)"
+      },
+      {
+        "command": "carboniq.trackWorkload",
+        "title": "CarbonIQ: Measure Active Script Energy with CodeCarbon",
+        "icon": "$(play)"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "carboniq.auditFile",
+          "when": "editorLangId == python",
+          "group": "CarbonIQ@1"
+        },
+        {
+          "command": "carboniq.optimizeFile",
+          "when": "editorLangId == python",
+          "group": "CarbonIQ@2"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "carboniq.auditFile",
+          "when": "editorLangId == python",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "CarbonIQ",
+      "properties": {
+        "carboniq.pythonPath": {
+          "type": "string",
+          "default": "python",
+          "description": "Path to Python executable with carboniq installed."
+        },
+        "carboniq.autoAuditOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically audit Python files for carbon anti-patterns on save."
+        },
+        "carboniq.defaultRegion": {
+          "type": "string",
+          "default": "us-east-1",
+          "description": "Default AWS / electricity region for live carbon intensity checks."
+        }
+      }
+    }
+  }
+}
