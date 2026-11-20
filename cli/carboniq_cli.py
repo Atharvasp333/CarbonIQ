@@ -13,15 +13,21 @@ from dotenv import load_dotenv
 from typing import Optional
 
 try:
-    from cli.codecarbon_wrapper import CodeCarbonMeasurement
-    from cli.backend_client import BackendClient
-    from cli.carbon_aware import CarbonAwareClient
-    from cli.config_manager import get_api_key, get_api_url, save_config_value, get_config
-except ImportError:
-    from codecarbon_wrapper import CodeCarbonMeasurement
-    from backend_client import BackendClient
-    from carbon_aware import CarbonAwareClient
-    from config_manager import get_api_key, get_api_url, save_config_value, get_config
+    from .codecarbon_wrapper import CodeCarbonMeasurement
+    from .backend_client import BackendClient
+    from .carbon_aware import CarbonAwareClient
+    from .config_manager import get_api_key, get_api_url, save_config_value, get_config
+except (ImportError, ValueError):
+    try:
+        from cli.codecarbon_wrapper import CodeCarbonMeasurement
+        from cli.backend_client import BackendClient
+        from cli.carbon_aware import CarbonAwareClient
+        from cli.config_manager import get_api_key, get_api_url, save_config_value, get_config
+    except ImportError:
+        from codecarbon_wrapper import CodeCarbonMeasurement
+        from backend_client import BackendClient
+        from carbon_aware import CarbonAwareClient
+        from config_manager import get_api_key, get_api_url, save_config_value, get_config
 
 # Load environment variables
 load_dotenv()
@@ -388,9 +394,10 @@ def recommend_schedule(duration, deadline, regions):
     
     # Display recommendation
     click.echo("="*60)
-    click.echo("RECOMMENDED EXECUTION SCHEDULE")
+    click.echo("CARBON-AWARE DECISION SUPPORT (RECOMMENDATION ONLY)")
     click.echo("="*60)
-    click.echo(f"\n🏆 OPTIMAL REGION: {results['optimal_region']}")
+    click.echo("Notice: Advisory guidance only; does not perform automatic workload migration or execution.")
+    click.echo(f"\n🏆 RECOMMENDED REGION: {results['optimal_region']}")
     click.echo(f"⚡ Carbon Intensity: {results['optimal_intensity']:.1f} gCO2/kWh")
     click.echo(f"🌱 Renewable %: {results.get('renewable_percentage', 'N/A')}")
     
@@ -401,9 +408,16 @@ def recommend_schedule(duration, deadline, regions):
     # Show comparison with other regions
     if len(regions) > 1:
         click.echo(f"\n📊 COMPARISON:")
-        for region in regions:
-            if region != results['optimal_region']:
-                click.echo(f"   {region}: ~{results.get(f'{region}_intensity', 'N/A')} gCO2/kWh")
+        for r_info in results.get('all_regions', []):
+            r_reg = r_info.get('aws_region')
+            if r_reg != results['optimal_region']:
+                r_int = r_info.get('carbon_intensity', 'N/A')
+                r_ren = r_info.get('renewable_percentage', 'N/A')
+                click.echo(f"   • {r_reg} ({r_info.get('zone', 'N/A')}): {r_int} gCO2/kWh (Renewable: {r_ren}%)")
+    
+    if results.get('source'):
+        mode_label = "Live Electricity Maps API" if "live" in results['source'] else "Empirical Regional Baseline"
+        click.echo(f"\n📡 Data Source: {mode_label}")
     
     click.echo("\n" + "="*60)
 
@@ -656,10 +670,12 @@ def whoami():
 
 def _display_results(results: dict):
     """Display measurement results in a formatted way."""
+    source_label = results.get("measurement_source") or ("CodeCarbon hardware telemetry" if CODECARBON_AVAILABLE else "CPU/RAM baseline estimate (65W TDP)")
     click.echo("\n" + "="*60)
     click.echo("MEASUREMENT RESULTS")
     click.echo("="*60)
-    click.echo(f"Duration:        {results.get('duration_seconds', 'N/A'):.2f} seconds")
+    click.echo(f"Telemetry Source: {source_label}")
+    click.echo(f"Duration:         {results.get('duration_seconds', 'N/A'):.2f} seconds")
     click.echo(f"Energy:          {results.get('energy_kwh', 'N/A'):.6f} kWh")
     click.echo(f"Emissions:       {results.get('emissions_gco2e', 'N/A'):.2f} gCO2e")
     click.echo(f"CPU Energy:      {results.get('cpu_energy', 'N/A'):.6f} kWh")

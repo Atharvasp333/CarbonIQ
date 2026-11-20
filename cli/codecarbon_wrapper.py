@@ -8,7 +8,13 @@ import subprocess
 import time
 from pathlib import Path
 from typing import Optional, Dict, List, Tuple, Any
-from codecarbon import EmissionsTracker, OfflineEmissionsTracker
+try:
+    from codecarbon import EmissionsTracker, OfflineEmissionsTracker
+    CODECARBON_AVAILABLE = True
+except ImportError:
+    EmissionsTracker = None
+    OfflineEmissionsTracker = None
+    CODECARBON_AVAILABLE = False
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -58,7 +64,41 @@ class CodeCarbonMeasurement:
         print(f"[CodeCarbon] Starting measurement for: {' '.join(command)}")
         print(f"[CodeCarbon] Tracking mode: {self.tracking_mode}")
         
-        # Initialize tracker
+        # Initialize tracker or fallback to CPU baseline
+        if not CODECARBON_AVAILABLE:
+            print("[CarbonIQ] Notice: CodeCarbon package not installed — executing with CPU baseline carbon estimation.")
+            start_time = time.time()
+            exit_code = 0
+            try:
+                result = subprocess.run(command, capture_output=True, text=True, check=False)
+                exit_code = result.returncode
+                if result.stdout:
+                    print("\n[Command Output]:")
+                    print(result.stdout)
+                if result.stderr:
+                    print("\n[Command Errors]:")
+                    print(result.stderr)
+            except Exception as e:
+                print(f"[Error] Failed to execute command: {e}")
+                exit_code = 1
+            duration = max(0.001, time.time() - start_time)
+            energy_kwh = (65.0 * (duration / 3600.0)) / 1000.0
+            emissions_kg = energy_kwh * 0.380
+            return {
+                "workload_name": self.workload_name,
+                "workload_type": self.workload_type,
+                "duration_seconds": duration,
+                "emissions_gco2e": emissions_kg * 1000.0,
+                "emissions_kgco2e": emissions_kg,
+                "energy_kwh": energy_kwh,
+                "cpu_energy": energy_kwh * 0.7,
+                "ram_energy": energy_kwh * 0.3,
+                "carbon_intensity": 380.0,
+                "country_name": "Local Host (Estimated)",
+                "measurement_source": "CPU/RAM baseline estimate (65W TDP model)",
+                "exit_code": exit_code
+            }
+
         try:
             self.tracker = EmissionsTracker(
                 project_name=self.project_name,
@@ -133,7 +173,37 @@ class CodeCarbonMeasurement:
         """
         print(f"[CodeCarbon] Starting measurement for function: {func.__name__}")
         
-        # Initialize tracker
+        # Initialize tracker or fallback to CPU baseline
+        if not CODECARBON_AVAILABLE:
+            print("[CarbonIQ] Notice: CodeCarbon package not installed — executing with CPU baseline carbon estimation.")
+            start_time = time.time()
+            func_result = None
+            error = None
+            try:
+                func_result = func(*args, **kwargs)
+            except Exception as e:
+                error = e
+                print(f"[Error] Function raised exception: {e}")
+            duration = max(0.001, time.time() - start_time)
+            energy_kwh = (65.0 * (duration / 3600.0)) / 1000.0
+            emissions_kg = energy_kwh * 0.380
+            measurement = {
+                "workload_name": self.workload_name,
+                "workload_type": self.workload_type,
+                "duration_seconds": duration,
+                "emissions_gco2e": emissions_kg * 1000.0,
+                "emissions_kgco2e": emissions_kg,
+                "energy_kwh": energy_kwh,
+                "cpu_energy": energy_kwh * 0.7,
+                "ram_energy": energy_kwh * 0.3,
+                "carbon_intensity": 380.0,
+                "country_name": "Local Host (Estimated)",
+                "exit_code": 0 if not error else 1
+            }
+            if error:
+                raise error
+            return func_result, measurement
+
         try:
             self.tracker = EmissionsTracker(
                 project_name=self.project_name,
@@ -206,6 +276,7 @@ class CodeCarbonMeasurement:
             "duration_seconds": round(duration, 2),
             "emissions_gco2e": round(emissions_gco2e, 4),
             "emissions_kgco2e": round(emissions_data, 6) if emissions_data else 0,
+            "measurement_source": "CodeCarbon hardware telemetry",
             "exit_code": exit_code,
             "tracking_mode": self.tracking_mode,
             "project_name": self.project_name,

@@ -1,4 +1,4 @@
-# CarbonIQ - Start All Services in One Command
+﻿# CarbonIQ - Start All Services in One Command
 # PowerShell script for Windows
 
 Write-Host "🚀 Starting CarbonIQ Development Environment..." -ForegroundColor Green
@@ -19,7 +19,11 @@ Write-Host "📦 Starting Backend (FastAPI)..." -ForegroundColor Cyan
 $backendJob = Start-Job -ScriptBlock {
     Set-Location $using:PWD
     cd backend
-    python -m uvicorn main:app --reload --port 8000
+    if (Test-Path "venv\Scripts\python.exe") {
+        & "venv\Scripts\python.exe" -m uvicorn main:app --reload --port 8000
+    } else {
+        python -m uvicorn main:app --reload --port 8000
+    }
 }
 Write-Host "   Backend starting on http://localhost:8000" -ForegroundColor Gray
 Start-Sleep -Seconds 3

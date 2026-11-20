@@ -1,24 +1,46 @@
-# CarbonIQ — AWS Carbon Emissions Analyzer + CLI Tool
+# CarbonIQ — Unified Cloud and Developer-Side Carbon Intelligence Platform
 
-Upload your AWS Cost & Usage Report (CUR) or connect your S3 bucket directly — CarbonIQ runs it through a 6-agent AI pipeline to calculate carbon emissions, identify optimization opportunities, and deliver actionable sustainability insights.
+[![Production Frontend](https://img.shields.io/badge/Production%20Frontend-Vercel-success?style=flat&logo=vercel)](https://carboniq-capstone.vercel.app/home)
+[![Production Backend](https://img.shields.io/badge/Production%20API-Render-informational?style=flat&logo=render)](https://carboniq-backend-duel.onrender.com/api/health)
+[![Python Version](https://img.shields.io/badge/Python-3.12%2B-blue?logo=python)](https://www.python.org/)
+[![Database](https://img.shields.io/badge/Database-NeonDB%20PostgreSQL-teal?logo=postgresql)](https://neon.tech)
 
-**NEW:** Carbon-Aware CLI tool for real-time workload measurement with CodeCarbon + Electricity Maps API integration.
+CarbonIQ unites macro-level cloud infrastructure accounting with micro-level developer compute optimization. It ingests AWS Cost & Usage Reports (CUR) from S3 through a six-stage pipeline, enriches them with Electricity Maps grid telemetry, and pairs them with developer tooling: an autonomous Python CLI, AST-driven green refactoring, and a VS Code extension.
+
+### 🌐 Live Production Links
+- **Production Web Dashboard**: [https://carboniq-capstone.vercel.app/home](https://carboniq-capstone.vercel.app/home)
+- **Production Backend API**: [https://carboniq-backend-duel.onrender.com](https://carboniq-backend-duel.onrender.com) (Health: `/api/health`)
+- **Official Repository**: [https://github.com/Kingslaye-varun/CarbonIQ_Capstone](https://github.com/Kingslaye-varun/CarbonIQ_Capstone)
+
+---
 
 ## What It Does
 
-### Web Dashboard
-1. User signs up / logs in (Neon Auth — real JWT sessions, no localStorage mock)
-2. Connects their AWS account once (credentials saved per-user in NeonDB)
-3. CUR CSVs are auto-fetched from their S3 bucket on every session, or manually uploaded
-4. A 6-agent pipeline processes the data: ingestion → region mapping → carbon intensity → emission calculation → analytics → optimization
-5. Dashboard shows emissions by service, region, and time — with AI-powered recommendations
+### 1. Web Dashboard & Cloud Accounting
+1. **User Authentication**: Secure sign up / login via Neon Auth (EdDSA & HS256 JWT sessions).
+2. **AWS S3 Integration**: Connect AWS credentials once (encrypted at rest in NeonDB); auto-fetch latest CUR CSV / CSV.GZ directly from S3.
+3. **Six-Stage Accounting Pipeline**:
+   - `Agent 1: Ingestion & Normalization` — Filter non-compute rows, strip tax/credits, compress to daily records.
+   - `Agent 2: Region Mapping` — Translate AWS region codes into grid balancing authority zones (e.g., `ap-south-1` → `IN-WE`).
+   - `Agent 3: Carbon Intensity` — Fetch real-time & historical grid intensity from Electricity Maps (cached lookup with empirical regional fallback).
+   - `Agent 4: Emission Calculation` — Deterministic Scope 2 location-based calculation using empirical service power factors.
+   - `Agent 5: Analytics` — Service breakdown, Pareto hotspot detection, regional distribution, and time-series aggregation.
+   - `Agent 6: Optimization & Explainability` — Evaluate carbon-aware candidates with organizational policy constraints and generate human-auditable insights.
+4. **Interactive Dashboard**: Drill-down by service/region, What-If migration simulator, and executive PDF compliance report export.
 
-### Python SDK & CLI Tool
-1. **Package Installation**: Install globally via `pip install -e .`
-2. **Personalized Authentication**: Connect terminal runs to your account using API Keys (`carboniq config set-key ciq_live_...`)
-3. **Function Tracking Decorators**: Wrap functions with `@carboniq.track` to measure hardware CPU/RAM kWh & emissions
-4. **Sustainable Code Engine**: Run `carboniq audit` and `carboniq optimize` to eliminate energy anti-patterns and generate green Python code
-5. **Real-Time Grid Monitoring**: Live carbon intensity tracking (`carboniq monitor`) and off-peak scheduling recommendations (`carboniq recommend-schedule`)
+### 2. Python SDK & Developer CLI Tool
+1. **Local Workload Profiling**: Measure Python commands (`carboniq measure`) with CodeCarbon hardware telemetry where available, or calibrated 65W TDP baseline CPU/RAM energy estimation.
+2. **AST Static Code Auditing**: Run `carboniq audit <script.py>` to detect 4 high-impact energy anti-patterns (nested loops, unvectorized appends, uncached recursion, large list materialization) and compute an A–F sustainability score.
+3. **Automated Green Refactoring**: Run `carboniq optimize <script.py>` to generate memoized, vectorized, or generator-streamed Python code.
+4. **Carbon-Aware Decision Support**: Query `carboniq recommend-schedule` to rank cloud regions and execution windows by carbon intensity (advisory guidance for DevOps teams).
+5. **Real-Time Grid Monitoring**: Stream regional grid carbon intensity (`carboniq monitor`).
+6. **Authenticated Cloud Synchronization**: Sync measurements to your dashboard using persistent API keys (`ciq_live_...`).
+
+### 3. Visual Studio Code Extension
+- Inline squiggly diagnostics on save (`onDidSaveTextDocument`).
+- Status bar Grade A–F sustainability badge.
+- One-click green refactoring with side-by-side visual diffs.
+- Command-palette live electric grid check.
 
 ---
 
@@ -84,8 +106,8 @@ CarbonIQ/
 ### 1. Clone
 
 ```bash
-git clone https://github.com/Atharvasp333/CarbonIQ.git
-cd CarbonIQ
+git clone https://github.com/Kingslaye-varun/CarbonIQ_Capstone.git
+cd CarbonIQ_Capstone
 ```
 
 ### 2. Environment Configuration (Single .env file)
@@ -340,7 +362,7 @@ pip install -r requirements.txt
 3. Login → lands on Dashboard
 4. Click "Connect AWS Account"
 5. Enter:
-   - Access Key: AKIA5IODSONOQSZMMT3M
+   - Access Key: AKIAIOSFODNN7EXAMPLE
    - Secret Key: (from .env)
    - Region: us-east-1
    - Bucket: carboniq-bucket
@@ -350,17 +372,17 @@ pip install -r requirements.txt
 Backend auto-fetches latest CUR CSV from S3 → runs 6-agent pipeline → results appear:
 
 **Dashboard Shows:**
-- Total Emissions: 5.66 kg CO2e
+- Total Emissions: 5.66 kg CO2e (or 8.05 kg CO2e exploratory benchmark)
 - Total Cost: $42.87
-- Top Service: AWS Glue (5.30 kg CO2e)
-- Top Region: ap-south-1 (708 gCO2/kWh)
+- Top Service: AWS Glue (5.30 kg CO2e, 7.49 kWh)
+- Top Region: ap-south-1 (708 gCO2/kWh empirical baseline / ~686-690 gCO2/kWh live)
 
 **Recommendations Panel:**
-✅ Migrate AWS Glue from ap-south-1 to eu-west-1 → 73% emissions reduction
-✅ Time-shift batch processing to 2-6 AM UTC → 35% cleaner grid
-✅ Cleanup idle Lambda functions → $3.20/month savings
+✅ Migrate AWS Glue from ap-south-1 to eu-west-1 (105 gCO2/kWh) → 85.2% workload emissions reduction (5.30 kg → 0.79 kg CO2e)
+✅ Time-shift batch processing to off-peak cleaner grid hours (2-6 AM UTC)
+✅ Cleanup idle compute / storage allocations
 
-7. Navigate to "/reports" → See time-series charts
+7. Navigate to "/reports" → See time-series charts & Export Executive Sustainability PDF
 8. Navigate to "/services" → Drill down into AWS Glue regional breakdown
 ```
 
@@ -420,19 +442,21 @@ The CarbonIQ web dashboard aggregates both data streams:
 ### Key Insights from This Journey
 
 **From AWS Billing Analysis:**
-- Real AWS usage (Oct 2026): 5.66 kg CO2e
-- Largest emitter: AWS Glue in high-carbon region (ap-south-1)
-- 73% potential savings by regional migration
+- Real AWS billing dataset: 5.66 kg CO2e in Blackbook itemization ($42.87 total cost across 5,240 records; 8.05 kg CO2e in exploratory research benchmark)
+- Largest emitter: AWS Glue in high-carbon region (ap-south-1 at 708 gCO2/kWh empirical baseline / ~686-690 gCO2/kWh live)
+- **85.2% potential savings on AWS Glue** by migrating to Ireland (eu-west-1 at 105 gCO2/kWh) — dropping from 5.30 kg → 0.79 kg CO2e
+- **79.7% overall reduction** across the complete 5.66 kg pipeline (dropping to 1.15 kg CO2e)
 
-**From CLI Tool:**
-- Real-time carbon intensity awareness before running workloads
-- Actual measurement using CodeCarbon (not estimates)
-- Carbon-aware scheduling recommendations
+**From Developer CLI Tool:**
+- Real-time grid carbon intensity awareness before scheduling workloads (Electricity Maps API + empirical regional fallback)
+- Workload measurement using CodeCarbon hardware telemetry on supported bare-metal/Linux systems, with a 65W TDP CPU/RAM energy estimation fallback on virtualized/unprivileged environments
+- Carbon-aware decision support (advisory guidance for DevOps teams; non-automated for safety)
+- AST-based static anti-pattern auditing and automated green code refactoring
 
 **Combined Impact:**
-- Student can track both cloud (AWS) and local (laptop) carbon footprint
+- Engineers can track both cloud (AWS) and local (workstation) carbon footprint in one unified dashboard
 - Data-driven decisions on where and when to run workloads
-- Demonstrable emissions reduction for capstone presentation
+- Demonstrable emissions reduction for capstone presentation and live review
 
 ---
 
@@ -445,11 +469,13 @@ The CarbonIQ web dashboard aggregates both data streams:
 - [x] Real-time workload emission telemetry ingestion and analytics pipeline.
 - [x] Explainable AI sustainability recommendation engine with organizational constraint validation.
 - [x] Sustainable AST Code Optimizer & green refactoring generator (`carboniq audit` and `carboniq optimize`).
+- [x] Visual Studio Code Extension with inline AST diagnostics, status bar grade badges, visual diffs, and grid check command.
+- [x] Downloadable executive sustainability compliance reports (client-side vector PDF export on Reports page).
+- [x] Live cloud deployments on Vercel (Frontend) and Render (FastAPI Backend + NeonDB PostgreSQL).
 - [x] End-to-end integration and user lifecycle validation suite (30/30 tests passing).
 
 ### Active Roadmap & Planned Enhancements
-- [ ] PyPI distribution for global installation (`pip install carboniq`).
-- [ ] VS Code / IDE Marketplace Extension for inline green code recommendations and audit warnings.
-- [ ] Downloadable executive sustainability compliance reports (PDF export).
+- [ ] Public PyPI package distribution (`pip install carboniq`).
+- [ ] Visual Studio Code Marketplace publication.
 - [ ] Extended emission calculation factors for Amazon API Gateway and managed messaging services.
-- [ ] Multi-cloud billing report ingestion for Google Cloud Platform (GCP) and Microsoft Azure.
+- [ ] Multi-cloud billing report ingestion for Google Cloud Platform (GCP BigQuery exports) and Microsoft Azure Cost Management.
