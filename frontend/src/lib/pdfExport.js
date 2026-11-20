@@ -243,11 +243,20 @@ export function generateSustainabilityPDF(analysisData, userInfo = {}) {
         </table>
 
         <div class="recommendations">
-          <h3>Strategic Decarbonization Recommendations</h3>
+          <h3>${data.intelligence?.recommendations?.length > 0 ? `Calculated Decarbonization Recommendations (${data.intelligence.recommendations.length} Action Items)` : 'Strategic Decarbonization Recommendations'}</h3>
           <ul>
-            <li><strong>Region Migration:</strong> Shifting compute workloads from high-carbon regions (e.g., ap-south-1) to green grid regions (e.g., us-west-2, eu-west-1) can reduce emissions by up to 64%.</li>
-            <li><strong>Time-Shifting Batch Workloads:</strong> Run compute-heavy batch tasks during local off-peak renewable energy hours.</li>
-            <li><strong>Workload Downsizing:</strong> Audit idle instances and rightsized underutilized compute/database units.</li>
+            ${data.intelligence?.recommendations?.length > 0 ? (
+              data.intelligence.recommendations.slice(0, 4).map(rec => {
+                const kg = rec.expected_reduction_kg ?? rec.carbon_reduction_kg ?? 0;
+                const pct = rec.expected_reduction_pct ?? rec.carbon_reduction_pct ?? 0;
+                const act = rec.recommended_action || rec.recommendation || rec.action || rec.title;
+                return `<li><strong>${rec.title || rec.category}:</strong> ${act} <em>[Impact: Save ${(kg ?? 0).toFixed(4)} kg CO₂ (${(pct ?? 0).toFixed(1)}%)]</em></li>`;
+              }).join('')
+            ) : `
+              <li><strong>Region Migration:</strong> Shifting compute workloads from high-carbon regions (e.g., ap-south-1) to green grid regions (e.g., us-west-2, eu-west-1) can reduce emissions by up to 64%.</li>
+              <li><strong>Time-Shifting Batch Workloads:</strong> Run compute-heavy batch tasks during local off-peak renewable energy hours.</li>
+              <li><strong>Workload Downsizing:</strong> Audit idle instances and rightsize underutilized compute/database units.</li>
+            `}
           </ul>
         </div>
 

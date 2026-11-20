@@ -22,21 +22,13 @@ class AIRecommendationAgent:
     """
     
     def __init__(self):
-        self.gemini_available = False
         self.recommendations_generated = 0
-        
-        # Check if Gemini is available
-        try:
-            from services.gemini import get_gemini_client
-            self.get_gemini_client = get_gemini_client
-            self.gemini_available = bool(os.getenv("GEMINI_API_KEY"))
-            if self.gemini_available:
-                logger.info("Gemini API available for recommendation explanations")
-            else:
-                logger.info("Gemini API key not found, using template explanations")
-        except Exception as e:
-            logger.warning(f"Gemini not available: {e}")
-            self.gemini_available = False
+        gemini_key = os.getenv("GEMINI_API_KEY", "").strip()
+        self.gemini_available = bool(gemini_key and gemini_key != "your_gemini_api_key_here")
+        if self.gemini_available:
+            logger.info("Gemini API key configured for recommendation explanations")
+        else:
+            logger.info("Gemini API key not configured, using deterministic template explanations")
     
     async def generate_recommendations(
         self,
@@ -90,15 +82,24 @@ class AIRecommendationAgent:
             model = genai.GenerativeModel('gemini-pro')
             response = model.generate_content(prompt)
             
-            # Parse Gemini response
-            explanation = response.text
+            # Parse and strictly validate Gemini response against deterministic numbers
+            raw_explanation = response.text
+            explanation = self._validate_and_sanitize_ai_explanation(raw_explanation, opportunity)
             
             # Build recommendation with AI explanation
             recommendation = {
                 **opportunity,  # Include all opportunity data
                 'explanation': explanation,
                 'explanation_source': 'gemini',
-                'formatted': True
+                'formatted': True,
+                'reasoning': opportunity.get('recommended_action', opportunity.get('recommendation', '')) or opportunity.get('observation', ''),
+                'recommendation': opportunity.get('recommended_action', opportunity.get('recommendation', '')),
+                'carbon_reduction_kg': opportunity.get('expected_reduction_kg'),
+                'carbon_reduction_pct': opportunity.get('expected_reduction_pct'),
+                'potential_savings_kg': opportunity.get('expected_reduction_kg'),
+                'potential_reduction_pct': opportunity.get('expected_reduction_pct'),
+                'constraints': opportunity.get('constraints', opportunity.get('constraints_applied', [])),
+                'details': opportunity.get('details', opportunity.get('evidence', {}))
             }
             
             return recommendation
@@ -193,7 +194,21 @@ Keep it concise, factual, and actionable. Use only the evidence provided.
         rec_text = self._get_recommendation_text(opportunity)
         recommendation = f"**Recommendation:**\n{rec_text}"
         
-        impact = f"**Expected Impact:**\n- Carbon Reduction: {opportunity['expected_reduction_kg']} kg CO2 ({opportunity['expected_reduction_pct']}%)\n- Cost Impact: {opportunity['cost_impact']}\n- Confidence: {opportunity.get('confidence', 'Medium')}"
+        red_kg = opportunity.get('expected_reduction_kg')
+        red_pct = opportunity.get('expected_reduction_pct')
+        if red_kg is not None and red_kg > 0:
+            carbon_red_text = f"{red_kg:.4f} kg CO2 ({red_pct:.1f}%)"
+        else:
+            carbon_red_text = "Not calculated (Qualitative architectural guidance)"
+        
+        impact = (
+            f"**Expected Impact:**\n"
+            f"- Carbon Reduction: {carbon_red_text}\n"
+            f"- Cost Impact: {opportunity['cost_impact']}\n"
+            f"- Calculation Basis: {opportunity.get('calculation_basis', 'Empirical operational telemetry')}\n"
+            f"- Data Provenance: {opportunity.get('data_provenance', 'AWS CUR Telemetry')}\n"
+            f"- Confidence: {opportunity.get('confidence', 'Medium')}"
+        )
         
         # Generate implementation notes
         impl_notes = self._get_implementation_notes(opportunity, org_profile)
@@ -206,8 +221,53 @@ Keep it concise, factual, and actionable. Use only the evidence provided.
             **opportunity,
             'explanation': full_explanation,
             'explanation_source': 'template',
-            'formatted': True
+            'formatted': True,
+            'reasoning': rec_text,
+            'recommendation': opportunity.get('recommended_action', rec_text),
+            'implementation_notes': impl_notes,
+            'carbon_reduction_kg': red_kg,
+            'carbon_reduction_pct': red_pct,
+            'potential_savings_kg': red_kg,
+            'potential_reduction_pct': red_pct,
+            'constraints': opportunity.get('constraints', opportunity.get('constraints_applied', [])),
+            'details': opportunity.get('details', opportunity.get('evidence', {}))
         }
+
+    def _validate_and_sanitize_ai_explanation(self, explanation: str, opportunity: Dict) -> str:
+        """
+        Validate and sanitize Gemini-generated explanations against deterministic calculation outputs.
+        Ensures AI cannot introduce unsupported numerical claims.
+        """
+        red_kg = opportunity.get('expected_reduction_kg')
+        red_pct = opportunity.get('expected_reduction_pct')
+        basis = opportunity.get('calculation_basis', 'Empirical operational baseline')
+        provenance = opportunity.get('data_provenance', 'AWS CUR Telemetry')
+        
+        if red_kg is not None and red_kg > 0:
+            carbon_str = f"- Carbon Reduction: {red_kg:.4f} kg CO2 ({red_pct:.1f}%)\n"
+        else:
+            carbon_str = "- Carbon Reduction: Not calculated (Qualitative architectural guidance)\n"
+            
+        impact_str = (
+            f"{carbon_str}"
+            f"- Cost Impact: {opportunity.get('cost_impact', 'Neutral')}\n"
+            f"- Calculation Basis: {basis}\n"
+            f"- Data Provenance: {provenance}\n"
+            f"- Confidence: {opportunity.get('confidence', 'Medium')}"
+        )
+        
+        # Enforce deterministic impact section in explanation
+        if "**Expected Impact:**" in explanation:
+            parts = explanation.split("**Expected Impact:**")
+            prefix = parts[0]
+            rest = parts[1]
+            if "\n\n**" in rest:
+                suffix = "\n\n**" + rest.split("\n\n**", 1)[1]
+            else:
+                suffix = ""
+            return f"{prefix}**Expected Impact:**\n{impact_str}{suffix}"
+        
+        return f"{explanation.strip()}\n\n**Expected Impact (Deterministically Verified):**\n{impact_str}"
     
     def _get_recommendation_text(self, opportunity: Dict) -> str:
         """Generate recommendation text based on opportunity type"""

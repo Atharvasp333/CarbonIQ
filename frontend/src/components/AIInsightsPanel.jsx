@@ -100,11 +100,15 @@ function AIInsightsPanel({ insights }) {
               <div className="flex gap-4 text-sm">
                 <div className="flex items-center gap-1">
                   <span className="text-green-400">💰</span>
-                  <span className="text-slate-300">Save: ${rec.estimated_savings_cost.toFixed(2)}</span>
+                  <span className="text-slate-300">
+                    Save: {rec.estimated_savings_cost != null && Number(rec.estimated_savings_cost) > 0 ? `$${Number(rec.estimated_savings_cost).toFixed(2)}` : 'Not calculated'}
+                  </span>
                 </div>
                 <div className="flex items-center gap-1">
                   <span className="text-blue-400">🌍</span>
-                  <span className="text-slate-300">Reduce: {rec.estimated_savings_kg.toFixed(2)} kg CO₂</span>
+                  <span className="text-slate-300">
+                    Reduce: {rec.estimated_savings_kg != null && Number(rec.estimated_savings_kg) > 0 ? `${Number(rec.estimated_savings_kg).toFixed(2)} kg CO₂` : 'Not calculated'}
+                  </span>
                 </div>
               </div>
             </div>

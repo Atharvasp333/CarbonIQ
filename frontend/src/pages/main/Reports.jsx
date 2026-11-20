@@ -4,6 +4,7 @@ import { BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, Cart
 import toast from 'react-hot-toast';
 import { useAuth } from '../../hooks/useAuth';
 import { generateSustainabilityPDF } from '../../lib/pdfExport';
+import api from '../../api/client';
 
 const COLORS = ['#10B981', '#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444', '#EC4899', '#6366F1', '#14B8A6'];
 
@@ -19,12 +20,20 @@ export default function Reports() {
     loadAnalysisData();
   }, []);
 
-  const loadAnalysisData = () => {
+  const loadAnalysisData = async () => {
     try {
       const storedData = localStorage.getItem('awsAnalysisData');
       if (storedData) {
         const data = JSON.parse(storedData);
         setAnalysisData(data);
+      } else {
+        try {
+          const res = await api.get('/api/analysis/latest');
+          if (res.data?.success && res.data?.summary) {
+            setAnalysisData(res.data);
+            localStorage.setItem('awsAnalysisData', JSON.stringify(res.data));
+          }
+        } catch (_) {}
       }
       setLoading(false);
     } catch (error) {

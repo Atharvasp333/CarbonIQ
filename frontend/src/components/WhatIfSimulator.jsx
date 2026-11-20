@@ -11,10 +11,14 @@ function WhatIfSimulator({ awsData }) {
   const handleSimulate = async () => {
     setLoading(true);
     try {
+      const currentEmissions = awsData?.summary?.total_emissions_kg ?? awsData?.total_co2_kg;
+      const currentSpend = awsData?.summary?.total_cost ?? awsData?.total_cost;
       const data = await simulateWhatIf({
         scenario,
         target_region: targetRegion,
-        target_instance: targetInstance
+        target_instance: targetInstance,
+        current_co2_kg: currentEmissions,
+        current_cost: currentSpend
       });
       setResult(data);
     } catch (error) {
@@ -113,9 +117,26 @@ function WhatIfSimulator({ awsData }) {
             </div>
           </div>
 
-          <div className="bg-slate-800/50 rounded-lg p-4">
-            <p className="text-white">{result.description}</p>
+          <div className="bg-slate-800/50 rounded-lg p-4 mb-4">
+            <p className="text-white font-medium">{result.description}</p>
           </div>
+
+          {(result.calculation_basis || result.data_provenance) && (
+            <div className="bg-slate-900/60 rounded-lg p-4 border border-slate-700/80 text-xs space-y-2">
+              {result.calculation_basis && (
+                <div>
+                  <span className="text-slate-400 font-semibold block mb-0.5">Calculation Basis:</span>
+                  <code className="text-green-300 font-mono">{result.calculation_basis}</code>
+                </div>
+              )}
+              {result.data_provenance && (
+                <div>
+                  <span className="text-slate-400 font-semibold block mb-0.5">Data Provenance:</span>
+                  <span className="text-slate-300">{result.data_provenance}</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -122,28 +122,28 @@ const MultiAgentDashboard = () => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
               <SummaryCard
                 title="Total Emissions"
-                value={`${results.summary.total_emissions_kg.toFixed(4)} kg`}
-                subtitle={`CO₂ · ${results.pipeline_stats.ingestion.original_rows} rows scanned`}
+                value={`${(results.summary?.total_emissions_kg ?? 0).toFixed(4)} kg`}
+                subtitle={`CO₂ · ${results.pipeline_stats?.ingestion?.original_rows ?? results.detailed_records?.length ?? 0} rows scanned`}
                 icon={<Activity className="text-red-400" size={32} />}
                 bgColor="bg-red-500/20"
               />
               <SummaryCard
                 title="Total Cost"
-                value={`$${results.summary.total_cost.toFixed(4)}`}
+                value={`$${(results.summary?.total_cost ?? 0).toFixed(4)}`}
                 subtitle="AWS Spend"
                 icon={<TrendingDown className="text-green-400" size={32} />}
                 bgColor="bg-green-500/20"
               />
               <SummaryCard
                 title="Top Region"
-                value={results.summary.top_region}
+                value={results.summary?.top_region || 'N/A'}
                 subtitle="Highest Emitter"
                 icon={<MapPin className="text-blue-400" size={32} />}
                 bgColor="bg-blue-500/20"
               />
               <SummaryCard
                 title="Top Service"
-                value={results.summary.top_service}
+                value={results.summary?.top_service || 'N/A'}
                 subtitle="Highest Usage"
                 icon={<Zap className="text-yellow-400" size={32} />}
                 bgColor="bg-yellow-500/20"
@@ -218,29 +218,30 @@ const MultiAgentDashboard = () => {
             )}
 
             {/* Optimization */}
-            <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 mb-8">
-              <h3 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-                <TrendingDown className="text-green-400" />
-                Optimization Opportunities
-              </h3>
-              <div className="bg-green-500/20 border border-green-500 rounded-lg p-4 mb-6">
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div>
-                    <div className="text-3xl font-bold text-white">{results.optimization.reduction_estimates.total_potential_reduction_kg.toFixed(4)} kg</div>
-                    <div className="text-green-300">CO₂ Reduction</div>
-                  </div>
-                  <div>
-                    <div className="text-3xl font-bold text-white">${results.optimization.reduction_estimates.total_potential_cost_savings.toFixed(4)}</div>
-                    <div className="text-green-300">Cost Savings</div>
-                  </div>
-                  <div>
-                    <div className="text-3xl font-bold text-white">{results.optimization.reduction_estimates.percentage_reduction.toFixed(1)}%</div>
-                    <div className="text-green-300">Reduction Rate</div>
+            {results.optimization && (
+              <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 mb-8">
+                <h3 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+                  <TrendingDown className="text-green-400" />
+                  Optimization Opportunities
+                </h3>
+                <div className="bg-green-500/20 border border-green-500 rounded-lg p-4 mb-6">
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                      <div className="text-3xl font-bold text-white">{(results.optimization.reduction_estimates?.total_potential_reduction_kg ?? 0).toFixed(4)} kg</div>
+                      <div className="text-green-300">CO₂ Reduction</div>
+                    </div>
+                    <div>
+                      <div className="text-3xl font-bold text-white">${(results.optimization.reduction_estimates?.total_potential_cost_savings ?? 0).toFixed(4)}</div>
+                      <div className="text-green-300">Cost Savings</div>
+                    </div>
+                    <div>
+                      <div className="text-3xl font-bold text-white">{(results.optimization.reduction_estimates?.percentage_reduction ?? 0).toFixed(1)}%</div>
+                      <div className="text-green-300">Reduction Rate</div>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="space-y-4">
-                {results.optimization.opportunities.slice(0, 5).map((opp, idx) => (
+                <div className="space-y-4">
+                  {(results.optimization.opportunities || []).slice(0, 5).map((opp, idx) => (
                   <div key={idx} className="bg-white/5 rounded-lg p-4 border-l-4 border-yellow-500">
                     <div className="flex items-start gap-3">
                       <AlertCircle className="text-yellow-400 mt-1" size={20} />
@@ -263,6 +264,7 @@ const MultiAgentDashboard = () => {
                 ))}
               </div>
             </div>
+            )}
 
             {/* Detailed Table */}
             <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 mb-8">
