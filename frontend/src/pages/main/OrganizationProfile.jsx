@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Save, Building2, Globe, Cpu, Zap, RefreshCw, Target } from 'lucide-react';
+import { getOrgProfile, saveOrgProfileApi, getOrgProfileOptions } from '../../api/client';
 
 export default function OrganizationProfile() {
   const [profile, setProfile] = useState(null);
@@ -23,17 +24,21 @@ export default function OrganizationProfile() {
   }, []);
 
   const loadProfile = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setLoading(false);
+      return;
+    }
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/profile/`);
-      if (response.ok) {
-        const data = await response.json();
-        if (data) {
-          setProfile(data);
-          setFormData(data);
-        }
+      const data = await getOrgProfile();
+      if (data) {
+        setProfile(data);
+        setFormData(data);
       }
     } catch (error) {
-      console.error('Failed to load profile:', error);
+      if (error?.response?.status !== 401) {
+        console.error('Failed to load profile:', error);
+      }
     } finally {
       setLoading(false);
     }
@@ -41,13 +46,12 @@ export default function OrganizationProfile() {
 
   const loadOptions = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/profile/options`);
-      if (response.ok) {
-        const data = await response.json();
+      const data = await getOrgProfileOptions();
+      if (data) {
         setOptions(data);
       }
     } catch (error) {
-      console.error('Failed to load options:', error);
+      console.warn('Failed to load options:', error?.message);
     }
   };
 
@@ -57,14 +61,8 @@ export default function OrganizationProfile() {
     setMessage('');
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/profile/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
-
-      if (response.ok) {
-        const data = await response.json();
+      const data = await saveOrgProfileApi(formData);
+      if (data) {
         setProfile(data);
         setMessage('Profile saved successfully!');
         setTimeout(() => setMessage(''), 3000);

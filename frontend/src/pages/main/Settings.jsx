@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Bell, Moon, Zap, Trash2, Building2, Globe, Cpu, RefreshCw, Target } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { getOrgProfile, saveOrgProfileApi, getOrgProfileOptions } from '../../api/client';
 
 export default function Settings() {
   const [settings, setSettings] = useState({
@@ -29,18 +30,21 @@ export default function Settings() {
   }, []);
 
   const loadOrgProfile = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setProfileLoading(false);
+      return;
+    }
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-      const response = await fetch(`${apiUrl}/api/profile/`);
-      if (response.ok) {
-        const data = await response.json();
-        if (data) {
-          setOrgProfile(data);
-          setProfileForm(data);
-        }
+      const data = await getOrgProfile();
+      if (data) {
+        setOrgProfile(data);
+        setProfileForm(data);
       }
     } catch (error) {
-      console.error('Failed to load organization profile:', error);
+      if (error?.response?.status !== 401) {
+        console.error('Failed to load organization profile:', error);
+      }
     } finally {
       setProfileLoading(false);
     }
@@ -48,19 +52,14 @@ export default function Settings() {
 
   const loadProfileOptions = async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-      const response = await fetch(`${apiUrl}/api/profile/options`);
-      if (response.ok) {
-        const data = await response.json();
+      const data = await getOrgProfileOptions();
+      if (data) {
         setProfileOptions(data);
-        console.log('Loaded profile options:', data);
       } else {
-        console.error('Failed to fetch options, using fallback');
         setProfileOptions(getFallbackOptions());
       }
     } catch (error) {
-      console.error('Failed to load profile options:', error);
-      // Use fallback options if API fails
+      console.warn('Failed to load profile options from API, using fallback:', error?.message);
       setProfileOptions(getFallbackOptions());
     }
   };
@@ -100,19 +99,10 @@ export default function Settings() {
 
   const saveOrgProfile = async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-      const response = await fetch(`${apiUrl}/api/profile/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(profileForm)
-      });
-
-      if (response.ok) {
-        const data = await response.json();
+      const data = await saveOrgProfileApi(profileForm);
+      if (data) {
         setOrgProfile(data);
         toast.success('Organization profile saved successfully!');
-      } else {
-        toast.error('Failed to save organization profile');
       }
     } catch (error) {
       console.error('Failed to save profile:', error);
