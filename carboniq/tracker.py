@@ -100,7 +100,17 @@ class TrackContext(ContextDecorator):
         try:
             import os
             import requests
-            from cli.config_manager import get_api_key, get_api_url
+            try:
+                from carboniq.cli.config_manager import get_api_key, get_api_url
+            except ImportError:
+                try:
+                    from .cli.config_manager import get_api_key, get_api_url
+                except (ImportError, ValueError):
+                    try:
+                        from cli.config_manager import get_api_key, get_api_url
+                    except ImportError:
+                        def get_api_key(): return None
+                        def get_api_url(): return "https://carboniq-backend-duel.onrender.com/api"
 
             url = get_api_url()
             key = get_api_key()

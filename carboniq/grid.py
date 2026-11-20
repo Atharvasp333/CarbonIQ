@@ -15,7 +15,13 @@ def get_grid_intensity(region: str = "us-east-1") -> Dict[str, Any]:
     Query real-time carbon intensity (gCO2/kWh) for a given cloud or electric region.
     """
     try:
-        from cli.carbon_aware import CarbonAwareClient
+        try:
+            from carboniq.cli.carbon_aware import CarbonAwareClient
+        except ImportError:
+            try:
+                from .cli.carbon_aware import CarbonAwareClient
+            except (ImportError, ValueError):
+                from cli.carbon_aware import CarbonAwareClient
         client = CarbonAwareClient()
         if client.is_available():
             data = client.get_current_intensity(region)
