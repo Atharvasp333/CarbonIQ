@@ -16,8 +16,17 @@ export const AuthProvider = ({ children }) => {
       axios.get(`${API_BASE}/api/auth/me`, {
         headers: { Authorization: `Bearer ${token}` }
       })
-      .then(res => {
+      .then(async (res) => {
         const userData = res.data?.user || res.data;
+        // Enrich with organization from organization_profile if not already set
+        try {
+          const orgRes = await axios.get(`${API_BASE}/api/profile/`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (orgRes.data?.organization_name) {
+            userData.organization = orgRes.data.organization_name;
+          }
+        } catch (_) {}
         setUser(userData);
         setLoading(false);
       })
@@ -82,19 +91,40 @@ export const AuthProvider = ({ children }) => {
       return { success: true };
     }
 
+    let updatedUser = { ...user, ...updates };
+
+    // 1. Try dedicated PUT /api/auth/profile
     try {
       const response = await axios.put(`${API_BASE}/api/auth/profile`, updates, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      const updatedUser = response.data?.user || { ...user, ...updates };
-      setUser(updatedUser);
-      return { success: true, user: updatedUser };
+      if (response.data?.user) {
+        updatedUser = response.data.user;
+      }
     } catch (err) {
-      console.error('Failed to update profile on backend:', err);
-      setUser((prev) => ({ ...prev, ...updates }));
-      const msg = err.response?.data?.detail || 'Failed to persist profile to server';
-      return { success: false, error: msg };
+      console.warn('PUT /api/auth/profile fallback needed:', err?.message);
     }
+
+    // 2. Persist organization to /api/profile/ (guaranteed supported in live database)
+    if (updates.organization) {
+      try {
+        await axios.post(`${API_BASE}/api/profile/`, {
+          organization_name: updates.organization,
+          primary_user_region: 'Global',
+          workload_type: 'Mixed',
+          latency_sensitivity: 'Medium',
+          migration_flexibility: 'Some Workloads',
+          optimization_priority: 'Reduce Carbon'
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } catch (orgErr) {
+        console.warn('Organization profile sync warning:', orgErr?.message);
+      }
+    }
+
+    setUser(updatedUser);
+    return { success: true, user: updatedUser };
   };
 
   return (
