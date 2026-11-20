@@ -90,8 +90,8 @@ jobs:
           carboniq deploy-analysis --help
           carboniq carbon-intensity --help
 
-          # Verify no generic top-level cli namespace collision
-          python -c "import importlib.util; assert importlib.util.find_spec('cli') is None, 'Generic cli collision detected!'"
+          # Verify no generic top-level cli namespace collision in site-packages
+          (cd /tmp && python -c "import importlib.util; assert importlib.util.find_spec('cli') is None, 'Generic cli collision detected!'")
 
           deactivate
           rm -rf test_env
