@@ -58,8 +58,12 @@ export default function SustainabilityRecommendations({ intelligence }) {
           
           <div className="bg-white/20 rounded-lg p-4 backdrop-blur">
             <div className="text-sm opacity-90">Potential Reduction</div>
-            <div className="text-3xl font-bold mt-1">{(totalReductionKg ?? 0).toFixed(2)} kg</div>
-            <div className="text-xs opacity-75 mt-1">~{(totalReductionPct ?? 0).toFixed(1)}% Avg Reduction</div>
+            <div className="text-3xl font-bold mt-1">
+              {totalReductionKg > 0 ? `${totalReductionKg.toFixed(2)} kg` : 'Not calculated'}
+            </div>
+            <div className="text-xs opacity-75 mt-1">
+              {totalReductionKg > 0 ? `~${(totalReductionPct ?? 0).toFixed(1)}% Avg Reduction` : 'Qualitative Guidance'}
+            </div>
           </div>
           
           <div className="bg-white/20 rounded-lg p-4 backdrop-blur">
@@ -138,8 +142,11 @@ function RecommendationCardItem({ rec, idx }) {
     return <span className="text-xs px-2 py-0.5 rounded font-semibold bg-gray-100 text-gray-700">Cost Neutral</span>;
   };
 
-  const reductionKg = rec.expected_reduction_kg ?? rec.carbon_reduction_kg ?? rec.potential_savings_kg ?? 0;
-  const reductionPct = rec.expected_reduction_pct ?? rec.carbon_reduction_pct ?? rec.potential_reduction_pct ?? 0;
+  const reductionKgRaw = rec.expected_reduction_kg ?? rec.carbon_reduction_kg ?? rec.potential_savings_kg;
+  const reductionPctRaw = rec.expected_reduction_pct ?? rec.carbon_reduction_pct ?? rec.potential_reduction_pct;
+  const hasReduction = reductionKgRaw != null && Number(reductionKgRaw) > 0;
+  const reductionKg = hasReduction ? Number(reductionKgRaw) : null;
+  const reductionPct = hasReduction && reductionPctRaw != null ? Number(reductionPctRaw) : null;
   const title = rec.title || rec.recommendation || 'Carbon Optimization Recommendation';
   const service = rec.service || 'Multi-Service';
   const category = rec.category || 'scheduling';
@@ -172,13 +179,22 @@ function RecommendationCardItem({ rec, idx }) {
           </div>
 
           <div className="text-right flex-shrink-0">
-            <div className="flex items-center justify-end gap-1 text-green-600">
-              <TrendingDown className="w-5 h-5" />
-              <span className="text-2xl font-bold">{(reductionKg ?? 0).toFixed(4)} kg</span>
-            </div>
-            <div className="text-sm font-semibold text-gray-600 mt-0.5">
-              {(reductionPct ?? 0).toFixed(1)}% reduction
-            </div>
+            {hasReduction ? (
+              <>
+                <div className="flex items-center justify-end gap-1 text-green-600">
+                  <TrendingDown className="w-5 h-5" />
+                  <span className="text-2xl font-bold">{reductionKg.toFixed(4)} kg</span>
+                </div>
+                <div className="text-sm font-semibold text-gray-600 mt-0.5">
+                  {reductionPct ? `${reductionPct.toFixed(1)}% reduction` : 'Verified reduction'}
+                </div>
+              </>
+            ) : (
+              <div className="bg-gray-100 px-3 py-2 rounded-lg border border-gray-200 text-right">
+                <span className="text-sm font-bold text-gray-700 block">Not calculated</span>
+                <span className="text-xs text-gray-500">Qualitative Guidance</span>
+              </div>
+            )}
           </div>
         </div>
 

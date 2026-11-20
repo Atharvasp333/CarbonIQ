@@ -163,11 +163,19 @@ const ServiceDetailDashboard = ({ serviceName, onClose }) => {
           {optimization.estimated_savings && (
             <div className="grid grid-cols-3 gap-4 mb-4 p-3 bg-green-500/20 rounded-lg text-center">
               <div>
-                <div className="text-xl font-bold text-white">{(optimization.estimated_savings.emissions_reduction_kg ?? 0).toFixed(4)} kg</div>
+                <div className="text-xl font-bold text-white">
+                  {(optimization.estimated_savings.emissions_reduction_kg != null && Number(optimization.estimated_savings.emissions_reduction_kg) > 0) 
+                    ? `${Number(optimization.estimated_savings.emissions_reduction_kg).toFixed(4)} kg` 
+                    : 'Not calculated'}
+                </div>
                 <div className="text-xs text-green-200">Potential CO₂ Reduction</div>
               </div>
               <div>
-                <div className="text-xl font-bold text-white">${(optimization.estimated_savings.cost_reduction ?? 0).toFixed(4)}</div>
+                <div className="text-xl font-bold text-white">
+                  {(optimization.estimated_savings.cost_reduction != null && Number(optimization.estimated_savings.cost_reduction) > 0)
+                    ? `$${Number(optimization.estimated_savings.cost_reduction).toFixed(4)}`
+                    : 'Not calculated'}
+                </div>
                 <div className="text-xs text-green-200">Cost Savings</div>
               </div>
               <div>

@@ -637,12 +637,25 @@ function RecommendationCard({ recommendation, onExpand }) {
         <div className="text-right ml-6 flex-shrink-0">
           <div className="bg-green-100 rounded-lg p-4 border-2 border-green-300">
             <div className="text-sm text-green-700 mb-1">Expected Impact</div>
-            <div className="text-3xl font-bold text-green-900">
-              {reductionPct.toFixed(1)}%
-            </div>
-            <div className="text-xs text-green-600 mt-1">
-              {reductionKg.toFixed(4)} kg CO₂
-            </div>
+            {reductionKg > 0 ? (
+              <>
+                <div className="text-3xl font-bold text-green-900">
+                  {reductionPct.toFixed(1)}%
+                </div>
+                <div className="text-xs text-green-600 mt-1">
+                  {reductionKg.toFixed(4)} kg CO₂
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-lg font-bold text-gray-700">
+                  Not calculated
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  Qualitative Guidance
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -747,12 +760,25 @@ function RecommendationModal({ recommendation, onClose }) {
             <div className="grid grid-cols-3 gap-4">
               <div className="bg-white rounded-lg p-4 border border-green-200">
                 <div className="text-sm text-gray-600 mb-1">Carbon Reduction</div>
-                <div className="text-2xl font-bold text-green-900">
-                  {reductionKg.toFixed(4)} kg
-                </div>
-                <div className="text-xs text-green-600 mt-1">
-                  {reductionPct.toFixed(1)}% reduction
-                </div>
+                {reductionKg > 0 ? (
+                  <>
+                    <div className="text-2xl font-bold text-green-900">
+                      {reductionKg.toFixed(4)} kg
+                    </div>
+                    <div className="text-xs text-green-600 mt-1">
+                      {reductionPct.toFixed(1)}% reduction
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-lg font-bold text-gray-700">
+                      Not calculated
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Qualitative Guidance
+                    </div>
+                  </>
+                )}
               </div>
               <div className="bg-white rounded-lg p-4 border border-blue-200">
                 <div className="text-sm text-gray-600 mb-1">Cost Impact</div>
