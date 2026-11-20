@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Activity, DollarSign, Zap, MapPin, AlertTriangle, Clock } from 'lucide-react';
 import axios from 'axios';
 
-const apiClient = axios.create({ baseURL: 'http://localhost:8000' });
+const apiClient = axios.create({ baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000' });
 
 const ServiceDetailDashboard = ({ serviceName, onClose }) => {
   const [loading, setLoading] = useState(true);
