@@ -85,6 +85,8 @@ class WhatIfAWSRequest(BaseModel):
     target_region: Optional[str] = None
     target_instance: Optional[str] = None
     service: Optional[str] = None
+    current_co2_kg: Optional[float] = None
+    current_cost: Optional[float] = None
 
 
 class WhatIfAWSResponse(BaseModel):
@@ -94,6 +96,8 @@ class WhatIfAWSResponse(BaseModel):
     savings_kg: float
     savings_cost: float
     description: str
+    calculation_basis: Optional[str] = None
+    data_provenance: Optional[str] = None
 
 
 # Time-Based Analysis Schemas (with Electricity Maps)

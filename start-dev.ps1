@@ -1,4 +1,4 @@
-﻿# CarbonIQ - Start All Services in One Command
+# CarbonIQ - Start All Services in One Command
 # PowerShell script for Windows
 
 Write-Host ">> Starting CarbonIQ Development Environment..." -ForegroundColor Green

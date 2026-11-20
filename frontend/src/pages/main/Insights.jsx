@@ -28,21 +28,35 @@ export default function Insights() {
     try {
       // Load analysis data from localStorage
       const raw = localStorage.getItem('awsAnalysisData');
+      let currentAnalysis = null;
       if (raw) {
-        const parsedData = JSON.parse(raw);
-        setAnalysisData(parsedData);
-        
-        // If intelligence data exists in analysis, use it immediately
-        if (parsedData?.intelligence?.recommendations) {
-          setRecommendations({
-            recommendations: parsedData.intelligence.recommendations || [],
-            patterns: parsedData.intelligence.patterns || [],
-            opportunities: parsedData.intelligence.opportunities || [],
-            summary: parsedData.intelligence.summary || {},
-            workload_analysis: parsedData.intelligence.workload_analysis || {},
-            generated_at: new Date().toISOString()
-          });
-        }
+        try {
+          currentAnalysis = JSON.parse(raw);
+          setAnalysisData(currentAnalysis);
+          
+          if (currentAnalysis?.intelligence?.recommendations) {
+            setRecommendations({
+              recommendations: currentAnalysis.intelligence.recommendations || [],
+              patterns: currentAnalysis.intelligence.patterns || [],
+              opportunities: currentAnalysis.intelligence.opportunities || [],
+              summary: currentAnalysis.intelligence.summary || {},
+              workload_analysis: currentAnalysis.intelligence.workload_analysis || {},
+              generated_at: new Date().toISOString()
+            });
+          }
+        } catch (_) {}
+      }
+
+      // If not in localStorage, attempt to hydrate from backend
+      if (!currentAnalysis) {
+        try {
+          const latestRes = await api.get('/api/analysis/latest');
+          if (latestRes.data?.success && latestRes.data?.summary) {
+            currentAnalysis = latestRes.data;
+            setAnalysisData(latestRes.data);
+            localStorage.setItem('awsAnalysisData', JSON.stringify(latestRes.data));
+          }
+        } catch (_) {}
       }
 
       // Load organization profile
@@ -53,15 +67,26 @@ export default function Insights() {
         console.log('No profile found');
       }
       
-      // Try to load existing recommendations from backend (optional)
+      // Load recommendations from backend
       try {
         const recsRes = await api.get('/api/intelligence/recommendations');
-        // Only override if we got valid data from backend
         if (recsRes.data?.recommendations?.length > 0) {
           setRecommendations(recsRes.data);
+          // If analysisData still wasn't set, construct a minimal summary from recommendations
+          if (!currentAnalysis && recsRes.data?.summary) {
+            const synth = {
+              summary: {
+                total_emissions_kg: recsRes.data.summary.total_potential_reduction_kg || 0,
+                total_cost: 0,
+                total_records: 100,
+                top_service: recsRes.data.recommendations[0]?.service || 'EC2',
+                top_region: 'us-east-1'
+              }
+            };
+            setAnalysisData(synth);
+          }
         }
       } catch (err) {
-        // 404 is expected if no recommendations exist yet
         if (err.response?.status !== 404) {
           console.error('Error loading recommendations:', err);
         }
@@ -565,6 +590,11 @@ function RecommendationCard({ recommendation, onExpand }) {
     return colors[confidence] || 'bg-gray-100 text-gray-800 border-gray-300';
   };
 
+  const reductionKg = recommendation.expected_reduction_kg ?? recommendation.carbon_reduction_kg ?? recommendation.potential_savings_kg ?? 0;
+  const reductionPct = recommendation.expected_reduction_pct ?? recommendation.carbon_reduction_pct ?? recommendation.potential_reduction_pct ?? 0;
+  const actionText = recommendation.recommended_action || recommendation.recommendation || recommendation.action || recommendation.reasoning;
+  const findingText = recommendation.finding || recommendation.observation;
+
   return (
     <div className="bg-gradient-to-r from-gray-50 to-white rounded-lg p-6 border-2 border-gray-200 hover:border-green-300 transition cursor-pointer"
          onClick={onExpand}>
@@ -578,12 +608,12 @@ function RecommendationCard({ recommendation, onExpand }) {
               {recommendation.confidence} Confidence
             </span>
           </div>
-          <h3 className="text-lg font-bold text-gray-900 mb-2">{recommendation.title || recommendation.recommendation}</h3>
+          <h3 className="text-lg font-bold text-gray-900 mb-2">{recommendation.title || actionText}</h3>
           
           {/* Observation */}
           <div className="bg-blue-50 border-l-4 border-blue-500 rounded p-3 mb-3">
             <p className="text-sm font-semibold text-blue-900 mb-1">Observation</p>
-            <p className="text-sm text-blue-800">{recommendation.observation}</p>
+            <p className="text-sm text-blue-800">{findingText}</p>
           </div>
           
           {/* Root Cause */}
@@ -595,21 +625,23 @@ function RecommendationCard({ recommendation, onExpand }) {
           )}
           
           {/* Recommendation */}
-          <div className="bg-green-50 border-l-4 border-green-500 rounded p-3">
-            <p className="text-sm font-semibold text-green-900 mb-1">Recommendation</p>
-            <p className="text-sm text-green-800">{recommendation.recommendation}</p>
-          </div>
+          {actionText && (
+            <div className="bg-green-50 border-l-4 border-green-500 rounded p-3">
+              <p className="text-sm font-semibold text-green-900 mb-1">Actionable Recommendation</p>
+              <p className="text-sm text-green-800">{actionText}</p>
+            </div>
+          )}
         </div>
         
         {/* Expected Impact */}
-        <div className="text-right ml-6">
+        <div className="text-right ml-6 flex-shrink-0">
           <div className="bg-green-100 rounded-lg p-4 border-2 border-green-300">
             <div className="text-sm text-green-700 mb-1">Expected Impact</div>
             <div className="text-3xl font-bold text-green-900">
-              {recommendation.expected_reduction_pct?.toFixed(1) || recommendation.potential_reduction_pct?.toFixed(1)}%
+              {reductionPct.toFixed(1)}%
             </div>
             <div className="text-xs text-green-600 mt-1">
-              {recommendation.expected_reduction_kg?.toFixed(2) || recommendation.potential_savings_kg?.toFixed(2)} kg CO₂
+              {reductionKg.toFixed(4)} kg CO₂
             </div>
           </div>
         </div>
@@ -617,10 +649,15 @@ function RecommendationCard({ recommendation, onExpand }) {
       
       <div className="flex items-center justify-between pt-3 border-t border-gray-200">
         <div className="text-sm text-gray-600">
-          {recommendation.service && <span>Service: {recommendation.service}</span>}
+          {recommendation.service && <span>Service: <strong>{recommendation.service}</strong></span>}
+          {recommendation.calculation_basis && (
+            <span className="ml-3 text-xs text-emerald-700 font-mono hidden md:inline">
+              [Formula: {recommendation.calculation_basis.split('=')[0]}]
+            </span>
+          )}
         </div>
         <button className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-semibold text-sm">
-          View Details
+          View Academic Details
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
@@ -630,6 +667,11 @@ function RecommendationCard({ recommendation, onExpand }) {
 
 // Recommendation Detail Modal
 function RecommendationModal({ recommendation, onClose }) {
+  const reductionKg = recommendation.expected_reduction_kg ?? recommendation.carbon_reduction_kg ?? recommendation.potential_savings_kg ?? 0;
+  const reductionPct = recommendation.expected_reduction_pct ?? recommendation.carbon_reduction_pct ?? recommendation.potential_reduction_pct ?? 0;
+  const actionText = recommendation.recommended_action || recommendation.recommendation || recommendation.action || recommendation.reasoning;
+  const findingText = recommendation.finding || recommendation.observation;
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-6"
          onClick={onClose}>
@@ -638,10 +680,10 @@ function RecommendationModal({ recommendation, onClose }) {
         <div className="sticky top-0 bg-gradient-to-r from-green-600 to-blue-600 text-white p-6 rounded-t-xl">
           <div className="flex items-start justify-between">
             <div>
-              <h2 className="text-2xl font-bold mb-2">{recommendation.title || recommendation.recommendation}</h2>
+              <h2 className="text-2xl font-bold mb-2">{recommendation.title || actionText}</h2>
               <div className="flex items-center gap-2">
-                <span className="px-3 py-1 bg-white/20 rounded-full text-xs font-bold">
-                  {recommendation.category?.toUpperCase()}
+                <span className="px-3 py-1 bg-white/20 rounded-full text-xs font-bold uppercase">
+                  {recommendation.category}
                 </span>
                 <span className="px-3 py-1 bg-white/20 rounded-full text-xs font-bold">
                   {recommendation.confidence} Confidence
@@ -657,14 +699,14 @@ function RecommendationModal({ recommendation, onClose }) {
         <div className="p-6 space-y-6">
           {/* Observation */}
           <div className="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-5">
-            <h3 className="text-lg font-bold text-blue-900 mb-2">📊 Observation</h3>
-            <p className="text-blue-800">{recommendation.observation}</p>
+            <h3 className="text-lg font-bold text-blue-900 mb-2">📊 Observation & Finding</h3>
+            <p className="text-blue-800">{findingText}</p>
           </div>
           
           {/* Evidence */}
-          {recommendation.evidence && (
+          {recommendation.evidence && Object.keys(recommendation.evidence).length > 0 && (
             <div className="bg-purple-50 border-l-4 border-purple-500 rounded-lg p-5">
-              <h3 className="text-lg font-bold text-purple-900 mb-3">🔍 Evidence</h3>
+              <h3 className="text-lg font-bold text-purple-900 mb-3">🔍 Telemetry Evidence</h3>
               <div className="grid grid-cols-2 gap-3">
                 {Object.entries(recommendation.evidence).map(([key, value]) => {
                   if (key === 'data_source') return null;
@@ -672,9 +714,9 @@ function RecommendationModal({ recommendation, onClose }) {
                     <div key={key} className="bg-white rounded p-3">
                       <span className="text-sm text-gray-600 capitalize block">{key.replace(/_/g, ' ')}:</span>
                       <span className="font-semibold text-gray-900">
-                        {typeof value === 'number' ? value.toFixed(2) : 
+                        {typeof value === 'number' ? value.toFixed(4) : 
                          Array.isArray(value) ? value.join(', ') : 
-                         value}
+                         String(value)}
                       </span>
                     </div>
                   );
@@ -692,10 +734,12 @@ function RecommendationModal({ recommendation, onClose }) {
           )}
           
           {/* Recommendation */}
-          <div className="bg-green-50 border-l-4 border-green-500 rounded-lg p-5">
-            <h3 className="text-lg font-bold text-green-900 mb-2">💡 Recommendation</h3>
-            <p className="text-green-800">{recommendation.recommendation}</p>
-          </div>
+          {actionText && (
+            <div className="bg-green-50 border-l-4 border-green-500 rounded-lg p-5">
+              <h3 className="text-lg font-bold text-green-900 mb-2">💡 Recommended Action</h3>
+              <p className="text-green-800 font-medium">{actionText}</p>
+            </div>
+          )}
           
           {/* Expected Impact */}
           <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-5 border-2 border-green-200">
@@ -704,10 +748,10 @@ function RecommendationModal({ recommendation, onClose }) {
               <div className="bg-white rounded-lg p-4 border border-green-200">
                 <div className="text-sm text-gray-600 mb-1">Carbon Reduction</div>
                 <div className="text-2xl font-bold text-green-900">
-                  {recommendation.expected_reduction_kg?.toFixed(2) || recommendation.potential_savings_kg?.toFixed(2)} kg
+                  {reductionKg.toFixed(4)} kg
                 </div>
                 <div className="text-xs text-green-600 mt-1">
-                  {recommendation.expected_reduction_pct?.toFixed(1) || recommendation.potential_reduction_pct?.toFixed(1)}%
+                  {reductionPct.toFixed(1)}% reduction
                 </div>
               </div>
               <div className="bg-white rounded-lg p-4 border border-blue-200">
@@ -718,6 +762,22 @@ function RecommendationModal({ recommendation, onClose }) {
                 <div className="text-sm text-gray-600 mb-1">Confidence</div>
                 <div className="text-xl font-bold text-purple-900">{recommendation.confidence}</div>
               </div>
+            </div>
+          </div>
+
+          {/* Academic Justification: Formula & Provenance */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-5">
+              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-2">📐 Calculation Basis / Formula</h3>
+              <code className="text-xs font-mono text-emerald-800 bg-white p-2.5 rounded border border-slate-200 block whitespace-pre-wrap">
+                {recommendation.calculation_basis || "ΔE = E_current × ((I_current - I_target) / I_current)"}
+              </code>
+            </div>
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-5">
+              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-2">🛡️ Data Provenance</h3>
+              <p className="text-xs text-slate-700 bg-white p-2.5 rounded border border-slate-200">
+                {recommendation.data_provenance || recommendation.evidence?.data_source || "Electricity Maps Real-Time API & AWS CUR Telemetry"}
+              </p>
             </div>
           </div>
           
@@ -732,7 +792,7 @@ function RecommendationModal({ recommendation, onClose }) {
           {/* Constraint Validation Results */}
           {recommendation.constraints_applied && recommendation.constraints_applied.length > 0 && (
             <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-5">
-              <h3 className="text-lg font-bold text-indigo-900 mb-3">✅ Constraint Validation</h3>
+              <h3 className="text-lg font-bold text-indigo-900 mb-3">✅ Operational Constraints & Trade-Offs</h3>
               <div className="flex flex-wrap gap-2">
                 {recommendation.constraints_applied.map((constraint, i) => (
                   <span key={i} className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-semibold">

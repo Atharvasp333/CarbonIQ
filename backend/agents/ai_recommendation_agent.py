@@ -22,21 +22,13 @@ class AIRecommendationAgent:
     """
     
     def __init__(self):
-        self.gemini_available = False
         self.recommendations_generated = 0
-        
-        # Check if Gemini is available
-        try:
-            from services.gemini import get_gemini_client
-            self.get_gemini_client = get_gemini_client
-            self.gemini_available = bool(os.getenv("GEMINI_API_KEY"))
-            if self.gemini_available:
-                logger.info("Gemini API available for recommendation explanations")
-            else:
-                logger.info("Gemini API key not found, using template explanations")
-        except Exception as e:
-            logger.warning(f"Gemini not available: {e}")
-            self.gemini_available = False
+        gemini_key = os.getenv("GEMINI_API_KEY", "").strip()
+        self.gemini_available = bool(gemini_key and gemini_key != "your_gemini_api_key_here")
+        if self.gemini_available:
+            logger.info("Gemini API key configured for recommendation explanations")
+        else:
+            logger.info("Gemini API key not configured, using deterministic template explanations")
     
     async def generate_recommendations(
         self,
@@ -98,7 +90,15 @@ class AIRecommendationAgent:
                 **opportunity,  # Include all opportunity data
                 'explanation': explanation,
                 'explanation_source': 'gemini',
-                'formatted': True
+                'formatted': True,
+                'reasoning': opportunity.get('recommended_action', opportunity.get('recommendation', '')) or opportunity.get('observation', ''),
+                'recommendation': opportunity.get('recommended_action', opportunity.get('recommendation', '')),
+                'carbon_reduction_kg': opportunity.get('expected_reduction_kg', 0),
+                'carbon_reduction_pct': opportunity.get('expected_reduction_pct', 0),
+                'potential_savings_kg': opportunity.get('expected_reduction_kg', 0),
+                'potential_reduction_pct': opportunity.get('expected_reduction_pct', 0),
+                'constraints': opportunity.get('constraints', opportunity.get('constraints_applied', [])),
+                'details': opportunity.get('details', opportunity.get('evidence', {}))
             }
             
             return recommendation
@@ -206,7 +206,16 @@ Keep it concise, factual, and actionable. Use only the evidence provided.
             **opportunity,
             'explanation': full_explanation,
             'explanation_source': 'template',
-            'formatted': True
+            'formatted': True,
+            'reasoning': rec_text,
+            'recommendation': opportunity.get('recommended_action', rec_text),
+            'implementation_notes': impl_notes,
+            'carbon_reduction_kg': opportunity.get('expected_reduction_kg', 0),
+            'carbon_reduction_pct': opportunity.get('expected_reduction_pct', 0),
+            'potential_savings_kg': opportunity.get('expected_reduction_kg', 0),
+            'potential_reduction_pct': opportunity.get('expected_reduction_pct', 0),
+            'constraints': opportunity.get('constraints', opportunity.get('constraints_applied', [])),
+            'details': opportunity.get('details', opportunity.get('evidence', {}))
         }
     
     def _get_recommendation_text(self, opportunity: Dict) -> str:

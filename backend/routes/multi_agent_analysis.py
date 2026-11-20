@@ -160,12 +160,42 @@ async def analyze_cur_multiagent(
         # Save to NeonDB with user_id
         if result.get('success'):
             try:
-                from database import save_analysis
+                from database import save_analysis, save_recommendation_run
                 analysis_id = await save_analysis(file.filename or 'upload.csv', result, user_id=user_id)
                 result['analysis_id'] = analysis_id
                 logger.info(f"Saved to NeonDB: analysis_id={analysis_id} for user_id={user_id}")
+                
+                # Automatically save intelligence recommendations
+                intel = result.get('intelligence')
+                if intel and intel.get('recommendations'):
+                    try:
+                        await save_recommendation_run(
+                            user_id=user_id,
+                            analysis_id=analysis_id,
+                            run_type='sustainability',
+                            findings=intel.get('summary', {}),
+                            recommendations=intel.get('recommendations', []),
+                            hotspots=intel.get('workload_analysis', {}).get('hotspots', []),
+                            region_opportunities=intel.get('opportunities', []),
+                            time_opportunities=[],
+                            confidence_score=0.90,
+                            metadata={
+                                'patterns': intel.get('insights', []),
+                                'opportunities': intel.get('opportunities', []),
+                                'workload_analysis': intel.get('workload_analysis', {})
+                            }
+                        )
+                    except Exception as rec_err:
+                        logger.warning(f"Failed to persist recommendation run: {rec_err}")
             except Exception as db_err:
                 logger.warning(f"DB save failed (non-fatal): {db_err}")
+
+            # Prime service analytics cache
+            try:
+                from routes.service_analytics import _analysis_cache
+                _analysis_cache['emission_records'] = result.get('all_records') or result.get('detailed_records', [])
+            except Exception:
+                pass
 
         return result
         
@@ -236,6 +266,44 @@ async def analyze_demo_multiagent(request: DemoRequest):
         # Add demo flag
         result['is_demo'] = True
         
+        # Save demo analysis and recommendations to NeonDB if available
+        if result.get('success'):
+            try:
+                from database import save_analysis, save_recommendation_run
+                analysis_id = await save_analysis('CUR_report-00001.csv', result, user_id=1)
+                result['analysis_id'] = analysis_id
+                
+                intel = result.get('intelligence')
+                if intel and intel.get('recommendations'):
+                    try:
+                        await save_recommendation_run(
+                            user_id=1,
+                            analysis_id=analysis_id,
+                            run_type='sustainability',
+                            findings=intel.get('summary', {}),
+                            recommendations=intel.get('recommendations', []),
+                            hotspots=intel.get('workload_analysis', {}).get('hotspots', []),
+                            region_opportunities=intel.get('opportunities', []),
+                            time_opportunities=[],
+                            confidence_score=0.90,
+                            metadata={
+                                'patterns': intel.get('insights', []),
+                                'opportunities': intel.get('opportunities', []),
+                                'workload_analysis': intel.get('workload_analysis', {})
+                            }
+                        )
+                    except Exception as rec_err:
+                        logger.warning(f"Failed to persist demo recommendation run: {rec_err}")
+            except Exception as db_err:
+                logger.warning(f"DB save failed (non-fatal): {db_err}")
+
+            # Prime service analytics cache
+            try:
+                from routes.service_analytics import _analysis_cache
+                _analysis_cache['emission_records'] = result.get('all_records') or result.get('detailed_records', [])
+            except Exception:
+                pass
+
         request_duration = time.time() - request_start
         logger.info(f"[10] RESPONSE SENT - Total time: {request_duration:.2f}s")
         

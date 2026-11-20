@@ -163,14 +163,23 @@ class ExplainableIntelligenceOrchestrator:
                 'total_opportunities': len(opportunities),
                 'total_recommendations': 0,
                 'total_potential_reduction_kg': 0,
+                'total_potential_reduction_pct': 0,
                 'high_priority_count': 0,
+                'high_confidence_count': 0,
+                'top_category': 'None',
                 'categories': []
             }
         
-        total_reduction = sum(r.get('expected_reduction_kg', 0) for r in recommendations)
+        total_reduction = sum(r.get('expected_reduction_kg', r.get('carbon_reduction_kg', 0)) for r in recommendations)
+        # Calculate average or max percentage reduction across recommendations
+        pcts = [r.get('expected_reduction_pct', r.get('carbon_reduction_pct', 0)) for r in recommendations]
+        avg_pct = round(sum(pcts) / len(pcts), 1) if pcts else 0
+        
         high_priority = sum(1 for r in recommendations if r.get('priority', 99) <= 2)
+        high_confidence = sum(1 for r in recommendations if r.get('confidence') == 'High')
         
         categories = list(set(r.get('category', 'unknown') for r in recommendations))
+        top_category = categories[0] if categories else 'scheduling'
         
         # Find top recommendation
         top_rec = max(recommendations, key=lambda x: x.get('expected_reduction_kg', 0))
@@ -180,7 +189,10 @@ class ExplainableIntelligenceOrchestrator:
             'total_opportunities': len(opportunities),
             'total_recommendations': len(recommendations),
             'total_potential_reduction_kg': round(total_reduction, 4),
+            'total_potential_reduction_pct': avg_pct,
             'high_priority_count': high_priority,
+            'high_confidence_count': high_confidence,
+            'top_category': top_category,
             'categories': categories,
             'top_recommendation': {
                 'title': top_rec.get('title'),
