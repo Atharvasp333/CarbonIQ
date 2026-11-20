@@ -16,11 +16,13 @@ try:
     from cli.codecarbon_wrapper import CodeCarbonMeasurement
     from cli.backend_client import BackendClient
     from cli.carbon_aware import CarbonAwareClient
+    from cli.carbon_aware_sdk import CarbonAwareSDKClient, DEFAULT_COMPARISON_REGIONS
     from cli.config_manager import get_api_key, get_api_url, save_config_value, get_config
 except ImportError:
     from codecarbon_wrapper import CodeCarbonMeasurement
     from backend_client import BackendClient
     from carbon_aware import CarbonAwareClient
+    from carbon_aware_sdk import CarbonAwareSDKClient, DEFAULT_COMPARISON_REGIONS
     from config_manager import get_api_key, get_api_url, save_config_value, get_config
 
 # Load environment variables
@@ -667,6 +669,421 @@ def _display_results(results: dict):
     click.echo(f"Country:         {results.get('country_name', 'N/A')}")
     click.echo(f"Carbon Intensity: {results.get('carbon_intensity', 'N/A')} gCO2e/kWh")
     click.echo("="*60 + "\n")
+
+
+
+
+# =============================================================================
+# deploy-analysis: Measure + Carbon Aware SDK + Gemini Agent
+# =============================================================================
+
+@cli.command(name='deploy-analysis')
+@click.argument('command', nargs=-1, required=True)
+@click.option('--workload-name', '-n', required=True, help='Name for this workload')
+@click.option('--workload-type', '-t', default='general', help='Type of workload (ml-training, batch-job, etc.)')
+@click.option('--regions', '-r', multiple=True,
+              default=['us-east-1', 'us-west-2', 'eu-west-1', 'eu-central-1', 'ap-southeast-1'],
+              help='AWS regions to compare (can specify multiple times)')
+@click.option('--deadline', '-d', default=None, help='Deployment deadline (ISO 8601)')
+@click.option('--forecast-region', '-f', default=None,
+              help='AWS region to get a time-based forecast for (defaults to best region found)')
+@click.option('--forecast-window', default=60, type=int,
+              help='Workload duration in minutes for forecast window sizing')
+@click.option('--send-to-backend/--no-send-to-backend', default=True,
+              help='Send results to CarbonIQ backend')
+def deploy_analysis(command, workload_name, workload_type, regions, deadline,
+                    forecast_region, forecast_window, send_to_backend):
+    """
+    Measure a workload AND get an AI-powered deployment recommendation.
+
+    Runs THREE steps in sequence:
+      1. Measures your workload with CodeCarbon (energy + emissions)
+      2. Queries the Carbon Aware SDK for real-time grid intensity across regions
+      3. Sends combined data to the CarbonIQ backend agent (Gemini) which
+         recommends the optimal REGION and TIME to deploy
+
+    Example:
+        carboniq deploy-analysis python train.py \\
+            --workload-name "ML Training" --workload-type ml-training \\
+            --regions us-east-1 --regions eu-west-1 --regions ap-southeast-1
+    """
+    click.echo("\n" + "=" * 70)
+    click.echo("   CarbonIQ Deploy Analysis")
+    click.echo("   CodeCarbon  +  Carbon Aware SDK  +  AI Agent")
+    click.echo("=" * 70)
+    click.echo(f"Workload : {workload_name} ({workload_type})")
+    click.echo(f"Command  : {' '.join(command)}")
+    click.echo(f"Regions  : {', '.join(regions)}")
+    if deadline:
+        click.echo(f"Deadline : {deadline}")
+    click.echo()
+
+    # ------------------------------------------------------------------ #
+    # STEP 1: CodeCarbon measurement
+    # ------------------------------------------------------------------ #
+    click.echo("STEP 1/3  CodeCarbon Measurement")
+    click.echo("-" * 40)
+
+    measurement_obj = CodeCarbonMeasurement(
+        workload_name=workload_name,
+        workload_type=workload_type,
+        output_dir=OUTPUT_DIR
+    )
+
+    try:
+        codecarbon_results = measurement_obj.measure_command(list(command))
+    except Exception as e:
+        click.echo(f"ERROR during measurement: {e}", err=True)
+        import sys; sys.exit(1)
+
+    if not codecarbon_results:
+        click.echo("ERROR: Measurement returned no results.", err=True)
+        import sys; sys.exit(1)
+
+    _display_results(codecarbon_results)
+
+    # ------------------------------------------------------------------ #
+    # STEP 2: Carbon Aware SDK query
+    # ------------------------------------------------------------------ #
+    click.echo("\nSTEP 2/3  Carbon Aware SDK — Region Comparison")
+    click.echo("-" * 40)
+
+    sdk_client = CarbonAwareSDKClient()
+    sdk_available = sdk_client.is_available()
+
+    if sdk_available:
+        click.echo(f"Carbon Aware SDK reachable at: {sdk_client.base_url}")
+    else:
+        click.echo(
+            f"Carbon Aware SDK NOT reachable at {sdk_client.base_url}\n"
+            "  To run it locally:\n"
+            "    docker run -p 5073:80 ghcr.io/green-software-foundation/carbon-aware-sdk:latest\n"
+            "  Set CARBON_AWARE_SDK_URL env var to point to a hosted instance.\n"
+            "  Continuing without real-time grid data..."
+        )
+
+    sdk_data = sdk_client.compare_regions(list(regions))
+
+    # Also try to get a time-based forecast
+    forecast_data = None
+    if sdk_available:
+        target_forecast_region = forecast_region
+        if not target_forecast_region and sdk_data.get("best_region"):
+            target_forecast_region = sdk_data["best_region"]["aws_region"]
+
+        if target_forecast_region:
+            click.echo(f"\nFetching time forecast for {target_forecast_region}...")
+            forecast_data = sdk_client.get_forecast(
+                aws_region=target_forecast_region,
+                window_duration_minutes=forecast_window
+            )
+
+    # Display SDK results
+    if sdk_data.get("available") and sdk_data.get("regions"):
+        click.echo("\n  Region Carbon Intensity Ranking (lowest = greenest):")
+        for i, r in enumerate(sdk_data["regions"], 1):
+            tag = "  <-- BEST" if i == 1 else ("  <-- WORST" if i == len(sdk_data["regions"]) else "")
+            click.echo(
+                f"    {i:2d}. {r['aws_region']:<18} {r['carbon_intensity']:>7.1f} gCO2eq/kWh{tag}"
+            )
+        click.echo()
+
+        if forecast_data and forecast_data.get("optimal_window_start"):
+            click.echo(
+                f"  Optimal time window ({forecast_data['aws_region']}): "
+                f"{forecast_data['optimal_window_start']}  "
+                f"({forecast_data['optimal_carbon_intensity']:.1f} gCO2eq/kWh)"
+            )
+    else:
+        click.echo("  No real-time region data available from Carbon Aware SDK.")
+
+    # ------------------------------------------------------------------ #
+    # STEP 3: Backend agent analysis (Gemini)
+    # ------------------------------------------------------------------ #
+    click.echo("\nSTEP 3/3  AI Agent Analysis (Gemini)")
+    click.echo("-" * 40)
+    click.echo("Sending combined data to CarbonIQ backend for analysis...")
+
+    # Build the payload
+    sdk_regions_payload = []
+    if sdk_data.get("regions"):
+        for r in sdk_data["regions"]:
+            sdk_regions_payload.append({
+                "aws_region": r["aws_region"],
+                "sdk_location": r.get("sdk_location"),
+                "carbon_intensity": r["carbon_intensity"],
+                "time": r.get("time"),
+                "source": r.get("source"),
+            })
+
+    forecast_payload = None
+    if forecast_data:
+        forecast_payload = {
+            "aws_region": forecast_data.get("aws_region"),
+            "optimal_window_start": forecast_data.get("optimal_window_start"),
+            "optimal_carbon_intensity": forecast_data.get("optimal_carbon_intensity"),
+            "window_duration_minutes": forecast_data.get("window_duration_minutes"),
+            "forecast_generated_at": forecast_data.get("forecast_generated_at"),
+            "source": forecast_data.get("source"),
+        }
+
+    best_region = None
+    if sdk_data.get("best_region"):
+        br = sdk_data["best_region"]
+        best_region = {
+            "aws_region": br["aws_region"],
+            "sdk_location": br.get("sdk_location"),
+            "carbon_intensity": br["carbon_intensity"],
+            "time": br.get("time"),
+            "source": br.get("source"),
+        }
+
+    worst_region = None
+    if sdk_data.get("worst_region"):
+        wr = sdk_data["worst_region"]
+        worst_region = {
+            "aws_region": wr["aws_region"],
+            "sdk_location": wr.get("sdk_location"),
+            "carbon_intensity": wr["carbon_intensity"],
+            "time": wr.get("time"),
+            "source": wr.get("source"),
+        }
+
+    analysis_payload = {
+        "codecarbon": {
+            "workload_name": codecarbon_results.get("workload_name", workload_name),
+            "workload_type": codecarbon_results.get("workload_type", workload_type),
+            "duration_seconds": codecarbon_results.get("duration_seconds", 0),
+            "emissions_gco2e": codecarbon_results.get("emissions_gco2e", 0),
+            "energy_kwh": codecarbon_results.get("energy_kwh", 0),
+            "carbon_intensity": codecarbon_results.get("carbon_intensity"),
+            "country_name": codecarbon_results.get("country_name"),
+            "cpu_energy": codecarbon_results.get("cpu_energy"),
+            "ram_energy": codecarbon_results.get("ram_energy"),
+            "gpu_energy": codecarbon_results.get("gpu_energy"),
+        },
+        "carbon_aware_sdk": {
+            "available": sdk_data.get("available", False),
+            "queried_at": sdk_data.get("queried_at"),
+            "regions": sdk_regions_payload,
+            "best_region": best_region,
+            "worst_region": worst_region,
+            "average_intensity": sdk_data.get("average_intensity"),
+            "total_regions_compared": sdk_data.get("total_regions_compared"),
+            "forecast": forecast_payload,
+            "error": sdk_data.get("error"),
+            "source": sdk_data.get("source"),
+        },
+        "deadline": deadline,
+        "preferred_regions": list(regions) if regions else None,
+        "measured_at": datetime.utcnow().isoformat(),
+    }
+
+    try:
+        import requests as _requests
+        resp = _requests.post(
+            f"{API_URL}/cli/deployment-analysis",
+            json=analysis_payload,
+            headers={"Content-Type": "application/json"},
+            timeout=30
+        )
+
+        if resp.status_code == 200:
+            analysis = resp.json()
+            _display_deployment_analysis(analysis)
+        else:
+            click.echo(f"Backend returned HTTP {resp.status_code}: {resp.text[:300]}", err=True)
+            click.echo("\nShowing local summary instead...")
+            _display_local_summary(codecarbon_results, sdk_data, forecast_data)
+
+    except Exception as e:
+        click.echo(f"Could not reach backend agent: {e}", err=True)
+        click.echo("\nShowing local summary instead...")
+        _display_local_summary(codecarbon_results, sdk_data, forecast_data)
+
+    # Also send raw measurement to backend
+    if send_to_backend:
+        try:
+            backend_client = BackendClient(API_URL)
+            payload = {
+                "workload_name": workload_name,
+                "workload_type": workload_type,
+                "measurement": codecarbon_results,
+                "carbon_aware_data": sdk_data if sdk_available else None,
+                "deadline": deadline,
+                "measured_at": datetime.utcnow().isoformat(),
+            }
+            backend_client.send_measurement(payload)
+        except Exception:
+            pass  # Storage is secondary
+
+
+@cli.command(name='carbon-intensity')
+@click.option('--regions', '-r', multiple=True,
+              default=['us-east-1', 'us-west-2', 'eu-west-1', 'eu-central-1',
+                       'ap-southeast-1', 'ap-southeast-2'],
+              help='AWS regions to compare (repeatable)')
+@click.option('--forecast', '-f', is_flag=True, default=False,
+              help='Also show time-based forecast for the best region')
+@click.option('--forecast-window', default=60, type=int,
+              help='Workload duration in minutes for forecast sizing')
+def carbon_intensity_check(regions, forecast, forecast_window):
+    """
+    Check real-time carbon intensity via Carbon Aware SDK across regions.
+
+    Shows which AWS region is greenest RIGHT NOW and optionally the optimal
+    deployment time window using forecasted grid data.
+
+    Example:
+        carboniq carbon-intensity --regions us-east-1 --regions eu-west-1 --forecast
+    """
+    click.echo("\n" + "=" * 60)
+    click.echo("   Carbon Aware SDK  —  Real-time Grid Intensity")
+    click.echo("=" * 60)
+
+    sdk_client = CarbonAwareSDKClient()
+
+    if not sdk_client.is_available():
+        click.echo(
+            f"Carbon Aware SDK not reachable at {sdk_client.base_url}\n"
+            "  Start it with:\n"
+            "    docker run -p 5073:80 ghcr.io/green-software-foundation/carbon-aware-sdk:latest\n"
+            "  Or set CARBON_AWARE_SDK_URL to your hosted instance."
+        )
+        return
+
+    click.echo(f"SDK endpoint : {sdk_client.base_url}")
+    sdk_data = sdk_client.compare_regions(list(regions))
+
+    if not sdk_data.get("available") or not sdk_data.get("regions"):
+        click.echo("No data returned from Carbon Aware SDK.")
+        return
+
+    click.echo(f"\nQueried {sdk_data['total_regions_compared']} regions at {sdk_data['queried_at'][:19]}Z")
+    click.echo(f"Average intensity : {sdk_data['average_intensity']:.1f} gCO2eq/kWh\n")
+    click.echo(f"  {'Rank':<5} {'AWS Region':<20} {'Intensity':>13}  Notes")
+    click.echo("  " + "-" * 55)
+
+    for i, r in enumerate(sdk_data["regions"], 1):
+        note = ""
+        if i == 1:
+            note = "BEST  🟢"
+        elif i == len(sdk_data["regions"]):
+            note = "WORST 🔴"
+        elif r["carbon_intensity"] < sdk_data["average_intensity"]:
+            note = "below avg 🟡"
+        click.echo(f"  {i:<5} {r['aws_region']:<20} {r['carbon_intensity']:>8.1f} g/kWh  {note}")
+
+    # Savings summary
+    if len(sdk_data["regions"]) > 1:
+        best = sdk_data["regions"][0]
+        worst = sdk_data["regions"][-1]
+        savings = (worst["carbon_intensity"] - best["carbon_intensity"]) / worst["carbon_intensity"] * 100
+        click.echo(f"\nDeploying to {best['aws_region']} instead of {worst['aws_region']}")
+        click.echo(f"saves approximately {savings:.1f}% carbon emissions.")
+
+    # Optional forecast
+    if forecast and sdk_data.get("best_region"):
+        best_region = sdk_data["best_region"]["aws_region"]
+        click.echo(f"\nFetching time forecast for {best_region} ({forecast_window}-min window)...")
+        fc = sdk_client.get_forecast(best_region, window_duration_minutes=forecast_window)
+        if fc and fc.get("optimal_window_start"):
+            click.echo(f"  Optimal window starts : {fc['optimal_window_start']}")
+            click.echo(f"  Forecast intensity    : {fc['optimal_carbon_intensity']:.1f} gCO2eq/kWh")
+        else:
+            click.echo("  No forecast data available for this region.")
+
+    click.echo("=" * 60 + "\n")
+
+
+# ---------------------------------------------------------------------------
+# Display helpers for deploy-analysis
+# ---------------------------------------------------------------------------
+
+def _display_deployment_analysis(analysis: dict):
+    """Pretty-print the backend agent's deployment analysis."""
+    click.echo("\n" + "=" * 70)
+    click.echo("   AI DEPLOYMENT RECOMMENDATION")
+    click.echo("=" * 70)
+
+    click.echo(f"\nSUMMARY:\n  {analysis.get('summary', 'N/A')}")
+
+    primary = analysis.get("primary_recommendation", {})
+    if primary:
+        click.echo("\n" + "-" * 70)
+        click.echo("PRIMARY RECOMMENDATION")
+        click.echo("-" * 70)
+        click.echo(f"  Deploy to     : {primary.get('optimal_region', 'N/A')}")
+        if primary.get("optimal_time_window"):
+            click.echo(f"  When          : {primary['optimal_time_window']}")
+        if primary.get("estimated_carbon_intensity"):
+            click.echo(f"  Intensity     : {primary['estimated_carbon_intensity']:.1f} gCO2eq/kWh")
+        if primary.get("estimated_emissions_gco2e"):
+            click.echo(f"  Est. emissions: {primary['estimated_emissions_gco2e']:.4f} gCO2e")
+        if primary.get("carbon_savings_vs_current_pct") is not None:
+            savings = primary["carbon_savings_vs_current_pct"]
+            emoji = "✅" if savings > 0 else "⚠️ "
+            click.echo(f"  Carbon savings: {emoji} {savings:+.1f}% vs. current location")
+        click.echo(f"\n  Rationale:\n    {primary.get('rationale', 'N/A')}")
+
+    alternatives = analysis.get("alternative_recommendations", [])
+    if alternatives:
+        click.echo("\n" + "-" * 70)
+        click.echo("ALTERNATIVE OPTIONS")
+        click.echo("-" * 70)
+        for i, alt in enumerate(alternatives, 1):
+            click.echo(f"\n  {i}. {alt.get('optimal_region', 'N/A')}")
+            if alt.get("estimated_carbon_intensity"):
+                click.echo(f"     Intensity : {alt['estimated_carbon_intensity']:.1f} gCO2eq/kWh")
+            if alt.get("carbon_savings_vs_current_pct") is not None:
+                click.echo(f"     Savings   : {alt['carbon_savings_vs_current_pct']:+.1f}%")
+            if alt.get("optimal_time_window"):
+                click.echo(f"     When      : {alt['optimal_time_window']}")
+            click.echo(f"     {alt.get('rationale', '')}")
+
+    insights = analysis.get("key_insights", [])
+    if insights:
+        click.echo("\n" + "-" * 70)
+        click.echo("KEY INSIGHTS")
+        click.echo("-" * 70)
+        for ins in insights:
+            click.echo(f"  * {ins}")
+
+    if analysis.get("carbon_reduction_potential_pct") is not None:
+        pct = analysis["carbon_reduction_potential_pct"]
+        click.echo(f"\n  Max carbon reduction potential: {pct:.1f}%")
+
+    click.echo(f"\n  Analysis by : {', '.join(analysis.get('data_sources', []))}")
+    click.echo(f"  Timestamp   : {analysis.get('analysis_timestamp', 'N/A')}")
+    click.echo("=" * 70 + "\n")
+
+
+def _display_local_summary(codecarbon_results: dict, sdk_data: dict, forecast_data):
+    """Fallback local summary when backend is not reachable."""
+    click.echo("\n" + "=" * 60)
+    click.echo("LOCAL DEPLOYMENT SUMMARY (backend unavailable)")
+    click.echo("=" * 60)
+    click.echo(f"Measured emissions : {codecarbon_results.get('emissions_gco2e', 'N/A'):.4f} gCO2e")
+    click.echo(f"Energy consumed    : {codecarbon_results.get('energy_kwh', 'N/A'):.6f} kWh")
+    click.echo(f"Duration           : {codecarbon_results.get('duration_seconds', 'N/A'):.2f}s")
+
+    if sdk_data.get("available") and sdk_data.get("best_region"):
+        best = sdk_data["best_region"]
+        click.echo(f"\nGreenest region now: {best['aws_region']} ({best['carbon_intensity']:.1f} gCO2eq/kWh)")
+        cur_i = codecarbon_results.get("carbon_intensity")
+        if cur_i and cur_i > 0:
+            savings = (cur_i - best["carbon_intensity"]) / cur_i * 100
+            click.echo(f"Potential savings  : {savings:.1f}% by deploying to {best['aws_region']}")
+    else:
+        click.echo("\nCarbon Aware SDK data not available.")
+        click.echo("  Run: docker run -p 5073:80 ghcr.io/green-software-foundation/carbon-aware-sdk:latest")
+
+    if forecast_data and forecast_data.get("optimal_window_start"):
+        click.echo(f"\nBest time window   : {forecast_data['optimal_window_start']}")
+        click.echo(f"Forecast intensity : {forecast_data['optimal_carbon_intensity']:.1f} gCO2eq/kWh")
+
+    click.echo("=" * 60 + "\n")
+
 
 
 if __name__ == '__main__':
