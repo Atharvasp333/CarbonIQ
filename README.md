@@ -362,8 +362,8 @@ pip install -r requirements.txt
 3. Login → lands on Dashboard
 4. Click "Connect AWS Account"
 5. Enter:
-   - Access Key: AKIAIOSFODNN7EXAMPLE
-   - Secret Key: (from .env)
+   - Access Key: <YOUR_AWS_ACCESS_KEY_ID>
+   - Secret Key: <YOUR_AWS_SECRET_ACCESS_KEY>
    - Region: us-east-1
    - Bucket: carboniq-bucket
    - File Prefix: carboniq-cur/carboniq-cur/data/
