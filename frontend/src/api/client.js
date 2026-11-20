@@ -196,3 +196,18 @@ export const getCliHistory = async (limit = 50) => {
   const response = await api.get(`/api/cli/measurements/history?limit=${limit}`);
   return response.data;
 };
+
+export const getOrgProfile = async () => {
+  const response = await api.get('/api/profile/');
+  return response.data;
+};
+
+export const saveOrgProfileApi = async (profileData) => {
+  const response = await api.post('/api/profile/', profileData);
+  return response.data;
+};
+
+export const getOrgProfileOptions = async () => {
+  const response = await api.get('/api/profile/options');
+  return response.data;
+};

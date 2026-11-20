@@ -133,6 +133,11 @@ async def init_db():
         """)
 
         # ── Migrations for existing tables ──────────────────────────────────
+        # Add organization column to users if it doesn't exist yet
+        await conn.execute("""
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS organization TEXT DEFAULT 'Cloud Infrastructure';
+        """)
+
         # Add user_id column to analyses if it doesn't exist yet
         await conn.execute("""
             ALTER TABLE analyses ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE CASCADE;

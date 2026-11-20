@@ -17,11 +17,15 @@ export const AuthProvider = ({ children }) => {
         headers: { Authorization: `Bearer ${token}` }
       })
       .then(res => {
-        setUser(res.data);
+        const userData = res.data?.user || res.data;
+        setUser(userData);
         setLoading(false);
       })
-      .catch(() => {
-        localStorage.removeItem('auth_token');
+      .catch((err) => {
+        if (err.response?.status === 401) {
+          localStorage.removeItem('auth_token');
+          setUser(null);
+        }
         setLoading(false);
       });
     } else {
@@ -71,8 +75,26 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
-  const updateProfile = (updates) => {
-    setUser((prev) => ({ ...prev, ...updates }));
+  const updateProfile = async (updates) => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      setUser((prev) => ({ ...prev, ...updates }));
+      return { success: true };
+    }
+
+    try {
+      const response = await axios.put(`${API_BASE}/api/auth/profile`, updates, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const updatedUser = response.data?.user || { ...user, ...updates };
+      setUser(updatedUser);
+      return { success: true, user: updatedUser };
+    } catch (err) {
+      console.error('Failed to update profile on backend:', err);
+      setUser((prev) => ({ ...prev, ...updates }));
+      const msg = err.response?.data?.detail || 'Failed to persist profile to server';
+      return { success: false, error: msg };
+    }
   };
 
   return (

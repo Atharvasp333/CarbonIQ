@@ -133,7 +133,7 @@ async def get_current_user(
         raise HTTPException(status_code=503, detail="Database unavailable")
     async with pool.acquire() as conn:
         user = await conn.fetchrow(
-            "SELECT id, name, email, created_at FROM users WHERE email = $1", email
+            "SELECT id, name, email, COALESCE(organization, 'Cloud Infrastructure') as organization, created_at FROM users WHERE email = $1", email
         )
 
     if not user:
@@ -141,9 +141,9 @@ async def get_current_user(
         try:
             async with pool.acquire() as conn:
                 user = await conn.fetchrow(
-                    """INSERT INTO users (name, email, password)
-                       VALUES ($1, $2, 'neon_auth_managed')
-                       RETURNING id, name, email, created_at""",
+                    """INSERT INTO users (name, email, password, organization)
+                       VALUES ($1, $2, 'neon_auth_managed', 'Cloud Infrastructure')
+                       RETURNING id, name, email, COALESCE(organization, 'Cloud Infrastructure') as organization, created_at""",
                     email.split("@")[0], email,
                 )
         except Exception as e:
@@ -166,7 +166,13 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class ProfileUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    organization: Optional[str] = None
+
+
 def _user_response(user, token: str):
+    created_val = user["created_at"].isoformat() if hasattr(user["created_at"], "isoformat") else str(user["created_at"])
     return {
         "success": True,
         "access_token": token,  # Frontend expects access_token
@@ -174,7 +180,8 @@ def _user_response(user, token: str):
             "id": user["id"],
             "name": user["name"],
             "email": user["email"],
-            "createdAt": user["created_at"].isoformat(),
+            "organization": user.get("organization") or "Cloud Infrastructure",
+            "createdAt": created_val,
         },
     }
 
@@ -216,9 +223,9 @@ async def signup(req: SignupRequest):
             
             print("Step 7: Inserting user into database...")
             user = await conn.fetchrow(
-                """INSERT INTO users (name, email, password)
-                   VALUES ($1, $2, $3)
-                   RETURNING id, name, email, created_at""",
+                """INSERT INTO users (name, email, password, organization)
+                   VALUES ($1, $2, $3, 'Cloud Infrastructure')
+                   RETURNING id, name, email, COALESCE(organization, 'Cloud Infrastructure') as organization, created_at""",
                 req.name, req.email.lower(), hashed,
             )
             print(f"Step 8: User created with ID: {user['id']}")
@@ -262,7 +269,7 @@ async def login(req: LoginRequest):
         async with pool.acquire() as conn:
             print(f"Step 3: Fetching user with email: {req.email.lower()}")
             user = await conn.fetchrow(
-                "SELECT id, name, email, password, created_at FROM users WHERE email = $1",
+                "SELECT id, name, email, password, COALESCE(organization, 'Cloud Infrastructure') as organization, created_at FROM users WHERE email = $1",
                 req.email.lower(),
             )
             print(f"Step 4: User found: {user is not None}")
@@ -317,14 +324,72 @@ async def login(req: LoginRequest):
 @router.get("/auth/me")
 async def me(current_user=Depends(get_current_user)):
     """Return the currently authenticated user (validates token)."""
+    created_val = current_user["created_at"].isoformat() if hasattr(current_user["created_at"], "isoformat") else str(current_user["created_at"])
     return {
         "success": True,
         "user": {
             "id": current_user["id"],
             "name": current_user["name"],
             "email": current_user["email"],
-            "createdAt": current_user["created_at"].isoformat(),
+            "organization": current_user.get("organization") or "Cloud Infrastructure",
+            "createdAt": created_val,
         },
+    }
+
+
+@router.put("/auth/profile")
+async def update_profile(req: ProfileUpdateRequest, current_user=Depends(get_current_user)):
+    """
+    Update authenticated user's name and organization in NeonDB.
+    Scoped strictly to current_user['id'].
+    """
+    user_id = current_user["id"]
+    new_name = (req.name or current_user["name"]).strip()
+    new_org = (req.organization if req.organization is not None else current_user.get("organization", "Cloud Infrastructure")).strip()
+
+    if not new_name:
+        raise HTTPException(status_code=400, detail="Full name cannot be empty")
+
+    from database import get_pool
+    pool = await get_pool()
+    if pool is None:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow("""
+            UPDATE users
+            SET name = $1, organization = $2
+            WHERE id = $3
+            RETURNING id, name, email, COALESCE(organization, 'Cloud Infrastructure') as organization, created_at
+        """, new_name, new_org, user_id)
+
+        if not row:
+            raise HTTPException(status_code=404, detail="User record not found")
+
+        # Sync with organization_profile table if present
+        if new_org:
+            try:
+                await conn.execute("""
+                    INSERT INTO organization_profile (
+                        user_id, organization_name, primary_user_region, workload_type,
+                        latency_sensitivity, migration_flexibility, optimization_priority
+                    )
+                    VALUES ($1, $2, 'Global', 'Production', 'Medium', 'Some Workloads', 'Balance Both')
+                    ON CONFLICT (user_id) DO UPDATE SET organization_name = EXCLUDED.organization_name, updated_at = NOW()
+                """, user_id, new_org)
+            except Exception as e:
+                logger.warning(f"Organization profile sync notice: {e}")
+
+    created_val = row["created_at"].isoformat() if hasattr(row["created_at"], "isoformat") else str(row["created_at"])
+    return {
+        "success": True,
+        "user": {
+            "id": row["id"],
+            "name": row["name"],
+            "email": row["email"],
+            "organization": row["organization"] or "Cloud Infrastructure",
+            "createdAt": created_val,
+        }
     }
 
 
