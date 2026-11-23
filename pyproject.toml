@@ -53,6 +53,8 @@ carboniq = "carboniq.cli.carboniq_cli:cli"
 Homepage = "https://carboniq-capstone.vercel.app"
 Repository = "https://github.com/Kingslaye-varun/CarbonIQ_Capstone"
 Documentation = "https://github.com/Kingslaye-varun/CarbonIQ_Capstone#readme"
+"Bug Tracker" = "https://github.com/Kingslaye-varun/CarbonIQ_Capstone/issues"
+Changelog = "https://github.com/Kingslaye-varun/CarbonIQ_Capstone/blob/main/CHANGELOG.md"
 
 [tool.setuptools.packages.find]
 where = ["."]

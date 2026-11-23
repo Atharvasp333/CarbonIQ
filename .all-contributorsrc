@@ -1,0 +1,62 @@
+{
+  "projectName": "CarbonIQ",
+  "projectOwner": "CarbonIQ Team",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "files": [
+    "README.md",
+    "CONTRIBUTORS.md"
+  ],
+  "imageSize": 100,
+  "commitConvention": "angular",
+  "contributors": [
+    {
+      "login": "Atharvasp333",
+      "name": "Atharva Pingale",
+      "avatar_url": "https://avatars.githubusercontent.com/u/Atharvasp333",
+      "profile": "https://github.com/Atharvasp333",
+      "contributions": [
+        "code",
+        "architecture",
+        "doc"
+      ]
+    },
+    {
+      "login": "Kingslaye-varun",
+      "name": "Varun Rahatgaonkar",
+      "avatar_url": "https://avatars.githubusercontent.com/u/Kingslaye-varun",
+      "profile": "https://github.com/Kingslaye-varun",
+      "contributions": [
+        "code",
+        "infra",
+        "maintenance",
+        "plugin",
+        "test",
+        "doc"
+      ]
+    },
+    {
+      "login": "tanaya2005",
+      "name": "Tanaya Jain",
+      "avatar_url": "https://avatars.githubusercontent.com/u/tanaya2005",
+      "profile": "https://github.com/tanaya2005",
+      "contributions": [
+        "code",
+        "security",
+        "design"
+      ]
+    },
+    {
+      "login": "nidhi0810",
+      "name": "Nidhi Puthran",
+      "avatar_url": "https://avatars.githubusercontent.com/u/nidhi0810",
+      "profile": "https://github.com/nidhi0810",
+      "contributions": [
+        "code",
+        "tool",
+        "research"
+      ]
+    }
+  ],
+  "contributorsPerLine": 7
+}

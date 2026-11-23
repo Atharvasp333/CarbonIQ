@@ -1,0 +1,43 @@
+name: Feature Request
+description: Propose an idea or enhancement for CarbonIQ.
+title: "[FEAT]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting an enhancement to CarbonIQ!
+  - type: dropdown
+    id: component
+    attributes:
+      label: Target Component
+      description: Where does this feature belong?
+      options:
+        - "Python SDK (carboniq)"
+        - "CLI Tool (carboniq CLI)"
+        - "Backend Multi-Agent Pipeline"
+        - "Frontend Dashboard"
+        - "VS Code Extension"
+        - "Documentation / Examples"
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: Is your feature request related to a specific problem or limitation?
+      placeholder: "I'm always frustrated when..."
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed Solution
+      description: A clear and concise description of what you want to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any alternative solutions or workarounds you have considered.

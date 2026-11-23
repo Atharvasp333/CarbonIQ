@@ -1,0 +1,52 @@
+cff-version: 1.2.0
+message: "If you use CarbonIQ in academic research, software benchmarks, or sustainable computing studies, please cite it as below."
+title: "CarbonIQ: A Constraint-Aware Agentic Platform for Explainable Carbon-Conscious Software Workload Scheduling"
+abstract: "CarbonIQ is an open-source platform uniting macro-level cloud infrastructure accounting (AWS CUR) with micro-level developer compute optimization. It provides an autonomous multi-agent accounting engine, an AST-driven green code refactoring optimizer, a carbon-aware scheduling CLI, and VS Code developer integration."
+version: 0.2.0
+date-released: "2026-11-23"
+license: MIT
+repository-code: "https://github.com/Kingslaye-varun/CarbonIQ_Capstone"
+url: "https://pypi.org/project/carboniq-sdk/"
+keywords:
+  - "sustainable-software"
+  - "carbon-aware-computing"
+  - "green-software"
+  - "energy-efficiency"
+  - "ast-optimizer"
+  - "aws-cur"
+authors:
+  - family-names: "Jain"
+    given-names: "Tanaya"
+    affiliation: "Vivekanand Education Society's Institute of Technology"
+    email: "2023.tanaya.jain@ves.ac.in"
+  - family-names: "Rahatgaonkar"
+    given-names: "Varun"
+    affiliation: "Vivekanand Education Society's Institute of Technology"
+    email: "2023.varun.rahatgaonkar@ves.ac.in"
+    orcid: "https://github.com/Kingslaye-varun"
+  - family-names: "Pingale"
+    given-names: "Atharva"
+    affiliation: "Vivekanand Education Society's Institute of Technology"
+    email: "2023.atharva.pingale@ves.ac.in"
+    orcid: "https://github.com/Atharvasp333"
+  - family-names: "Puthran"
+    given-names: "Nidhi"
+    affiliation: "Vivekanand Education Society's Institute of Technology"
+    email: "2023.nidhi.puthran@ves.ac.in"
+preferred-citation:
+  type: conference-paper
+  title: "CarbonIQ: A Constraint-Aware Agentic Platform for Explainable Carbon-Conscious Software Workload Scheduling"
+  authors:
+    - family-names: "Jain"
+      given-names: "Tanaya"
+    - family-names: "Rahatgaonkar"
+      given-names: "Varun"
+    - family-names: "Pingale"
+      given-names: "Atharva"
+    - family-names: "Puthran"
+      given-names: "Nidhi"
+    - family-names: "Nehete"
+      given-names: "Charusheela"
+  year: 2026
+  conference:
+    name: "Under Review / Capstone Research"
