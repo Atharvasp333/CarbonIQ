@@ -1,7 +1,7 @@
 cff-version: 1.2.0
 message: "If you use CarbonIQ in academic research, software benchmarks, or sustainable computing studies, please cite it as below."
 title: "CarbonIQ: A Constraint-Aware Agentic Platform for Explainable Carbon-Conscious Software Workload Scheduling"
-abstract: "CarbonIQ is an open-source platform uniting macro-level cloud infrastructure accounting (AWS CUR) with micro-level developer compute optimization. It provides an autonomous multi-agent accounting engine, an AST-driven green code refactoring optimizer, a carbon-aware scheduling CLI, and VS Code developer integration."
+abstract: "CarbonIQ is an open-source platform uniting macro-level cloud infrastructure accounting (AWS CUR) with micro-level developer compute optimization. Originated as the Group 13 Information Technology Capstone Project (Academic Year 2026–27) at VESIT under the academic guidance of Mrs. Charusheela Nehete, it provides an autonomous multi-agent accounting engine, an AST-driven green code refactoring optimizer, a carbon-aware scheduling CLI, and VS Code developer integration."
 version: 0.2.0
 date-released: "2026-11-23"
 license: MIT
@@ -49,4 +49,4 @@ preferred-citation:
       given-names: "Charusheela"
   year: 2026
   conference:
-    name: "Under Review / Capstone Research"
+    name: "Department of Information Technology Capstone Project (Group 13, AY 2026–27), VESIT / Under Review"

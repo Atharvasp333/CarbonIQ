@@ -1,6 +1,6 @@
 # Authors of CarbonIQ
 
-CarbonIQ was developed as a final-year academic capstone project at Vivekanand Education Society's Institute of Technology (VESIT), Mumbai, by a four-member student team under the academic guidance of Mrs. Charusheela Nehete.
+CarbonIQ originated as the Group 13 Information Technology Capstone Project (Academic Year 2026–27) at Vivekanand Education Society's Institute of Technology (VESIT), Mumbai, under the academic guidance of Mrs. Charusheela Nehete.
 
 ---
 
@@ -19,7 +19,8 @@ CarbonIQ was developed as a final-year academic capstone project at Vivekanand E
 
 ### Varun Rahatgaonkar
 * **GitHub:** [@Kingslaye-varun](https://github.com/Kingslaye-varun)
-* **Designation:** Core Developer — Python SDK, Developer Tools & Release Engineering
+* **Designation:** Group 13 Team Leader, Core Developer — Python SDK, Developer Tools & Release Engineering
+* **Academic Leadership:** Group 13 Team Leader for the 2026–27 Department of Information Technology capstone project at VESIT (project planning, cross-tier integration, and release stewardship).
 * **Deployment & Release Maintainer:** Administrator of the deployment and PyPI publishing repository ([Kingslaye-varun/CarbonIQ_Capstone](https://github.com/Kingslaye-varun/CarbonIQ_Capstone))
 * **Contributions:**
   * CarbonIQ Python SDK packaging (PEP 517/518/621) and public release maintainership.
@@ -63,6 +64,7 @@ CarbonIQ was developed as a final-year academic capstone project at Vivekanand E
 
 ## Authorship & Attribution Principles
 
-1. **Shared Academic Origin:** The project originated as a collaborative final-year academic capstone project at VESIT.
+1. **Shared Academic Origin:** The project originated as a collaborative final-year academic capstone project (Group 13, AY 2026–27) at VESIT.
 2. **Factual Attribution:** Responsibilities and contributions are documented truthfully according to verified Git commit history and academic project records.
 3. **No Exclusive Claims:** Release engineering and repository administration responsibilities (such as managing the deployment fork or publishing `carboniq-sdk` to PyPI) represent operational maintenance and do not constitute exclusive legal ownership of the collaborative project.
+4. **Project Repositories & Academic Context:** The institutional academic documentation is archived at [itprojects-create/Cp_13_2026-27](https://github.com/itprojects-create/Cp_13_2026-27). Team leader and release maintainer roles reflect project coordination and distribution logistics; they do not alter the collective authorship of the software.

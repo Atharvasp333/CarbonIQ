@@ -19,8 +19,9 @@ CarbonIQ unites macro-level cloud infrastructure accounting with micro-level dev
 * **Public PyPI Package:** [`pip install carboniq-sdk`](https://pypi.org/project/carboniq-sdk/) (Version 0.2.0)
 * **Production Web Dashboard:** [https://carboniq-capstone.vercel.app](https://carboniq-capstone.vercel.app)
 * **Production API Swagger Docs:** [https://carboniq-backend-duel.onrender.com/docs](https://carboniq-backend-duel.onrender.com/docs)
-* **Deployment & Release Repository:** [Kingslaye-varun/CarbonIQ_Capstone](https://github.com/Kingslaye-varun/CarbonIQ_Capstone)
-* **Original Upstream Repository:** [Atharvasp333/CarbonIQ](https://github.com/Atharvasp333/CarbonIQ)
+* **Production & SDK Release Repository:** [Kingslaye-varun/CarbonIQ_Capstone](https://github.com/Kingslaye-varun/CarbonIQ_Capstone)
+* **Collaborative Development Repository:** [Atharvasp333/CarbonIQ](https://github.com/Atharvasp333/CarbonIQ)
+* **Academic Capstone Records (Group 13):** [itprojects-create/Cp_13_2026-27](https://github.com/itprojects-create/Cp_13_2026-27)
 * **Academic Citation:** [CITATION.cff](CITATION.cff) | [Authors](AUTHORS.md) | [Architecture](docs/ARCHITECTURE.md)
 
 ---
@@ -255,26 +256,34 @@ For cloud billing line items (CUR), energy is calculated from usage metrics and 
 
 ---
 
-## Two-Repository Architecture
+## Project Repositories
 
-CarbonIQ is developed across two synchronized GitHub repositories:
+CarbonIQ operations, source code, and institutional records are organized across three distinct repositories:
 
-* **[Atharvasp333/CarbonIQ](https://github.com/Atharvasp333/CarbonIQ):** The original upstream repository created during the academic capstone initiative. Holds the foundation multi-agent cloud accounting system and research base. Maintained by Atharva Pingale.
-* **[Kingslaye-varun/CarbonIQ_Capstone](https://github.com/Kingslaye-varun/CarbonIQ_Capstone):** The specialized deployment and distribution fork configured as the public PyPI Trusted Publisher for `carboniq-sdk`. Maintained by Varun Rahatgaonkar.
+1. **Academic Capstone Records ([itprojects-create/Cp_13_2026-27](https://github.com/itprojects-create/Cp_13_2026-27)):**
+   * Institutional academic repository for Group 13 (Academic Year 2026–27) within the Department of Information Technology at VESIT.
+   * Houses archival semester submissions, project synopses, semester logbooks, and academic blackbook documentation.
+   * *Note: The department repository serves strictly for academic evaluation and institutional record-keeping; it does not constitute institutional endorsement or operational ownership of the public software.*
 
-Both repositories maintain synchronized release histories. Detailed evidence is documented in [CONTRIBUTION_AUDIT.md](CONTRIBUTION_AUDIT.md).
+2. **Collaborative Development Repository ([Atharvasp333/CarbonIQ](https://github.com/Atharvasp333/CarbonIQ)):**
+   * The original collaborative upstream repository created during the academic capstone initiative.
+   * Hosts the core six-stage cloud emissions accounting architecture, AWS CUR ingestion pipelines, and multi-agent backend engine. Maintained by Atharva Pingale.
+
+3. **Production & SDK Release Repository ([Kingslaye-varun/CarbonIQ_Capstone](https://github.com/Kingslaye-varun/CarbonIQ_Capstone)):**
+   * The deployment and release engineering repository configured with GitHub Actions OpenID Connect (OIDC) Trusted Publishing to PyPI.
+   * Houses the `carboniq-sdk` packaging, developer CLI commands, AST sustainable code optimization engine, automated test suites, and live deployment configurations (Vercel and Render). Maintained by Varun Rahatgaonkar.
 
 ---
 
 ## Authors & Contributors
 
-CarbonIQ was developed as a final-year academic capstone project at Vivekanand Education Society's Institute of Technology (VESIT), Mumbai, by a four-member student team under the academic guidance of Mrs. Charusheela Nehete:
+CarbonIQ originated as the Group 13 Information Technology Capstone Project (Academic Year 2026–27) at Vivekanand Education Society's Institute of Technology (VESIT), Mumbai, under the academic guidance of Mrs. Charusheela Nehete:
 
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
 | Contributor | Profile | Key Focus Areas |
 |:---:|:---:|:---|
 | **Atharva Pingale** | [@Atharvasp333](https://github.com/Atharvasp333) | 💻 🏗️ 📦 Core Developer — Cloud & AI Architecture, Upstream Repository Maintainer |
-| **Varun Rahatgaonkar** | [@Kingslaye-varun](https://github.com/Kingslaye-varun) | 💻 🚀 🧪 Core Developer — Python SDK, Developer Tools & Release Engineering |
+| **Varun Rahatgaonkar** | [@Kingslaye-varun](https://github.com/Kingslaye-varun) | 💻 🚀 🧪 Group 13 Team Leader, Core Developer — Python SDK, Developer Tools & Release Engineering |
 | **Nidhi Puthran** | [@nidhi0810](https://github.com/nidhi0810) | 💻 🌍 📊 Core Developer — Carbon-Aware Computing |
 | **Tanaya Jain** | [@tanaya2005](https://github.com/tanaya2005) | 📖 📋 ⚖️ Research, Documentation & Intellectual Property, UI & Crypto Commits |
 | **Mrs. Charusheela Nehete** | — | 🧑‍🏫 🔬 Faculty Advisor & Research Supervision, Assistant Professor, Department of IT, VESIT |
@@ -324,6 +333,6 @@ See [COPYRIGHT.md](COPYRIGHT.md) for full intellectual property disclosures, thi
 
 ## Acknowledgments
 
-* **Vivekanand Education Society's Institute of Technology (VESIT):** Department of Information Technology, Mumbai, India.
+* **Vivekanand Education Society's Institute of Technology (VESIT):** Department of Information Technology, Mumbai, India (Capstone Project Group 13, AY 2026–27).
 * **Faculty Project Advisor:** Mrs. Charusheela Nehete, Assistant Professor, Department of Information Technology, VESIT.
 * **Open Source Ecosystem:** Built with pride upon [FastAPI](https://fastapi.tiangolo.com/), [CodeCarbon](https://codecarbon.io/), [Electricity Maps](https://www.electricitymaps.com/), [Green Software Foundation](https://greensoftware.foundation/), [Neon](https://neon.tech/), and [React](https://react.dev/).

@@ -12,9 +12,10 @@
 ## 1. Project Origin & Academic Context
 
 > **Official Academic Description:**  
-> *"CarbonIQ was developed as a final-year academic capstone project at Vivekanand Education Society's Institute of Technology (VESIT), Mumbai, by a four-member student team under the academic guidance of Mrs. Charusheela Nehete."*
+> *"CarbonIQ originated as the Group 13 Information Technology Capstone Project (Academic Year 2026–27) at Vivekanand Education Society's Institute of Technology (VESIT), Mumbai, under the academic guidance of Mrs. Charusheela Nehete."*
 
-* **Department:** Department of Information Technology, Vivekanand Education Society's Institute of Technology (VESIT, Autonomous), Chembur, Mumbai, Maharashtra, India.
+* **Department & Academic Group:** Department of Information Technology, Vivekanand Education Society's Institute of Technology (VESIT, Autonomous), Chembur, Mumbai, Maharashtra, India — Group 13 (Academic Year 2026–27).
+* **Academic Documentation Repository:** [itprojects-create/Cp_13_2026-27](https://github.com/itprojects-create/Cp_13_2026-27)
 * **Faculty Advisor / Project Guide:** Mrs. Charusheela Nehete (`charusheela.nehete@ves.ac.in`), Assistant Professor, Department of Information Technology, VESIT.
 * **Mentorship & Affiliation Correction:** The project was an independent academic capstone developed under institutional faculty supervision. Preliminary exploratory discussions occurred with external industry professionals, but they were outside the scope of CarbonIQ and did not constitute project mentorship, advisory review, sponsorship, or institutional affiliation. There is no corporate or external institutional partnership associated with CarbonIQ.
 
@@ -27,7 +28,7 @@ The project was co-founded by its four student contributors at VESIT:
 | Contributor | GitHub Profile | Primary Email (Commit Log) | Academic Affiliation | Project Role & Designation |
 |---|---|---|---|---|
 | **Atharva Pingale** | [@Atharvasp333](https://github.com/Atharvasp333) | `atharvapingale333@gmail.com` | `2023.atharva.pingale@ves.ac.in` | **Core Developer — Cloud & AI Architecture**<br/>Upstream repository administrator ([Atharvasp333/CarbonIQ](https://github.com/Atharvasp333/CarbonIQ)). |
-| **Varun Rahatgaonkar** | [@Kingslaye-varun](https://github.com/Kingslaye-varun) | `rahatgaonkarvarun@gmail.com` | `2023.varun.rahatgaonkar@ves.ac.in` | **Core Developer — Python SDK, Developer Tools & Release Engineering**<br/>Deployment & PyPI release fork administrator ([Kingslaye-varun/CarbonIQ_Capstone](https://github.com/Kingslaye-varun/CarbonIQ_Capstone)). |
+| **Varun Rahatgaonkar** | [@Kingslaye-varun](https://github.com/Kingslaye-varun) | `rahatgaonkarvarun@gmail.com` | `2023.varun.rahatgaonkar@ves.ac.in` | **Group 13 Team Leader, Core Developer — Python SDK, Developer Tools & Release Engineering**<br/>Deployment & PyPI release fork administrator ([Kingslaye-varun/CarbonIQ_Capstone](https://github.com/Kingslaye-varun/CarbonIQ_Capstone)). |
 | **Nidhi Puthran** | [@nidhi0810](https://github.com/nidhi0810) | `nidhiputhrannp@gmail.com` | `2023.nidhi.puthran@ves.ac.in` | **Core Developer — Carbon-Aware Computing** |
 | **Tanaya Jain** | [@tanaya2005](https://github.com/tanaya2005) | `tanayaitis@gmail.com` | `2023.tanaya.jain@ves.ac.in` | **Research, Documentation & Intellectual Property** |
 | **Mrs. Charusheela Nehete** | — | `charusheela.nehete@ves.ac.in` | Assistant Professor, VESIT | **Academic Project Guide & Faculty Advisor** |
@@ -43,6 +44,7 @@ This table classifies project contributions across Git history, academic project
 | **Atharva Pingale** | Cloud Multi-Agent Accounting Architecture | 6-Agent accounting pipeline, orchestrator, ingestion, carbon intensity & emission agents, Google Gemini integration | Git commits `7685d64`, `1f89304`, `backend/agents/` | **Verified by Git** |
 | **Atharva Pingale** | Upstream Repository Management | Original repository creation, initial commit tree, issue tracking | GitHub upstream remote `Atharvasp333/CarbonIQ` | **Verified by Git** |
 | **Atharva Pingale** | Academic Research Paper | Co-author on capstone research preprint | `docs/paper/main.tex` author list | **Verified by project document** |
+| **Varun Rahatgaonkar** | Academic Team Leadership | Group 13 capstone coordination, project planning, cross-tier integration | Project records, capstone logbook / team-reported | **Team-reported** *(Co-listed on blackbook certificate)* |
 | **Varun Rahatgaonkar** | Python SDK Packaging & PyPI Launch | PEP 517/518/621 packaging, GitHub Actions OIDC Trusted Publishing, PyPI `carboniq-sdk` v0.2.0 | Git commits `54821a9` to `1a95251`, `.github/workflows/release.yml`, PyPI release | **Verified by Git** |
 | **Varun Rahatgaonkar** | AST Sustainable Code Optimizer | `carboniq/optimizer.py`, `carboniq audit`, `carboniq optimize`, AST refactoring engine | Git commits `66fbf38`, `2e35299`, `carboniq/optimizer.py` | **Verified by Git** |
 | **Varun Rahatgaonkar** | VS Code Extension & Developer Tooling | Inline AST linting, code actions, CLI architecture, automated test suites (36 tests) | Git commits `b311e39`, `6ffaeb7`, `vscode-extension/`, `tests/` | **Verified by Git** |
@@ -64,21 +66,24 @@ This table classifies project contributions across Git history, academic project
 
 ---
 
-## 4. Two-Repository Topology & Relationship
+## 4. Three-Repository Topology & Relationship
 
 ```mermaid
 flowchart TD
-    Upstream["Upstream Team Repository<br/><b>Atharvasp333/CarbonIQ</b><br/>• Origin repo<br/>• Core backend multi-agent pipeline<br/>• Maintained by Atharva Pingale & Team"]
-    Fork["Official SDK & Deployment Fork<br/><b>Kingslaye-varun/CarbonIQ_Capstone</b><br/>• Production deployment fork<br/>• PyPI Trusted Publishing host<br/>• Maintained by Varun Rahatgaonkar"]
+    Academic["Institutional Academic Archive<br/><b>itprojects-create/Cp_13_2026-27</b><br/>• Department of IT, VESIT (Group 13)<br/>• Semester logbooks, synopses, blackbook<br/>• Institutional evaluation records"]
+    Upstream["Collaborative Development Repo<br/><b>Atharvasp333/CarbonIQ</b><br/>• Original team upstream repository<br/>• Core 6-stage cloud accounting engine<br/>• Maintained by Atharva Pingale & Team"]
+    Fork["Official SDK & Deployment Repo<br/><b>Kingslaye-varun/CarbonIQ_Capstone</b><br/>• Production deployment & packaging<br/>• PyPI OIDC Trusted Publishing host<br/>• Maintained by Varun Rahatgaonkar"]
     PyPI["Public PyPI Package<br/><b>carboniq-sdk v0.2.0</b><br/>• Published via GitHub Actions OIDC<br/>• Namespace: carboniq<br/>• CLI: carboniq"]
     
+    Academic -.->|Archival Context| Upstream
     Upstream <-->|Bidirectional Git Remotes| Fork
     Fork -->|OIDC Trusted Publisher| PyPI
 ```
 
+* **itprojects-create/Cp_13_2026-27:** Institutional academic repository for Group 13 (Academic Year 2026–27) within the Department of Information Technology at VESIT. Holds archival semester submissions, project synopses, semester logbooks, and academic blackbook documentation. It serves purely for academic evaluation and institutional record-keeping; it does not constitute institutional endorsement or operational ownership of the public software.
 * **Atharvasp333/CarbonIQ:** The original canonical repository created during the capstone development phase. Holds the original commit history and core cloud multi-agent system.
 * **Kingslaye-varun/CarbonIQ_Capstone:** The specialized release, continuous deployment, and packaging fork configured as the PyPI Trusted Publisher for `carboniq-sdk`.
-* **Synchronization Policy:** Both repositories share synchronized `main` histories for all stable releases. Neither repository claims exclusive authorship of the collaborative codebase.
+* **Synchronization Policy:** Both software repositories share synchronized `main` histories for all stable releases. Neither repository claims exclusive authorship of the collaborative codebase.
 
 ---
 

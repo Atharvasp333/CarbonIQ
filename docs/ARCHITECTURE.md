@@ -1,6 +1,6 @@
 # CarbonIQ Architecture
 
-CarbonIQ bridges macro-level cloud infrastructure accounting with micro-level developer compute optimization. This document provides an architectural overview of its subsystems, multi-agent pipeline, and data flows.
+CarbonIQ bridges macro-level cloud infrastructure accounting with micro-level developer compute optimization. Originated as the Group 13 Information Technology Capstone Project (Academic Year 2026–27) at Vivekanand Education Society's Institute of Technology (VESIT), Mumbai, under the academic guidance of Mrs. Charusheela Nehete, this document provides an architectural overview of its subsystems, multi-agent pipeline, and data flows.
 
 ---
 

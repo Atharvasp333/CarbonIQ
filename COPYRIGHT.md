@@ -11,11 +11,11 @@
 The intellectual property, architecture, source code, and technical documentation of CarbonIQ are the joint creation of its four student co-founders:
 
 * **Atharva Pingale** ([@Atharvasp333](https://github.com/Atharvasp333)) — Core Developer — Cloud & AI Architecture
-* **Varun Rahatgaonkar** ([@Kingslaye-varun](https://github.com/Kingslaye-varun)) — Core Developer — Python SDK, Developer Tools & Release Engineering
+* **Varun Rahatgaonkar** ([@Kingslaye-varun](https://github.com/Kingslaye-varun)) — Group 13 Team Leader, Core Developer — Python SDK, Developer Tools & Release Engineering
 * **Nidhi Puthran** ([@nidhi0810](https://github.com/nidhi0810)) — Core Developer — Carbon-Aware Computing
 * **Tanaya Jain** ([@tanaya2005](https://github.com/tanaya2005)) — Research, Documentation & Intellectual Property
 
-CarbonIQ was developed as a final-year academic capstone project at Vivekanand Education Society's Institute of Technology (VESIT), Mumbai, under the academic guidance of Mrs. Charusheela Nehete.
+CarbonIQ originated as the Group 13 Information Technology Capstone Project (Academic Year 2026–27) at Vivekanand Education Society's Institute of Technology (VESIT), Mumbai, under the academic guidance of Mrs. Charusheela Nehete.
 
 ### Important Ownership & IP Clarifications
 1. **Repository Hosting:** Hosting the deployment fork or continuous deployment workflows at `Kingslaye-varun/CarbonIQ_Capstone` reflects operational release engineering and does not establish exclusive legal copyright over the shared codebase.
@@ -24,6 +24,7 @@ CarbonIQ was developed as a final-year academic capstone project at Vivekanand E
    - **Software Copyright:** Governs the computer program, algorithms, CLI, SDK, and multi-agent backend under the open-source MIT License.
    - **Logo & Design IP:** Project branding graphics, visual marks, and logo documentation represent distinct design assets. Preparatory copyright documentation was undertaken by Tanaya Jain. Any future trademark or logo copyright registration remains distinct from open-source software code licensing.
 4. **No External Corporate Assignment:** The project has not been assigned, licensed exclusively, or transferred to any corporation or external commercial sponsor.
+5. **Team Leader Role & Copyright Ownership:** Varun Rahatgaonkar's designation as Group 13 Team Leader reflects academic project coordination and distribution stewardship. Under open-source copyright principles, team leadership does not constitute exclusive legal copyright ownership over the collaborative codebase.
 
 ---
 

@@ -2,7 +2,7 @@
 
 Thank you to everyone who has contributed to the CarbonIQ platform, SDK, CLI, and documentation!
 
-CarbonIQ was developed as a final-year academic capstone project at Vivekanand Education Society's Institute of Technology (VESIT), Mumbai, by a four-member student team under the academic guidance of Mrs. Charusheela Nehete.
+CarbonIQ originated as the Group 13 Information Technology Capstone Project (Academic Year 2026–27) at Vivekanand Education Society's Institute of Technology (VESIT), Mumbai, under the academic guidance of Mrs. Charusheela Nehete.
 
 This project adheres to the [All Contributors](https://allcontributors.org) specification.
 
@@ -14,7 +14,7 @@ This project adheres to the [All Contributors](https://allcontributors.org) spec
 | Contributor | Profile | Contribution Badges | Areas of Focus |
 |:---:|:---:|:---:|:---|
 | **Atharva Pingale** | [@Atharvasp333](https://github.com/Atharvasp333) | 💻 🏗️ 📦 📖 | Cloud Multi-Agent Pipeline, Ingestion & Accounting Engine, Upstream Repository Maintainer |
-| **Varun Rahatgaonkar** | [@Kingslaye-varun](https://github.com/Kingslaye-varun) | 💻 🚀 🧪 🔌 📦 📖 | Python SDK Packaging, AST Optimizer, PyPI Trusted Publishing, VS Code Tooling, CLI Architecture |
+| **Varun Rahatgaonkar** | [@Kingslaye-varun](https://github.com/Kingslaye-varun) | 💻 🚀 🧪 🔌 📦 📖 | Group 13 Team Leader, Python SDK Packaging, AST Optimizer, PyPI Trusted Publishing, VS Code Tooling, CLI Architecture |
 | **Nidhi Puthran** | [@nidhi0810](https://github.com/nidhi0810) | 💻 🌍 📊 🔧 | Carbon Aware SDK Integration, AI Deployment Analysis, Grid Intensity Forecasting, Dev Scripting |
 | **Tanaya Jain** | [@tanaya2005](https://github.com/tanaya2005) | 📖 📋 ⚖️ 💻 🎨 | Capstone Blackbook, Research Paper Documentation, IPR Documentation, UI & Crypto Commits |
 | **Mrs. Charusheela Nehete** | — | 🧑‍🏫 🔬 📋 | Academic Faculty Guide, Research Supervision, Capstone Evaluation |
