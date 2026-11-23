@@ -109,25 +109,21 @@ jobs:
           print("Distribution security inspection passed cleanly.")
           '
 
-      - name: Run unit, CLI, and repository compatibility tests
-        run: |
-          python -m pip install pytest
-          pytest tests/test_sdk_api.py tests/test_cli_commands.py tests/test_packaging_and_security.py tests/test_carbon_aware_integration.py -v
-
-      - name: Run installed-wheel isolation tests from clean directory
+      - name: Install built wheel and execute complete verification suite
         run: |
           python -m venv test_env
           source test_env/bin/activate
-          pip install dist/*.whl
+          python -m pip install --upgrade pip
+          python -m pip install dist/*.whl pytest
 
-          # Verify SDK import
-          python -c "import carboniq; print('SDK loaded, version:', carboniq.__version__)"
+          # 1. Run complete test suite against installed package and source shims
+          python -m pytest tests/test_sdk_api.py tests/test_cli_commands.py tests/test_packaging_and_security.py tests/test_carbon_aware_integration.py -v
 
-          # Run from /tmp to verify clean isolated execution outside repo tree
-          (cd /tmp && python -c "import carboniq; assert carboniq.__version__ == '0.2.0'")
-          (cd /tmp && python -c "import importlib.util; assert importlib.util.find_spec('cli') is None, 'Generic cli collision detected!'")
+          # 2. Installed-wheel isolation tests from clean directory outside repository
+          (cd /tmp && python -c "import carboniq; assert carboniq.__version__ == '0.2.0', 'Version mismatch!'")
+          (cd /tmp && python -c "import importlib.util; assert importlib.util.find_spec('cli') is None, 'Generic cli namespace collision detected in site-packages!'")
 
-          # Verify CLI entry point and commands from outside repo
+          # 3. Verify CLI entry point and commands from outside repository
           (cd /tmp && carboniq --help)
           (cd /tmp && carboniq audit --help)
           (cd /tmp && carboniq optimize --help)
@@ -135,15 +131,22 @@ jobs:
           (cd /tmp && carboniq deploy-analysis --help)
           (cd /tmp && carboniq carbon-intensity --help)
 
-          # Test functional CLI command with clean sample
-          echo 'def f(n): return [x*2 for x in range(n)]' > /tmp/sample_workload.py
-          (cd /tmp && carboniq audit /tmp/sample_workload.py)
-          (cd /tmp && carboniq optimize /tmp/sample_workload.py)
-          rm -f /tmp/sample_workload.py
+          # 4. Functional audit and optimize execution on representative inefficient fixture
+          cat << 'EOF' > /tmp/inefficient_sample.py
+def process_data(items):
+    results = []
+    for i in range(len(items)):
+        results.append(items[i] * 2)
+    return results
+EOF
+
+          (cd /tmp && carboniq audit /tmp/inefficient_sample.py)
+          (cd /tmp && carboniq optimize /tmp/inefficient_sample.py)
+          rm -f /tmp/inefficient_sample.py
 
           deactivate
           rm -rf test_env
-          echo "Clean isolated installation verification passed."
+          echo "All test suites and clean isolated installation verifications passed successfully."
 
       - name: Upload distribution artifacts
         uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
