@@ -29,7 +29,7 @@ Under the Indian Copyright Act (1957) and Copyright Rules (2013), statutory copy
 | **2. Application Acknowledgement** | Generation of Form XIV submission record on the Copyright portal. | Confirms application data has entered the system. | Internal record; does not establish granted rights. |
 | **3. Diary Number** | Administrative tracking number assigned upon receipt of Form XIV. | Initiates procedural processing and statutory **30-day mandatory waiting period** for third-party objections. | Administrative tracking only; **does not constitute registration**. |
 | **4. Status Confirmation** | Status updates (e.g., "Work Awaiting", "Under Examination", "Hearing", "Re-Scrutiny"). | Reflects procedural examination milestones within the Copyright Office. | Not proof of grant; status remains pending. |
-| **5. Registration Certificate (ROC)** | Formal statutory certificate (Extract from Register of Copyrights) issued under seal of the Registrar. | **The only document that legally confers registered copyright status** (Section 45). | Only upon verification of ROC may "Registered" be stated. |
+| **5. Registration Certificate (ROC)** | Formal statutory certificate (Extract from Register of Copyrights) issued under seal of the Registrar. | **The statutory certificate establishing registered status on the public register** (Section 45). Copyright itself vests automatically upon creation; registration provides prima facie proof (Section 48). | Only upon verification of ROC may "Registered" be stated. |
 
 ---
 
@@ -37,7 +37,7 @@ Under the Indian Copyright Act (1957) and Copyright Rules (2013), statutory copy
 
 | Asset Category | Subject Matter | Applicable Framework | Current Status | Attribution Status |
 |---|---|---|---|---|
-| **Software Codebase** | Python SDK, CLI, 6-Agent pipeline, AST optimizer, frontend | Open-Source MIT License (`LICENSE`) | Active / Published (PyPI v0.2.0) | Attributed to "The CarbonIQ Authors and Contributors" (awaiting co-author sign-off). |
+| **Software Codebase** | Python SDK, CLI, 6-Agent pipeline, AST optimizer, frontend | Open-Source MIT License (`LICENSE`) | Active / Published (PyPI v0.2.0) | Attributed to "The CarbonIQ Authors and Contributors" (unanimously approved by all 4 co-founders). |
 | **Artistic Work** | CarbonIQ Logo, Visual Marks, System Architecture Block Diagram | Statutory Copyright Filing Drafts | Preparatory / Application In-Progress | Preparatory drafting credited to Tanaya Jain. Formal grant **Unverified**. |
 | **Literary Work** | Master Blackbook (`Blackbook_Group13_CarbonIQ.pdf`), Research Paper (`main.tex`) | Academic Research Co-Authorship | Completed Academic Capstone Submission | Four student co-authors + faculty guide credited. |
 

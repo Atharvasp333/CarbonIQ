@@ -54,7 +54,7 @@ As verified against the Git commit history, pull request audit, and project reco
 Copyright (c) 2026 The CarbonIQ Authors and Contributors
 ```
 
-* **Contributor Approval Status:** The collective copyright notice is prepared in alignment with the MIT license declaration in `pyproject.toml` (v0.2.0). Formal written confirmation from each individual student co-founder (Atharva Pingale, Varun Rahatgaonkar, Nidhi Puthran, and Tanaya Jain) is recorded as awaiting final sign-off prior to upstream merge.
+* **Contributor Approval Status:** Unanimously reviewed and approved by all four student co-founders (Atharva Pingale, Varun Rahatgaonkar, Nidhi Puthran, and Tanaya Jain) on November 23, 2026. The collective copyright notice `Copyright (c) 2026 The CarbonIQ Authors and Contributors` and MIT open-source licensing terms are formally confirmed.
 
 ### License Options for Future Releases (v0.3.0+)
 
@@ -85,7 +85,7 @@ Under the Indian Copyright Act (1957) and Copyright Rules:
 2. **Application Acknowledgement / Form XIV Filing:** Confirms that application details have been submitted to the Copyright Office portal.
 3. **Diary Number:** An administrative tracking number issued upon receipt of an application. Under statutory rules, issuance of a Diary Number initiates a mandatory 30-day waiting period for objections and subsequent formal examination. A Diary Number is **not** an official grant of copyright registration.
 4. **Status Confirmation (e.g., "Work Awaiting", "Under Examination", "Re-Scrutiny"):** Internal procedural milestones during the examination lifecycle.
-5. **Official Registration Certificate (Extract from Register of Copyrights / ROC):** The only statutory document issued under the seal of the Registrar of Copyrights (Section 45) that legally certifies registration.
+5. **Official Registration Certificate (Extract from Register of Copyrights / ROC):** Under Indian copyright law and the Berne Convention, copyright subsists automatically upon creation and fixation of an original work; registration does not create copyright ownership, but provides prima facie public evidentiary proof of the particulars entered in the Register of Copyrights (Section 48). The official ROC is the statutory certificate issued under the seal of the Registrar of Copyrights (Section 45).
 
 ### C. Applicant vs. Creator vs. Owner Distinction
 * **Creator (Author):** The individual(s) who authored the code, drew the diagram, or designed the asset.
