@@ -52,8 +52,17 @@ class TestPackagingAndSecurity:
 
 
 class TestVSCodeExtensionCompatibility:
+    @classmethod
+    def setup_class(cls):
+        """Ensure the checked-out source repository root is in sys.path specifically for repository-level shim compatibility verification."""
+        import sys
+        from pathlib import Path
+        repo_root = str(Path(__file__).resolve().parent.parent)
+        if repo_root not in sys.path:
+            sys.path.insert(0, repo_root)
+
     def test_cli_shims_exist(self):
-        """Verifies that the old cli.* import paths exist as shims for backward compatibility."""
+        """Verifies that the old cli.* import paths exist as shims in the source repo for backward compatibility."""
         import cli
         import cli.config_manager
         import cli.carboniq_cli

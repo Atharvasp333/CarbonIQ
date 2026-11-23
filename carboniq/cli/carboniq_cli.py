@@ -7,7 +7,7 @@ import os
 import sys
 import json
 import click
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from dotenv import load_dotenv
 from typing import Optional
@@ -132,7 +132,7 @@ def measure(command, workload_name, workload_type, deadline, send_to_backend, ch
                 "measurement": results,
                 "carbon_aware_data": carbon_aware_data,
                 "deadline": deadline,
-                "measured_at": datetime.utcnow().isoformat()
+                "measured_at": datetime.now(timezone.utc).isoformat()
             }
             
             success = backend_client.send_measurement(payload)
@@ -150,7 +150,7 @@ def measure(command, workload_name, workload_type, deadline, send_to_backend, ch
                 "measurement": results,
                 "carbon_aware_data": carbon_aware_data,
                 "deadline": deadline,
-                "measured_at": datetime.utcnow().isoformat()
+                "measured_at": datetime.now(timezone.utc).isoformat()
             }, f, indent=2)
         
         click.echo(f"\n💾 Results saved to: {output_file}")
@@ -906,7 +906,7 @@ def deploy_analysis(command, workload_name, workload_type, regions, deadline,
         },
         "deadline": deadline,
         "preferred_regions": list(regions) if regions else None,
-        "measured_at": datetime.utcnow().isoformat(),
+        "measured_at": datetime.now(timezone.utc).isoformat(),
     }
 
     try:
@@ -941,7 +941,7 @@ def deploy_analysis(command, workload_name, workload_type, regions, deadline,
                 "measurement": codecarbon_results,
                 "carbon_aware_data": sdk_data if sdk_available else None,
                 "deadline": deadline,
-                "measured_at": datetime.utcnow().isoformat(),
+                "measured_at": datetime.now(timezone.utc).isoformat(),
             }
             backend_client.send_measurement(payload)
         except Exception:

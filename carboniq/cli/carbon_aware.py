@@ -6,7 +6,7 @@ Uses Electricity Maps API to get real-time carbon intensity data.
 import os
 import requests
 from typing import Dict, Optional, List
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -103,7 +103,7 @@ class CarbonAwareClient:
             "aws_region": aws_region,
             "zone": base["zone"],
             "carbon_intensity": base["carbon_intensity"],
-            "datetime": datetime.utcnow().isoformat(),
+            "datetime": datetime.now(timezone.utc).isoformat(),
             "fossil_fuel_percentage": base["fossil_fuel_percentage"],
             "renewable_percentage": base["renewable_percentage"],
             "source": "empirical_regional_fallback"
@@ -163,7 +163,7 @@ class CarbonAwareClient:
                     "aws_region": aws_region,
                     "zone": base["zone"],
                     "carbon_intensity": float(base["carbon_intensity"]),
-                    "datetime": datetime.utcnow().isoformat(),
+                    "datetime": datetime.now(timezone.utc).isoformat(),
                     "fossil_fuel_percentage": base["fossil_fuel_percentage"],
                     "renewable_percentage": base["renewable_percentage"],
                     "source": "empirical_regional_fallback"
@@ -189,7 +189,7 @@ class CarbonAwareClient:
             "optimal_intensity": optimal.get('carbon_intensity'),
             "renewable_percentage": optimal.get('renewable_percentage'),
             "all_regions": results,
-            "queried_at": datetime.utcnow().isoformat(),
+            "queried_at": datetime.now(timezone.utc).isoformat(),
             "duration_minutes": duration_minutes,
             "source": source_type,
             "potential_carbon_savings_pct": savings_pct,

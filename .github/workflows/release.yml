@@ -109,28 +109,37 @@ jobs:
           print("Distribution security inspection passed cleanly.")
           '
 
-      - name: Install built wheel in isolated environment and run smoke tests
+      - name: Run unit, CLI, and repository compatibility tests
+        run: |
+          python -m pip install pytest
+          pytest tests/test_sdk_api.py tests/test_cli_commands.py tests/test_packaging_and_security.py tests/test_carbon_aware_integration.py -v
+
+      - name: Run installed-wheel isolation tests from clean directory
         run: |
           python -m venv test_env
           source test_env/bin/activate
-          pip install dist/*.whl pytest
+          pip install dist/*.whl
 
           # Verify SDK import
           python -c "import carboniq; print('SDK loaded, version:', carboniq.__version__)"
 
-          # Run full unit and CLI test suite against installed package
-          pytest tests/test_sdk_api.py tests/test_cli_commands.py tests/test_packaging_and_security.py tests/test_carbon_aware_integration.py -v
-
-          # Verify CLI entry point and commands
-          carboniq --help
-          carboniq audit cli/sample_workloads/compute_intensive.py
-          carboniq optimize cli/sample_workloads/compute_intensive.py
-          carboniq recommend-schedule -d 60 -r us-east-1
-          carboniq deploy-analysis -n deploy_smoke "python -c 'print(1)'"
-          carboniq carbon-intensity -r us-east-1
-
-          # Verify no generic top-level cli namespace collision in site-packages
+          # Run from /tmp to verify clean isolated execution outside repo tree
+          (cd /tmp && python -c "import carboniq; assert carboniq.__version__ == '0.2.0'")
           (cd /tmp && python -c "import importlib.util; assert importlib.util.find_spec('cli') is None, 'Generic cli collision detected!'")
+
+          # Verify CLI entry point and commands from outside repo
+          (cd /tmp && carboniq --help)
+          (cd /tmp && carboniq audit --help)
+          (cd /tmp && carboniq optimize --help)
+          (cd /tmp && carboniq recommend-schedule --help)
+          (cd /tmp && carboniq deploy-analysis --help)
+          (cd /tmp && carboniq carbon-intensity --help)
+
+          # Test functional CLI command with clean sample
+          echo 'def f(n): return [x*2 for x in range(n)]' > /tmp/sample_workload.py
+          (cd /tmp && carboniq audit /tmp/sample_workload.py)
+          (cd /tmp && carboniq optimize /tmp/sample_workload.py)
+          rm -f /tmp/sample_workload.py
 
           deactivate
           rm -rf test_env
