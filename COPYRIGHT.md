@@ -70,7 +70,38 @@ Copyright (c) 2026 The CarbonIQ Authors and Contributors
 
 ---
 
-## 4. Third-Party Licenses & Credits
+## 4. Statutory Copyright Documentation & Public Attribution Safety Framework
+
+To ensure legal accuracy and prevent public misrepresentation, the project strictly adheres to the following statutory and evidentiary principles:
+
+### A. Clear Separation of Assets
+* **Software Codebase (Computer Program):** The software source code, CLI, SDK, and backend multi-agent algorithms are governed under open-source MIT licensing (`Copyright (c) 2026 The CarbonIQ Authors and Contributors`), subject to collective co-author sign-off.
+* **Artistic Work (Logo & System Architecture Block Diagram):** Visual brand assets, logo graphics, and system architecture diagrams represent separate artistic works. Preparatory IPR documentation and statutory application drafting was performed by Tanaya Jain per institutional capstone IPR templates.
+* **Literary Work (Technical Research Paper & Master Blackbook):** Technical reports and capstone documentation are governed by academic co-authorship under the Department of Information Technology at VESIT.
+
+### B. Rigorous Differentiation of Statutory Stages
+Under the Indian Copyright Act (1957) and Copyright Rules:
+1. **Payment Receipt / Fee Challan:** Confirms payment processing by the payment gateway or bank; does **not** signify filing acceptance, examination, or ownership.
+2. **Application Acknowledgement / Form XIV Filing:** Confirms that application details have been submitted to the Copyright Office portal.
+3. **Diary Number:** An administrative tracking number issued upon receipt of an application. Under statutory rules, issuance of a Diary Number initiates a mandatory 30-day waiting period for objections and subsequent formal examination. A Diary Number is **not** an official grant of copyright registration.
+4. **Status Confirmation (e.g., "Work Awaiting", "Under Examination", "Re-Scrutiny"):** Internal procedural milestones during the examination lifecycle.
+5. **Official Registration Certificate (Extract from Register of Copyrights / ROC):** The only statutory document issued under the seal of the Registrar of Copyrights (Section 45) that legally certifies registration.
+
+### C. Applicant vs. Creator vs. Owner Distinction
+* **Creator (Author):** The individual(s) who authored the code, drew the diagram, or designed the asset.
+* **Applicant:** The party submitting the statutory application (e.g., student member, institutional representative, or authorized agent).
+* **Copyright Owner:** The legal holder of copyright, governed by Indian copyright law, institutional IPR policy, and formal agreements. These three entities are legally distinct and must not be assumed to be identical.
+
+### D. Privacy & Confidentiality Safeguards
+Under no circumstances shall payment transaction IDs, challan receipts, diary numbers, residential addresses, physical signatures, or student roll numbers be published in public git repositories or open-source documentation.
+
+### E. Current Public Attribution Standards
+* No public documentation may use phrases like "Copyright Registered", "Registered IP", or equivalent claims without verified documentary proof of an official registration certificate.
+* Tanaya Jain's contribution is accurately credited as: *IPR documentation, capstone blackbook compilation, and logo/artistic copyright filing preparation work (status: preparatory / application in progress; formal grant unverified)*.
+
+---
+
+## 5. Third-Party Licenses & Credits
 
 CarbonIQ incorporates or interfaces with several open-source libraries, each retained under its respective permissive license:
 
