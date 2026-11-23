@@ -268,16 +268,16 @@ Both repositories maintain synchronized release histories. Detailed evidence is 
 
 ## Authors & Contributors
 
-CarbonIQ was co-founded by its core team at Vivekanand Education Society's Institute of Technology (VESIT), Mumbai:
+CarbonIQ was developed as a final-year academic capstone project at Vivekanand Education Society's Institute of Technology (VESIT), Mumbai, by a four-member student team under the academic guidance of Mrs. Charusheela Nehete:
 
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
 | Contributor | Profile | Key Focus Areas |
 |:---:|:---:|:---|
-| **Atharva Pingale** | [@Atharvasp333](https://github.com/Atharvasp333) | 💻 🏗️ 📦 Upstream Maintainer, Cloud Multi-Agent Pipeline, Ingestion & Accounting Engine |
-| **Varun Rahatgaonkar** | [@Kingslaye-varun](https://github.com/Kingslaye-varun) | 💻 🚀 🧪 SDK Release Maintainer, PyPI Trusted Publishing, AST Optimizer, CLI Architecture |
-| **Tanaya Jain** | [@tanaya2005](https://github.com/tanaya2005) | 💻 🔒 🗄️ Security Lead, At-Rest Credential Encryption, Neon Auth & AWS S3 Integration |
-| **Nidhi Puthran** | [@nidhi0810](https://github.com/nidhi0810) | 💻 🌍 📊 Carbon-Aware Lead, GSF Carbon Aware SDK Client, AI Deployment Analysis |
-| **Mrs. Charusheela Nehete** | — | 🧑‍🏫 🔬 Faculty Advisor & Research Supervision, Department of IT, VESIT |
+| **Atharva Pingale** | [@Atharvasp333](https://github.com/Atharvasp333) | 💻 🏗️ 📦 Core Developer — Cloud & AI Architecture, Upstream Repository Maintainer |
+| **Varun Rahatgaonkar** | [@Kingslaye-varun](https://github.com/Kingslaye-varun) | 💻 🚀 🧪 Core Developer — Python SDK, Developer Tools & Release Engineering |
+| **Nidhi Puthran** | [@nidhi0810](https://github.com/nidhi0810) | 💻 🌍 📊 Core Developer — Carbon-Aware Computing |
+| **Tanaya Jain** | [@tanaya2005](https://github.com/tanaya2005) | 📖 📋 ⚖️ Research, Documentation & Intellectual Property, UI & Crypto Commits |
+| **Mrs. Charusheela Nehete** | — | 🧑‍🏫 🔬 Faculty Advisor & Research Supervision, Assistant Professor, Department of IT, VESIT |
 <!-- ALL-CONTRIBUTORS-LIST:END -->
 
 For complete contributor details and contribution guidelines, see [AUTHORS.md](AUTHORS.md), [CONTRIBUTORS.md](CONTRIBUTORS.md), and [CONTRIBUTING.md](CONTRIBUTING.md).
@@ -325,5 +325,5 @@ See [COPYRIGHT.md](COPYRIGHT.md) for full intellectual property disclosures, thi
 ## Acknowledgments
 
 * **Vivekanand Education Society's Institute of Technology (VESIT):** Department of Information Technology, Mumbai, India.
-* **Academic Project Mentors:** Tata Consultancy Services (TCS) mentors for valuable industry guidance and architectural review.
+* **Faculty Project Advisor:** Mrs. Charusheela Nehete, Assistant Professor, Department of Information Technology, VESIT.
 * **Open Source Ecosystem:** Built with pride upon [FastAPI](https://fastapi.tiangolo.com/), [CodeCarbon](https://codecarbon.io/), [Electricity Maps](https://www.electricitymaps.com/), [Green Software Foundation](https://greensoftware.foundation/), [Neon](https://neon.tech/), and [React](https://react.dev/).

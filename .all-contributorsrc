@@ -36,17 +36,6 @@
       ]
     },
     {
-      "login": "tanaya2005",
-      "name": "Tanaya Jain",
-      "avatar_url": "https://avatars.githubusercontent.com/u/tanaya2005",
-      "profile": "https://github.com/tanaya2005",
-      "contributions": [
-        "code",
-        "security",
-        "design"
-      ]
-    },
-    {
       "login": "nidhi0810",
       "name": "Nidhi Puthran",
       "avatar_url": "https://avatars.githubusercontent.com/u/nidhi0810",
@@ -55,6 +44,18 @@
         "code",
         "tool",
         "research"
+      ]
+    },
+    {
+      "login": "tanaya2005",
+      "name": "Tanaya Jain",
+      "avatar_url": "https://avatars.githubusercontent.com/u/tanaya2005",
+      "profile": "https://github.com/tanaya2005",
+      "contributions": [
+        "doc",
+        "research",
+        "code",
+        "design"
       ]
     }
   ],

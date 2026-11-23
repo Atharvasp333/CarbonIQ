@@ -11,67 +11,56 @@
 
 ## 1. Project Origin & Academic Context
 
-* **Project Title:** CarbonIQ: A Constraint-Aware Agentic Platform for Explainable Carbon-Conscious Software Workload Scheduling
-* **Origin:** Academic Capstone Project (Group 13), Department of Information Technology, Vivekanand Education Society's Institute of Technology (VESIT, Autonomous), Mumbai, India.
-* **Faculty Advisor / Guide:** Mrs. Charusheela Nehete (`charusheela.nehete@ves.ac.in`)
-* **Industry Mentorship Context:** Academic capstone project advised under mentorship from Tata Consultancy Services (TCS) mentors. *(Note: Mentorship was advisory and academic; TCS does not hold institutional ownership, trademark claims, or corporate endorsement of the repository).*
+> **Official Academic Description:**  
+> *"CarbonIQ was developed as a final-year academic capstone project at Vivekanand Education Society's Institute of Technology (VESIT), Mumbai, by a four-member student team under the academic guidance of Mrs. Charusheela Nehete."*
+
+* **Department:** Department of Information Technology, Vivekanand Education Society's Institute of Technology (VESIT, Autonomous), Chembur, Mumbai, Maharashtra, India.
+* **Faculty Advisor / Project Guide:** Mrs. Charusheela Nehete (`charusheela.nehete@ves.ac.in`), Assistant Professor, Department of Information Technology, VESIT.
+* **Mentorship & Affiliation Correction:** The project was an independent academic capstone developed under institutional faculty supervision. Preliminary exploratory discussions occurred with external industry professionals, but they were outside the scope of CarbonIQ and did not constitute project mentorship, advisory review, sponsorship, or institutional affiliation. There is no corporate or external institutional partnership associated with CarbonIQ.
 
 ---
 
 ## 2. Verified Contributor Registry
 
-All contributor records below are verified from commit author headers, PGP/email signatures, GitHub profiles, and the project's peer-reviewed research preprint (`docs/paper/main.tex`).
+The project was co-founded by its four student contributors at VESIT:
 
-| Contributor | GitHub Profile | Primary Email (Commit Log) | Academic Identity | Core Project Roles |
+| Contributor | GitHub Profile | Primary Email (Commit Log) | Academic Affiliation | Project Role & Designation |
 |---|---|---|---|---|
-| **Atharva Pingale** | [@Atharvasp333](https://github.com/Atharvasp333) | `atharvapingale333@gmail.com` | `2023.atharva.pingale@ves.ac.in` | **Project Co-Founder & Upstream Maintainer.** Multi-agent cloud accounting architecture, LLM agent orchestration, pattern detection, and upstream repo administrator. |
-| **Varun Rahatgaonkar** | [@Kingslaye-varun](https://github.com/Kingslaye-varun) | `rahatgaonkarvarun@gmail.com` | `2023.varun.rahatgaonkar@ves.ac.in` | **Project Co-Founder & SDK Release Maintainer.** Python SDK packaging, PyPI OIDC release engineering, AST green code optimizer, VS Code extension, CI/CD pipeline, and deployment fork administrator. |
-| **Tanaya Jain** | [@tanaya2005](https://github.com/tanaya2005) | `tanayaitis@gmail.com` | `2023.tanaya.jain@ves.ac.in` | **Project Co-Founder & Security/Auth Lead.** At-rest credential encryption (Fernet), AWS credential management, user session authentication (Neon Auth), and database schema modeling. |
-| **Nidhi Puthran** | [@nidhi0810](https://github.com/nidhi0810) | `nidhiputhrannp@gmail.com` | `2023.nidhi.puthran@ves.ac.in` | **Project Co-Founder & Carbon-Aware Lead.** Green Software Foundation Carbon Aware SDK client, AI deployment analysis API, regional grid intensity forecasting, and developer startup automation. |
-| **Mrs. Charusheela Nehete** | — | `charusheela.nehete@ves.ac.in` | Faculty Advisor, VESIT | **Academic Project Guide & Review Advisor.** Research methodology guidance, architectural validation, and project evaluation oversight. |
+| **Atharva Pingale** | [@Atharvasp333](https://github.com/Atharvasp333) | `atharvapingale333@gmail.com` | `2023.atharva.pingale@ves.ac.in` | **Core Developer — Cloud & AI Architecture**<br/>Upstream repository administrator ([Atharvasp333/CarbonIQ](https://github.com/Atharvasp333/CarbonIQ)). |
+| **Varun Rahatgaonkar** | [@Kingslaye-varun](https://github.com/Kingslaye-varun) | `rahatgaonkarvarun@gmail.com` | `2023.varun.rahatgaonkar@ves.ac.in` | **Core Developer — Python SDK, Developer Tools & Release Engineering**<br/>Deployment & PyPI release fork administrator ([Kingslaye-varun/CarbonIQ_Capstone](https://github.com/Kingslaye-varun/CarbonIQ_Capstone)). |
+| **Nidhi Puthran** | [@nidhi0810](https://github.com/nidhi0810) | `nidhiputhrannp@gmail.com` | `2023.nidhi.puthran@ves.ac.in` | **Core Developer — Carbon-Aware Computing** |
+| **Tanaya Jain** | [@tanaya2005](https://github.com/tanaya2005) | `tanayaitis@gmail.com` | `2023.tanaya.jain@ves.ac.in` | **Research, Documentation & Intellectual Property** |
+| **Mrs. Charusheela Nehete** | — | `charusheela.nehete@ves.ac.in` | Assistant Professor, VESIT | **Academic Project Guide & Faculty Advisor** |
 
 ---
 
-## 3. Detailed Component Attribution & Evidence Matrix
+## 3. Attribution Evidence Table
 
-### A. Cloud Multi-Agent Accounting Engine (`backend/agents/`)
-* **Primary Author:** Atharva Pingale (`@Atharvasp333`)
-* **Evidence:** Commit `7685d64` ("Insights agents added"), `backend/agents/carbon_iq_orchestrator.py`, `backend/agents/accounting/`, `backend/agents/intelligence/`.
-* **Scope:**
-  - 6-agent sequential accounting pipeline (Ingestion, Region Mapping, Intensity Lookup, Emission Math, Analytics, Optimization).
-  - LLM integration with Google Gemini for explainable carbon insights.
-  - Multi-agent orchestration and inter-agent state passing.
+This table classifies project contributions across Git history, academic project documentation, team reporting, and verification status:
 
-### B. Security, Cryptography & Cloud Database (`backend/routes/`, `backend/services/crypto.py`)
-* **Primary Author:** Tanaya Jain (`@tanaya2005`)
-* **Evidence:** Commits `fedcbf1` ("save creds in DB"), `b4f2251` ("integrate remote auth+aws-creds"), `6161ea8` ("AWS connected+ pipeline automated").
-* **Scope:**
-  - AES/Fernet encryption for customer AWS CUR S3 access credentials stored in NeonDB PostgreSQL.
-  - Authentication flow integration (`backend/routes/auth.py`, `backend/routes/aws_credentials.py`).
-  - Frontend AWS Connect modal banner and credential validation state.
+| Contributor | Contribution Area | Specific Deliverables | Git / Document Evidence | Verification Status |
+|---|---|---|---|---|
+| **Atharva Pingale** | Cloud Multi-Agent Accounting Architecture | 6-Agent accounting pipeline, orchestrator, ingestion, carbon intensity & emission agents, Google Gemini integration | Git commits `7685d64`, `1f89304`, `backend/agents/` | **Verified by Git** |
+| **Atharva Pingale** | Upstream Repository Management | Original repository creation, initial commit tree, issue tracking | GitHub upstream remote `Atharvasp333/CarbonIQ` | **Verified by Git** |
+| **Atharva Pingale** | Academic Research Paper | Co-author on capstone research preprint | `docs/paper/main.tex` author list | **Verified by project document** |
+| **Varun Rahatgaonkar** | Python SDK Packaging & PyPI Launch | PEP 517/518/621 packaging, GitHub Actions OIDC Trusted Publishing, PyPI `carboniq-sdk` v0.2.0 | Git commits `54821a9` to `1a95251`, `.github/workflows/release.yml`, PyPI release | **Verified by Git** |
+| **Varun Rahatgaonkar** | AST Sustainable Code Optimizer | `carboniq/optimizer.py`, `carboniq audit`, `carboniq optimize`, AST refactoring engine | Git commits `66fbf38`, `2e35299`, `carboniq/optimizer.py` | **Verified by Git** |
+| **Varun Rahatgaonkar** | VS Code Extension & Developer Tooling | Inline AST linting, code actions, CLI architecture, automated test suites (36 tests) | Git commits `b311e39`, `6ffaeb7`, `vscode-extension/`, `tests/` | **Verified by Git** |
+| **Varun Rahatgaonkar** | Academic Research Paper | Co-author on capstone research preprint | `docs/paper/main.tex` author list | **Verified by project document** |
+| **Nidhi Puthran** | Carbon-Aware Computing | Green Software Foundation Carbon Aware SDK client, regional grid intensity lookup | Git commit `c5bc5f0`, branch `origin/final-nidhi-carboniq`, `cli/carbon_aware_sdk.py` | **Verified by Git** |
+| **Nidhi Puthran** | AI Deployment Analysis & CLI | `/api/cli/deploy-analysis`, `carboniq deploy-analysis`, `carboniq carbon-intensity`, `start-dev.ps1` | Git commit `c5bc5f0`, `backend/routes/deployment_analysis.py` | **Verified by Git** |
+| **Nidhi Puthran** | Academic Research Paper | Co-author on capstone research preprint | `docs/paper/main.tex` author list | **Verified by project document** |
+| **Tanaya Jain** | Capstone Blackbook & Academic Documentation | Master capstone blackbook compilation, academic progress updates, testing documentation | Project reports, `docs/Blackbook_Group13_CarbonIQ.pdf`, `carboniq-update1.md` | **Verified by project document / Team-reported** |
+| **Tanaya Jain** | Research Paper Preparation | Co-author on capstone research preprint | `docs/paper/main.tex` author list | **Verified by project document** |
+| **Tanaya Jain** | Intellectual Property & Logo Work | IPR documentation, logo copyright-related preparation and filing work | Team capstone reports | **Team-reported** *(Formal registration grant unverified)* |
+| **Tanaya Jain** | Frontend UI & Credential Security Commits | UI page layouts (`Login.jsx`, `Signup.jsx`, `Home.jsx`), Fernet crypto helper (`crypto.py`), AWS credentials route commits | Git commits `fedcbf1`, `b4f2251`, `6161ea8`, `928ad13`, `7a608b1` | **Verified by Git** |
+| **Mrs. Charusheela Nehete** | Academic Faculty Guidance | Capstone faculty guide and advisor, methodology oversight | `docs/paper/main.tex` author list, VESIT project guide record | **Verified by project document** |
 
-### C. Carbon Aware Computing & Deployment Optimization (`cli/carbon_aware_sdk.py`, `backend/routes/deployment_analysis.py`)
-* **Primary Author:** Nidhi Puthran (`@nidhi0810`)
-* **Evidence:** Commit `c5bc5f0` ("Fix development startup script" / integrated deployment analysis), Branch `origin/final-nidhi-carboniq`.
-* **Scope:**
-  - Python client interfacing with the Green Software Foundation Carbon Aware SDK Web API.
-  - AWS region to GSF balancing zone resolution.
-  - AI deployment recommendation endpoint (`/api/cli/deploy-analysis`).
-  - CLI command extensions: `carboniq deploy-analysis` and `carboniq carbon-intensity`.
-  - Multi-service launch script (`start-dev.ps1`).
-
-### D. Python SDK Packaging, AST Optimizer, Developer Tooling & PyPI Release (`carboniq/`, `cli/`, `vscode-extension/`, `.github/`)
-* **Primary Author:** Varun Rahatgaonkar (`@Kingslaye-varun`)
-* **Evidence:** Commits `54821a9` (PEP 621 packaging), `66fbf38` (AST refactoring engine), `b311e39` (VS Code extension), `b792460` to `1a95251` (OIDC Trusted Publishing workflow & hardening).
-* **Scope:**
-  - `carboniq-sdk` distribution packaging with PEP 517/518/621 specification.
-  - GitHub Actions OIDC Trusted Publishing release workflow (`.github/workflows/release.yml`).
-  - AST Static Code Auditor & Refactoring Generator (`carboniq/optimizer.py`, `carboniq audit`, `carboniq optimize`).
-  - Visual Studio Code Extension with diagnostics and green refactoring code actions.
-  - Real-time telemetry ingestion and multi-tenant user profile synchronization.
-  - Executive sustainability PDF report generation (`frontend/src/lib/pdfExport.js`).
-  - Automated test suites (`tests/test_sdk_api.py`, `tests/test_cli_commands.py`, `tests/test_packaging_and_security.py`, `tests/test_carbon_aware_integration.py`).
-  - Production deployments on Vercel and Render.
+*Verification Status Definitions:*
+* **Verified by Git:** Commits present in Git commit history with verifiable author headers, timestamps, and file diffs.
+* **Verified by project document:** Formally recorded in academic research papers (`docs/paper/main.tex`), project blackbooks, or institutional records.
+* **Team-reported:** Attributed based on unanimous project team reporting where work was performed collaboratively or outside Git commit tracking.
+* **Unverified:** Pending official third-party documentary evidence (e.g., formal government copyright registration certificates).
 
 ---
 
@@ -93,19 +82,9 @@ flowchart TD
 
 ---
 
-## 5. Intellectual Property, Copyright & Legal Notice
+## 5. Intellectual Property, Copyright & Legal Status
 
-1. **Joint Authorship:** The CarbonIQ codebase is the joint creation of the four student co-founders (Atharva Pingale, Varun Rahatgaonkar, Tanaya Jain, and Nidhi Puthran) under academic guidance at VESIT.
+1. **Joint Authorship:** The CarbonIQ software and research are the collective intellectual creation of the four student co-founders (Atharva Pingale, Varun Rahatgaonkar, Tanaya Jain, and Nidhi Puthran) under academic guidance at VESIT.
 2. **PyPI Publishing Context:** Publishing `carboniq-sdk` on PyPI under `@Kingslaye-varun` reflects authorized release engineering and operational maintenance; it does **not** transfer or extinguish co-authors' moral and legal copyright in their respective contributions.
-3. **No External Corporate Transfer:** The code has not been assigned or transferred to any commercial entity. Mentorship by TCS was educational; no institutional copyright belongs to TCS.
-4. **Third-Party Dependencies:** Third-party libraries (CodeCarbon, Electricity Maps API client, FastAPI, React, Lucide, Click) remain under their respective upstream licenses.
-
----
-
-## 6. Unresolved Attribution Questions & Recommended Actions
-
-| Issue | Finding | Recommended Action |
-|---|---|---|
-| **Root LICENSE File** | A formal `LICENSE` file was omitted from the root, though `pyproject.toml` declared `MIT`. | Commit a standard MIT License explicitly listing the CarbonIQ Contributors. |
-| **PyPI Author Metadata** | `pyproject.toml` in v0.2.0 listed `"CarbonIQ Team <team@carboniq.internal>"`. | For v0.3.0+, update `authors` to formally list all 4 co-founders with project URLs and roles. |
-| **README Contributor Showcase** | Prior README lacked contributor acknowledgment and research citation. | Add an All-Contributors gallery, direct GitHub profile links, and `CITATION.cff`. |
+3. **No Commercial Assignment:** The code has not been assigned or transferred to any commercial entity.
+4. **Third-Party Dependencies:** Third-party libraries (CodeCarbon, Electricity Maps API client, FastAPI, React, Click) remain under their respective upstream permissive licenses.

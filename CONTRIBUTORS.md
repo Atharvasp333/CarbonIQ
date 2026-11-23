@@ -2,6 +2,8 @@
 
 Thank you to everyone who has contributed to the CarbonIQ platform, SDK, CLI, and documentation!
 
+CarbonIQ was developed as a final-year academic capstone project at Vivekanand Education Society's Institute of Technology (VESIT), Mumbai, by a four-member student team under the academic guidance of Mrs. Charusheela Nehete.
+
 This project adheres to the [All Contributors](https://allcontributors.org) specification.
 
 ---
@@ -11,11 +13,11 @@ This project adheres to the [All Contributors](https://allcontributors.org) spec
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
 | Contributor | Profile | Contribution Badges | Areas of Focus |
 |:---:|:---:|:---:|:---|
-| **Atharva Pingale** | [@Atharvasp333](https://github.com/Atharvasp333) | 💻 🏗️ 📦 📖 | Cloud Multi-Agent Pipeline, Ingestion & Accounting Engine, Upstream Project Administration |
-| **Varun Rahatgaonkar** | [@Kingslaye-varun](https://github.com/Kingslaye-varun) | 💻 🚀 🧪 🔌 📦 📖 | SDK Release Engineering, AST Optimizer, PyPI Trusted Publishing, VS Code Extension, CLI Architecture |
-| **Tanaya Jain** | [@tanaya2005](https://github.com/tanaya2005) | 💻 🔒 🗄️ 🎨 | At-Rest Credential Encryption, Neon Auth & Session Management, AWS Connect Interface |
+| **Atharva Pingale** | [@Atharvasp333](https://github.com/Atharvasp333) | 💻 🏗️ 📦 📖 | Cloud Multi-Agent Pipeline, Ingestion & Accounting Engine, Upstream Repository Maintainer |
+| **Varun Rahatgaonkar** | [@Kingslaye-varun](https://github.com/Kingslaye-varun) | 💻 🚀 🧪 🔌 📦 📖 | Python SDK Packaging, AST Optimizer, PyPI Trusted Publishing, VS Code Tooling, CLI Architecture |
 | **Nidhi Puthran** | [@nidhi0810](https://github.com/nidhi0810) | 💻 🌍 📊 🔧 | Carbon Aware SDK Integration, AI Deployment Analysis, Grid Intensity Forecasting, Dev Scripting |
-| **Mrs. Charusheela Nehete** | — | 🧑‍🏫 🔬 📋 | Academic Research Guidance, Methodology Supervision, Capstone Review |
+| **Tanaya Jain** | [@tanaya2005](https://github.com/tanaya2005) | 📖 📋 ⚖️ 💻 🎨 | Capstone Blackbook, Research Paper Documentation, IPR Documentation, UI & Crypto Commits |
+| **Mrs. Charusheela Nehete** | — | 🧑‍🏫 🔬 📋 | Academic Faculty Guide, Research Supervision, Capstone Evaluation |
 <!-- ALL-CONTRIBUTORS-LIST:END -->
 
 ---
@@ -25,14 +27,14 @@ This project adheres to the [All Contributors](https://allcontributors.org) spec
 * 💻 **Code:** Core platform, backend, frontend, CLI, or SDK code
 * 🏗️ **Architecture:** System design, multi-agent frameworks, and data pipelines
 * 🚀 **Release / DevOps:** Package distribution, PyPI publishing, and CI/CD pipelines
-* 🔒 **Security:** Cryptography, credential protection, and authentication
 * 🌍 **Sustainability:** Carbon calculations, grid intensity APIs, and carbon-aware models
-* 🗄️ **Database:** Schema modeling, asyncpg connection pooling, and migrations
 * 🔌 **Plugin / IDE:** Visual Studio Code extension and developer tooling
-* 🧪 **Tests:** Test suites, edge cases, and continuous validation
-* 🎨 **Design / UI:** User interface components, dashboards, and visual charts
+* 🧪 **Tests:** Test suites, edge cases, and automated release validation
 * 📖 **Documentation:** User guides, API references, architecture docs, and technical reports
-* 🧑‍🏫 **Mentorship:** Academic guidance, advisory reviews, and research supervision
+* 📋 **Project Documentation:** Capstone blackbook, academic reports, and testing records
+* ⚖️ **Intellectual Property:** IPR documentation and copyright filing preparation work
+* 🎨 **Design / UI:** User interface components and page layouts
+* 🧑‍🏫 **Academic Guidance:** Faculty advisor, methodology review, and project evaluation
 
 ---
 

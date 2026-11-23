@@ -1,7 +1,6 @@
 # CarbonIQ — GitHub Repository Makeover, Branding & Attribution Report
 
 **Branch:** `docs/official-branding-and-attribution`  
-**Commit SHA:** `4bb2da874f7affbd4cd4af1a7cc90ac2745d2874`  
 **Deployment Fork Remote:** [Kingslaye-varun/CarbonIQ_Capstone](https://github.com/Kingslaye-varun/CarbonIQ_Capstone/tree/docs/official-branding-and-attribution)  
 **Upstream Team Remote:** [Atharvasp333/CarbonIQ](https://github.com/Atharvasp333/CarbonIQ)  
 **Status:** **COMMITTED & PUSHED TO FORK — AWAITING USER APPROVAL TO OPEN PRs AND MERGE**
@@ -38,35 +37,45 @@ All requested documentation, attribution, branding, and community governance fil
 
 ## 2. Contributor Attribution Verification
 
-The audit confirms that CarbonIQ was jointly authored as a Capstone Project at Vivekanand Education Society's Institute of Technology (VESIT), Mumbai, under the guidance of Mrs. Charusheela Nehete and advisory mentorship from Tata Consultancy Services (TCS) mentors:
+The audit confirms that CarbonIQ was developed as a final-year academic capstone project at Vivekanand Education Society's Institute of Technology (VESIT), Mumbai, by a four-member student team under the academic guidance of Mrs. Charusheela Nehete:
 
 1. **Atharva Pingale (@Atharvasp333):**
-   * *Verified Roles:* Co-Founder & Upstream Repository Maintainer.
-   * *Codebase Ownership:* Core multi-agent cloud accounting architecture (`backend/agents/`), LLM agent orchestration, pattern detection, and ingestion normalizer.
+   * *Designation:* Core Developer — Cloud & AI Architecture
+   * *Verified Roles:* Upstream Repository Maintainer.
+   * *Codebase Ownership:* Multi-agent cloud emissions analysis architecture (`backend/agents/`), AWS Cost and Usage Report (CUR) processing/ingestion, backend agent orchestration, carbon emission accounting, and cloud-side intelligence via Google Gemini.
 2. **Varun Rahatgaonkar (@Kingslaye-varun):**
-   * *Verified Roles:* Co-Founder & SDK Release Maintainer.
-   * *Codebase Ownership:* CarbonIQ SDK release engineering, PEP 621 packaging, PyPI OIDC Trusted Publishing, AST green code optimizer (`carboniq/optimizer.py`), VS Code extension, CLI architecture, and test automation.
+   * *Designation:* Core Developer — Python SDK, Developer Tools & Release Engineering
+   * *Verified Roles:* Deployment & PyPI Release Fork Maintainer.
+   * *Codebase Ownership:* CarbonIQ Python SDK packaging (PEP 517/518/621), CLI architecture, AST-based sustainable code analysis and optimization (`carboniq/optimizer.py`, `carboniq audit`, `carboniq optimize`), VS Code developer tooling (`vscode-extension/`), deployment integration, GitHub Actions CI/CD release engineering, PyPI OIDC Trusted Publishing, and automated release verification.
    * *Verified Contribution Statement:* *"Varun Rahatgaonkar (@Kingslaye-varun) — CarbonIQ SDK release engineering, packaging, deployment integration, CI/CD, and developer tooling contributions."*
-3. **Tanaya Jain (@tanaya2005):**
-   * *Verified Roles:* Co-Founder & Security Lead.
-   * *Codebase Ownership:* Symmetrical credential encryption at rest (Fernet/AES), authentication routes (Neon Auth), AWS S3 credential storage, and frontend AWS Connect interface.
-4. **Nidhi Puthran (@nidhi0810):**
-   * *Verified Roles:* Co-Founder & Carbon-Aware Lead.
-   * *Codebase Ownership:* Green Software Foundation Carbon Aware SDK client (`cli/carbon_aware_sdk.py`), AI deployment analysis API, regional grid intensity forecasting, and local launch automation.
+3. **Nidhi Puthran (@nidhi0810):**
+   * *Designation:* Core Developer — Carbon-Aware Computing
+   * *Codebase Ownership:* Green Software Foundation Carbon Aware SDK client (`cli/carbon_aware_sdk.py`), regional grid carbon intensity functionality, AI deployment analysis API (`backend/routes/deployment_analysis.py`), regional and temporal decision support (`carboniq deploy-analysis`, `carboniq carbon-intensity`), and multi-service development launch scripts (`start-dev.ps1`).
+4. **Tanaya Jain (@tanaya2005):**
+   * *Designation:* Research, Documentation & Intellectual Property
+   * *Project Contributions:* Capstone project master blackbook documentation, research paper preparation (`docs/paper/main.tex`), academic milestone reports and project documentation updates, intellectual property rights (IPR) documentation, and logo copyright-related preparation and filing work (where supported by project records).
+   * *Additional Git-verified Commits:* Frontend authentication UI layouts (`Login.jsx`, `Signup.jsx`, `Home.jsx`), Fernet credential encryption helper (`backend/services/crypto.py`), and AWS credentials database routes (`backend/routes/aws_credentials.py`).
+5. **Mrs. Charusheela Nehete:**
+   * *Designation:* Assistant Professor, Department of Information Technology, VESIT
+   * *Role:* Academic Project Guide & Faculty Advisor (research methodology supervision, architectural review, and capstone evaluation).
 
 ---
 
 ## 3. Existing License & Copyright Findings
 
-* **Current State:** `pyproject.toml` in published `carboniq-sdk==0.2.0` declares `license = { text = "MIT" }` and Trove classifier `License :: OSI Approved :: MIT License`. However, a root `LICENSE` file was historically omitted from the repository.
-* **Licensing Recommendation:** Retaining the **MIT License** attributed to **The CarbonIQ Authors and Contributors** is recommended to preserve consistency with the published PyPI v0.2.0 metadata. Transitioning to Apache-2.0 or another license can be planned for v0.3.0+ upon unanimous co-author approval.
+* **Current State:** `pyproject.toml` in published `carboniq-sdk==0.2.0` declares `license = { text = "MIT" }` and Trove classifier `License :: OSI Approved :: MIT License`.
+* **Licensing Recommendation:** Retaining the **MIT License** attributed to **The CarbonIQ Authors and Contributors** is recommended to preserve consistency with the published PyPI v0.2.0 metadata:
+  ```
+  Copyright (c) 2026 The CarbonIQ Authors and Contributors
+  ```
 * **Non-Exclusivity:** Publishing on PyPI or maintaining the deployment fork under `@Kingslaye-varun` reflects authorized release engineering and does not establish exclusive legal ownership over the co-authored codebase.
+* **Software vs. Logo IP:** Software code is governed by the permissive MIT License; logo/branding design documentation represents distinct project assets.
 
 ---
 
 ## 4. Documentation & Community Validation Results
 
-* **Markdown Links:** All internal links across all 12 Markdown files resolve cleanly (0 broken links).
+* **Markdown Links:** All internal links across all Markdown files resolve cleanly (0 broken links).
 * **YAML Validation:** `.github/ISSUE_TEMPLATE/bug_report.yml`, `.github/ISSUE_TEMPLATE/feature_request.yml`, and `CITATION.cff` verified 100% valid YAML via `yaml.safe_load`.
 * **Automated Tests:** All **36 automated unit, CLI, packaging isolation, and grid integration tests PASSED** in 14.15s (`pytest tests/test_sdk_api.py tests/test_cli_commands.py tests/test_packaging_and_security.py tests/test_carbon_aware_integration.py -v`).
 * **Package Isolation:** Verified zero generic `cli` namespace collision in `site-packages`.
@@ -82,20 +91,3 @@ The audit confirms that CarbonIQ was jointly authored as a Capstone Project at V
 * **Upstream Repository (`Atharvasp333/CarbonIQ`):**
   * As instructed by the safety protocol, no direct push has been made to `origin/main`.
   * A Pull Request can be submitted from `Kingslaye-varun/CarbonIQ_Capstone:docs/official-branding-and-attribution` targeting `Atharvasp333/CarbonIQ:main`.
-
----
-
-## 6. Actions Awaiting User Approval
-
-Before merging this branch into the `main` branch of either repository, please approve:
-
-1. **Copyright Holder Formulation:**  
-   Proposed: `Copyright (c) 2026 The CarbonIQ Authors and Contributors` (listing Atharva Pingale, Varun Rahatgaonkar, Tanaya Jain, and Nidhi Puthran in `AUTHORS.md`).
-2. **License Selection:**  
-   Confirm retaining the permissive **MIT License** (matching published `carboniq-sdk` v0.2.0 metadata).
-3. **Contributor Roles & Attributions:**  
-   Confirm the specific role descriptions and component attributions documented in `AUTHORS.md` and `CONTRIBUTORS.md`.
-4. **README Presentation:**  
-   Confirm the redesigned `README.md` structure, visual hierarchy, and methodology disclosures.
-5. **Merge Authorization:**  
-   Confirm authorization to merge `docs/official-branding-and-attribution` into `Kingslaye-varun/CarbonIQ_Capstone:main` and open a PR against `Atharvasp333/CarbonIQ:main`.
