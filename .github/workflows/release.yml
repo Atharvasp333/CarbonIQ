@@ -132,14 +132,7 @@ jobs:
           (cd /tmp && carboniq carbon-intensity --help)
 
           # 4. Functional audit and optimize execution on representative inefficient fixture
-          cat << 'EOF' > /tmp/inefficient_sample.py
-def process_data(items):
-    results = []
-    for i in range(len(items)):
-        results.append(items[i] * 2)
-    return results
-EOF
-
+          python -c "open('/tmp/inefficient_sample.py', 'w').write('def process_data(items):\n    results = []\n    for i in range(len(items)):\n        results.append(items[i] * 2)\n    return results\n')"
           (cd /tmp && carboniq audit /tmp/inefficient_sample.py)
           (cd /tmp && carboniq optimize /tmp/inefficient_sample.py)
           rm -f /tmp/inefficient_sample.py
