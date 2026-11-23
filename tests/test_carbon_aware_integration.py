@@ -16,6 +16,8 @@ def test_regional_grid_baselines_completeness():
 
 def test_carbon_aware_client_fallback_behavior():
     client = CarbonAwareClient()
+    # Explicitly verify the fallback baseline mechanism
+    client.enabled = False
     data = client.get_current_intensity("us-east-1")
     assert data["carbon_intensity"] == FALLBACK_REGIONAL_BASELINES["us-east-1"]["carbon_intensity"]
     assert "fallback" in data["source"] or "baseline" in data["source"]
