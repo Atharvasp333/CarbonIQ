@@ -15,7 +15,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          fetch-depth: 1
+          ref: ${{ github.ref }}
+          fetch-depth: 0
 
       - name: Set up Python 3.12
         uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
@@ -23,21 +24,38 @@ jobs:
           python-version: "3.12"
           cache: "pip"
 
-      - name: Validate Release Tag against pyproject.toml
+      - name: Validate Release Tag, Commit SHA, and pyproject.toml
+        env:
+          EXPECTED_COMMIT: "__RELEASE_COMMIT_SHA__"
+          EXPECTED_VERSION: "0.2.0"
         run: |
           TAG_NAME="${{ github.ref_name }}"
           CLEAN_TAG=$(echo "$TAG_NAME" | sed -E 's/^(sdk-)?v?//')
           PYPROJECT_VERSION=$(grep -E '^version = ' pyproject.toml | head -n1 | cut -d '"' -f2)
+          CURRENT_COMMIT=$(git rev-parse HEAD)
 
           echo "GitHub Release Tag:     $TAG_NAME"
           echo "Cleaned Semantic Tag:   $CLEAN_TAG"
           echo "pyproject.toml Version: $PYPROJECT_VERSION"
+          echo "Expected Release SHA:   $EXPECTED_COMMIT"
+          echo "Checked out Commit SHA: $CURRENT_COMMIT"
 
-          if [ "$CLEAN_TAG" != "$PYPROJECT_VERSION" ]; then
-            echo "::error::Tag version '$CLEAN_TAG' does not match pyproject.toml version '$PYPROJECT_VERSION'!"
+          if [ "$CLEAN_TAG" != "$EXPECTED_VERSION" ]; then
+            echo "::error::Tag version '$CLEAN_TAG' does not match expected version '$EXPECTED_VERSION'!"
             exit 1
           fi
-          echo "Version verification passed: $CLEAN_TAG matches pyproject.toml"
+
+          if [ "$PYPROJECT_VERSION" != "$EXPECTED_VERSION" ]; then
+            echo "::error::pyproject.toml version '$PYPROJECT_VERSION' does not match expected '$EXPECTED_VERSION'!"
+            exit 1
+          fi
+
+          if [ "$CURRENT_COMMIT" != "$EXPECTED_COMMIT" ]; then
+            echo "::error::Security violation: Checked out commit '$CURRENT_COMMIT' does not match exact audited release candidate '$EXPECTED_COMMIT'!"
+            exit 1
+          fi
+
+          echo "Version and exact commit verification passed successfully."
 
       - name: Install build and validation tools
         run: |
@@ -77,18 +95,21 @@ jobs:
         run: |
           python -m venv test_env
           source test_env/bin/activate
-          pip install dist/*.whl
+          pip install dist/*.whl pytest
 
           # Verify SDK import
           python -c "import carboniq; print('SDK loaded, version:', carboniq.__version__)"
+
+          # Run full unit and CLI test suite against installed package
+          pytest tests/test_sdk_api.py tests/test_cli_commands.py tests/test_packaging_and_security.py tests/test_carbon_aware_integration.py -v
 
           # Verify CLI entry point and commands
           carboniq --help
           carboniq audit cli/sample_workloads/compute_intensive.py
           carboniq optimize cli/sample_workloads/compute_intensive.py
-          carboniq recommend-schedule --help
-          carboniq deploy-analysis --help
-          carboniq carbon-intensity --help
+          carboniq recommend-schedule -d 60 -r us-east-1
+          carboniq deploy-analysis -n deploy_smoke "python -c 'print(1)'"
+          carboniq carbon-intensity -r us-east-1
 
           # Verify no generic top-level cli namespace collision in site-packages
           (cd /tmp && python -c "import importlib.util; assert importlib.util.find_spec('cli') is None, 'Generic cli collision detected!'")

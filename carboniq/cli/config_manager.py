@@ -15,9 +15,9 @@ DEFAULT_REMOTE_URL = "https://carboniq-backend-duel.onrender.com/api"
 
 def get_config() -> Dict[str, Any]:
     """Load configuration from ~/.carboniq/config.json"""
-    if not CONFIG_FILE.exists():
-        return {}
     try:
+        if not CONFIG_FILE.exists():
+            return {}
         with open(CONFIG_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
     except Exception:
@@ -26,11 +26,14 @@ def get_config() -> Dict[str, Any]:
 
 def save_config_value(key: str, value: Any):
     """Save a key-value pair to ~/.carboniq/config.json"""
-    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-    cfg = get_config()
-    cfg[key] = value
-    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-        json.dump(cfg, f, indent=2)
+    try:
+        CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+        cfg = get_config()
+        cfg[key] = value
+        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+            json.dump(cfg, f, indent=2)
+    except Exception:
+        pass
 
 
 def get_api_key() -> Optional[str]:
