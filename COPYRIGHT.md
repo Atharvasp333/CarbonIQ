@@ -47,11 +47,13 @@ As verified against the Git commit history, pull request audit, and project reco
 ### Current Status
 * `pyproject.toml` in version 0.2.0 declares `license = { text = "MIT" }` with Trove classifier `License :: OSI Approved :: MIT License`.
 * The published `carboniq-sdk==0.2.0` wheel and source archive on PyPI carry this MIT declaration.
-* To provide complete transparency and avoid license ambiguity, the repository operates under the **MIT License** attributed to **The CarbonIQ Authors and Contributors**:
+* To provide complete transparency and avoid license ambiguity, the repository operates under the **MIT License** attributed to **The CarbonIQ Authors and Contributors** (see root [`LICENSE`](LICENSE) file):
 
 ```
 Copyright (c) 2026 The CarbonIQ Authors and Contributors
 ```
+
+* **Contributor Approval Status:** The collective copyright notice is prepared in alignment with the MIT license declaration in `pyproject.toml` (v0.2.0). Formal written confirmation from each individual student co-founder (Atharva Pingale, Varun Rahatgaonkar, Nidhi Puthran, and Tanaya Jain) is recorded as awaiting final sign-off prior to upstream merge.
 
 ### License Options for Future Releases (v0.3.0+)
 

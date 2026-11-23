@@ -5,7 +5,7 @@
 [![PyPI Version](https://img.shields.io/pypi/v/carboniq-sdk.svg?color=green&logo=pypi)](https://pypi.org/project/carboniq-sdk/)
 [![Python Versions](https://img.shields.io/pypi/pyversions/carboniq-sdk.svg?logo=python)](https://pypi.org/project/carboniq-sdk/)
 [![Release Pipeline](https://github.com/Kingslaye-varun/CarbonIQ_Capstone/actions/workflows/release.yml/badge.svg)](https://github.com/Kingslaye-varun/CarbonIQ_Capstone/actions/workflows/release.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](COPYRIGHT.md)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Production Frontend](https://img.shields.io/badge/Production%20Frontend-Vercel-success?style=flat&logo=vercel)](https://carboniq-capstone.vercel.app)
 [![Production API](https://img.shields.io/badge/Production%20API-Render-informational?style=flat&logo=render)](https://carboniq-backend-duel.onrender.com/docs)
 [![Database](https://img.shields.io/badge/Database-NeonDB%20PostgreSQL-teal?logo=postgresql)](https://neon.tech)
@@ -312,7 +312,7 @@ To report a vulnerability, please review our [Security Policy](SECURITY.md).
 
 ## License & Copyright
 
-CarbonIQ is open-source software licensed under the **MIT License** (see [COPYRIGHT.md](COPYRIGHT.md)).
+CarbonIQ is open-source software licensed under the **MIT License** (see [LICENSE](LICENSE) and [COPYRIGHT.md](COPYRIGHT.md)).
 
 ```
 Copyright (c) 2026 The CarbonIQ Authors and Contributors
