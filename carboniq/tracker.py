@@ -82,9 +82,22 @@ class TrackContext(ContextDecorator):
             "workload_type": self.workload_type,
             "duration_seconds": self.duration_seconds,
             "emissions_gco2e": emissions_g,
+            "emissions_kg": emissions_kg,
             "energy_kwh": energy_kwh,
             "carbon_intensity": (emissions_g / energy_kwh) if energy_kwh > 0 else 380.0
         }
+
+    @property
+    def energy_kwh(self) -> float:
+        return self.results.get("energy_kwh", 0.0) if self.results else 0.0
+
+    @property
+    def emissions_kg_co2(self) -> float:
+        return self.results.get("emissions_kg", 0.0) if self.results else 0.0
+
+    @property
+    def emissions_gco2e(self) -> float:
+        return self.results.get("emissions_gco2e", 0.0) if self.results else 0.0
 
         # Print user friendly log in terminal
         print(f"\n[CarbonIQ] 🌱 Workload '{self.workload_name}' completed:")
@@ -100,7 +113,17 @@ class TrackContext(ContextDecorator):
         try:
             import os
             import requests
-            from cli.config_manager import get_api_key, get_api_url
+            try:
+                from carboniq.cli.config_manager import get_api_key, get_api_url
+            except ImportError:
+                try:
+                    from .cli.config_manager import get_api_key, get_api_url
+                except (ImportError, ValueError):
+                    try:
+                        from cli.config_manager import get_api_key, get_api_url
+                    except ImportError:
+                        def get_api_key(): return None
+                        def get_api_url(): return "https://carboniq-backend-duel.onrender.com/api"
 
             url = get_api_url()
             key = get_api_key()

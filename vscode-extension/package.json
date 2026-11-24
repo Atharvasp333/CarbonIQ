@@ -24,7 +24,8 @@
     "onCommand:carboniq.auditFile",
     "onCommand:carboniq.optimizeFile",
     "onCommand:carboniq.checkGrid",
-    "onCommand:carboniq.trackWorkload"
+    "onCommand:carboniq.trackWorkload",
+    "onCommand:carboniq.applyOptimizations"
   ],
   "main": "./extension.js",
   "contributes": {
@@ -38,6 +39,11 @@
         "command": "carboniq.optimizeFile",
         "title": "CarbonIQ: Generate Sustainable Green Code (Refactor)",
         "icon": "$(sparkle)"
+      },
+      {
+        "command": "carboniq.applyOptimizations",
+        "title": "CarbonIQ: Apply Sustainable Refactoring to File",
+        "icon": "$(check)"
       },
       {
         "command": "carboniq.checkGrid",

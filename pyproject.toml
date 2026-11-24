@@ -3,11 +3,11 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "carboniq"
+name = "carboniq-sdk"
 version = "0.2.0"
-description = "Carbon-aware computing SDK and sustainable code generator"
+description = "CarbonIQ — Carbon-aware computing SDK, AST sustainable code generator, and CLI"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 license = { text = "MIT" }
 authors = [
     { name = "CarbonIQ Team", email = "team@carboniq.internal" }
@@ -16,27 +16,51 @@ keywords = [
     "carbon-footprint",
     "sustainability",
     "green-software",
-    "codecarbon",
-    "energy-efficiency"
+    "energy-efficiency",
+    "carbon-aware",
+    "ast-codegen"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Monitoring"
 ]
 dependencies = [
     "click>=8.1.0",
     "requests>=2.31.0",
     "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+hardware = [
+    "codecarbon>=2.8.0",
+]
+all = [
     "codecarbon>=2.8.0",
 ]
 
 [project.scripts]
-carboniq = "cli.carboniq_cli:cli"
+carboniq = "carboniq.cli.carboniq_cli:cli"
+
+[project.urls]
+Homepage = "https://carboniq-capstone.vercel.app"
+Repository = "https://github.com/Kingslaye-varun/CarbonIQ_Capstone"
+Documentation = "https://github.com/Kingslaye-varun/CarbonIQ_Capstone#readme"
+"Bug Tracker" = "https://github.com/Kingslaye-varun/CarbonIQ_Capstone/issues"
+Changelog = "https://github.com/Kingslaye-varun/CarbonIQ_Capstone/blob/main/CHANGELOG.md"
 
 [tool.setuptools.packages.find]
-include = ["carboniq*", "cli*"]
+where = ["."]
+include = ["carboniq*"]
+exclude = ["backend*", "frontend*", "docs*", "measurements*", "tests*", "cli*"]
 
 [tool.pyrefly]
-search-path = [".", "backend", "cli"]
+search-path = [".", "backend", "carboniq"]
 project-excludes = ["**/node_modules", "**/__pycache__", "**/.venv/**/*", "**/venv/**/*"]
-
-[tool.pyrefly.errors]
-"bad-argument-type" = "warn"
-"unsupported-operation" = "warn"
-"missing-attribute" = "warn"
